@@ -41,7 +41,7 @@
   "menu.explore.check": "検査",
   "menu.explore.check.description": "リポジトリのすべての不整合と修復のヒント。",
   "menu.log": "決定ログ",
-  "menu.log.description": "決定ログにエントリを書き込みます。",
+  "menu.log.description": "決定ログにエントリを書き込むか、既存のエントリを閲覧します。",
   "menu.log.log": "新しいエントリ",
   "menu.log.log.description": "正式な ADR より軽量な記録です。",
   "menu.repository": "リポジトリ",

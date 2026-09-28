@@ -41,7 +41,7 @@
   "menu.explore.check": "Prüfen",
   "menu.explore.check.description": "Alle Inkonsistenzen im Repository, mit Reparaturhinweis.",
   "menu.log": "Entscheidungsprotokoll",
-  "menu.log.description": "Einen Eintrag im Entscheidungsprotokoll schreiben.",
+  "menu.log.description": "Einen Eintrag im Entscheidungsprotokoll schreiben oder die vorhandenen durchsehen.",
   "menu.log.log": "Neuer Eintrag",
   "menu.log.log.description": "Die leichtere Schwester eines formalen ADR.",
   "menu.repository": "Repository",

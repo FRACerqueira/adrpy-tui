@@ -1,13 +1,13 @@
 <img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
 
-[← README](../README.md) · **Architecture** · [Forms](forms.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+[← README](../README.md) · [Screens and forms](forms.md) · **Architecture** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
 
 # Architecture
 
-This page explains how `adrpy-tui` is put together and why. For the
-per-command forms (which component edits which flag), see
-[`forms.md`](forms.md); for the recorded decisions behind the choices
-below, see [`doc/adr/`](adr/).
+This page explains how `adrpy-tui` is put together and why. For how it
+looks and behaves, and which component edits which flag, see
+[Screens and forms](forms.md); for the recorded decisions behind the
+choices below, see [`doc/adr/`](adr/).
 
 ## Why this project exists
 
@@ -46,6 +46,13 @@ so the TUI always talks to the adrpy installed next to it:
 [sys.executable, "-m", "adrpy.skills", <verb>, *flags]
 ```
 
+It is required as `adrpy-ai>=0.1.dev0,<0.2`, the series adrpy-tui was
+validated against, development builds included. An adrpy-ai installed
+apart from the TUI later can be outside it; `core/versions.py` compares the
+installed version with the same range, read from adrpy-tui's installed
+metadata, and the main menu names both when they disagree -- a warning,
+not a refusal (ADR003V01).
+
 `adrpy-ai` is not on PyPI yet, so `adrpy-tui` cannot be published either
 until it is; CI installs `adrpy-ai` from git first.
 
@@ -81,7 +88,7 @@ graph TD
 | `core/themes.py` | The appearance presets: the color of each screen role on top of a Textual base theme. |
 | `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
 | `core/suggest.py` | Suggestions from the values a repository already uses. |
-| `core/versions.py` | The installed versions of adrpy-tui and adrpy-ai, for the header and `--version`. |
+| `core/versions.py` | The installed versions of adrpy-tui and adrpy-ai, for the header and `--version`, and the check of adrpy-ai against the declared range. |
 | `ui/app.py`, `ui/base.py`, `ui/header.py` | The Textual app (navigation, repository, language, theme), the screen every other one extends and the header they share. |
 | `ui/paged.py`, `ui/picker.py`, `ui/errors.py` | The interface's paged list (`row` makes every option, as plain text), the decision picker and the list of a repository's inconsistencies. |
 | `ui/running.py` | Confirming and running a screen's commands, then the result; nothing leaves the screen or runs again meanwhile. Forms, the config editors and migrate go through it. |
@@ -108,14 +115,28 @@ Hand-written forms and packs can drift from the CLI, so tests guard them:
   `adrpy-skills help --full` -- same flag names, same `required`, no flag
   missing or extra.
 - **Coverage test:** every command either `help` lists is reachable from
-  the menu; a command whose form is not written yet is listed explicitly
-  and shown disabled.
+  the menu. A command with no form yet would be listed explicitly and shown
+  disabled; today none is.
 - **Language test:** every pack has exactly `en-us`'s keys, and the packs
   are the languages `adrpy help init` lists.
 
 ## Testing
 
 - `client.py` with an injected fake runner.
-- Integration against the real `adrpy` on repositories built in `tmp_path`.
+- Integration against the real `adrpy` on repositories built in `tmp_path`;
+  `installconfig` and a global skills install only ever against a fake
+  client, since the real ones would write this machine's own files.
 - UI through Textual's `App.run_test()`, driven with `asyncio.run` (no
-  `pytest-asyncio`).
+  `pytest-asyncio`), including checks that run over every screen:
+  - every list is paged;
+  - every screen opens with the focus where the keys act;
+  - everything each screen draws meets WCAG contrast in every preset.
+- The documentation: every page's navigation, and no broken link
+  (`tests/test_docs.py`).
+
+What a test cannot check -- a real terminal's rendering, keys and colors --
+is in the [manual test checklist](manual-test-checklist.md).
+
+---
+
+[← README](../README.md) · [Screens and forms](forms.md) · **Architecture** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)

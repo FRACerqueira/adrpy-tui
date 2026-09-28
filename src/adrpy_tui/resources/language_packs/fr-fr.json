@@ -41,7 +41,7 @@
   "menu.explore.check": "Vérifier",
   "menu.explore.check.description": "Toutes les incohérences du dépôt, avec une piste de réparation.",
   "menu.log": "Journal des décisions",
-  "menu.log.description": "Écrire une entrée dans le journal des décisions.",
+  "menu.log.description": "Écrire une entrée dans le journal des décisions ou parcourir celles qui existent.",
   "menu.log.log": "Nouvelle entrée",
   "menu.log.log.description": "La petite sœur, plus légère, d'un ADR formel.",
   "menu.repository": "Dépôt",

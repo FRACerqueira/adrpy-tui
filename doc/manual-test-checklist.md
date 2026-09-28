@@ -1,6 +1,6 @@
 <img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
 
-[← README](../README.md) · [Architecture](architecture.md) · [Forms](forms.md) · **Manual test checklist** · [Decisions](adr/)
+[← README](../README.md) · [Screens and forms](forms.md) · [Architecture](architecture.md) · **Manual test checklist** · [Decisions](adr/)
 
 # Manual test checklist
 
@@ -110,3 +110,7 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
       English.
 - [ ] Change repository: the tree lists folders only; choosing one, then
       `Ctrl+R`, works on it from then on.
+
+---
+
+[← README](../README.md) · [Screens and forms](forms.md) · [Architecture](architecture.md) · **Manual test checklist** · [Decisions](adr/)

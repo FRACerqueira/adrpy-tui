@@ -1,3 +1,5 @@
+[← README](README.md)
+
 # Security Policy
 
 ## Supported Versions
@@ -18,7 +20,7 @@ This is a small, early-stage project maintained by one person — there's no for
 
 ## Scope
 
-adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: every change is an `adrpy` or `adrpy-skills` command run from its own interpreter ([ADR001V01](doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)). The only file it writes is its own per-user state (chosen language, last menu items). It does not expose network services and does not handle credentials.
+adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: every change is an `adrpy` or `adrpy-skills` command run from its own interpreter ([ADR001V01](doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)). The only file it writes is its own per-user state (language, appearance and colors, changed keys, last menu items). It does not expose network services and does not handle credentials.
 
 Concerns that are in scope:
 
@@ -31,5 +33,5 @@ Vulnerabilities in adrpy itself belong to [adrpy-ai](https://github.com/FRACerqu
 
 ## Security Best Practices for Users
 
-- Keep your Python installation, adrpy-tui and adrpy-ai up to date.
+- Keep your Python installation, adrpy-tui and adrpy-ai up to date -- adrpy-ai within the range your adrpy-tui requires; the main menu says when it is not.
 - Read the command on the confirmation screen before running it.

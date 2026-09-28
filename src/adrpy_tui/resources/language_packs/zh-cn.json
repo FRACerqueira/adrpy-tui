@@ -41,7 +41,7 @@
   "menu.explore.check": "检查",
   "menu.explore.check.description": "仓库中的所有不一致之处及修复提示。",
   "menu.log": "决策日志",
-  "menu.log.description": "在决策日志中写入一条记录。",
+  "menu.log.description": "在决策日志中写入一条记录，或浏览已有的记录。",
   "menu.log.log": "新记录",
   "menu.log.log.description": "比正式 ADR 更轻量的记录。",
   "menu.repository": "仓库",

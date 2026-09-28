@@ -41,7 +41,7 @@
   "menu.explore.check": "검사",
   "menu.explore.check.description": "저장소의 모든 불일치와 복구 힌트.",
   "menu.log": "결정 로그",
-  "menu.log.description": "결정 로그에 항목을 작성합니다.",
+  "menu.log.description": "결정 로그에 항목을 작성하거나 기존 항목을 둘러봅니다.",
   "menu.log.log": "새 항목",
   "menu.log.log.description": "정식 ADR보다 가벼운 기록입니다.",
   "menu.repository": "저장소",

@@ -1,11 +1,14 @@
 <img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
 
-[← README](../README.md) · [Architecture](architecture.md) · **Forms** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+[← README](../README.md) · **Screens and forms** · [Architecture](architecture.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
 
-# Forms
+# Screens and forms
 
-How every `adrpy` and `adrpy-skills` command is reached and filled in,
-with the Textual 8 widget used for each kind of input. Where Textual has no
+How adrpy-tui looks and behaves -- the header, the menus, lists, focus,
+keys, previews and colors every screen shares -- and how every `adrpy` and
+`adrpy-skills` command is reached and filled in, with the Textual 8 widget
+used for each kind of input. How it is built is in
+[Architecture](architecture.md). Where Textual has no
 ready-made component, the closest core widget is used rather than a custom
 one or a new dependency, so the experience can be validated first
 ([ADR002V01](adr/ADR002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md)).
@@ -24,7 +27,7 @@ modals open over it, so it stays visible.
 /_/   \_\____/|_| \_\    |_|    |_|
 ══════════════════════════════════════
 Welcome to adrpy-tui (<version>) · adrpy-ai <version>
-Repo: <repository root>
+Repository: <repository root>
 '<command>' command started
 ```
 
@@ -145,23 +148,24 @@ opened in a browser: the file may not be the person's own.
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
-| Decision content | detail view | `MarkdownViewer`, read-only |
+| Decision content | detail view, previews, help | `Markdown`, read-only, links never opened in a browser |
 
 ## Menus
 
 ```
 Main menu
-├─ 1 Decisions             new · approve · reject · undo · version · revise · supersede
-├─ 2 Explore and validate  explore (table → detail) · check
-├─ 3 Decision log          log
-├─ 4 Repository            init · config · migrate
-├─ 5 Install config        installconfig
-├─ 6 AI skills             list · install · remove
-├─ 7 Command help          one item per adrpy and adrpy-skills command
-├─ 8 Change repository
-├─ 9 Language
-├─ 10 Appearance
-└─ 0 Exit
+├─ Decisions             new · approve · reject · undo · version · revise · supersede
+├─ Explore and validate  explore (table → detail) · check
+├─ Decision log          log · browse the entries
+├─ Repository            init · config · migrate
+├─ Install config        installconfig
+├─ AI skills             list · install · remove
+├─ Command help          one item per adrpy and adrpy-skills command
+├─ Change repository
+├─ Language
+├─ Appearance
+├─ Keys
+└─ Exit
 ```
 
 - The first run starts with the language choice (ADR005V01): the eleven
@@ -169,13 +173,17 @@ Main menu
   language preselected when it is one of them. "Language" changes it later,
   from the same list with "← Back" on top and the current language
   highlighted; the first run has no Back, since there is no menu yet.
-- With no repository configured (`config-not-found`), groups 1-3 and
+- With no repository configured (`config-not-found`), Decisions, Explore and validate, Decision log and
   `config`/`migrate` are disabled.
 - Every submenu starts with "← Back"; `Esc` also goes back one level. A
   submenu opens on its first command, or on the item last selected in it;
   choosing Back is not remembered. A grey line under each screen lists its
   keys.
 - The last selected item of each menu is remembered across sessions.
+- The main menu names what it found at start-up and set aside: an adrpy-ai
+  outside the range this adrpy-tui was validated with (ADR003V01), a
+  repository configuration that could not be read, a saved key or color
+  that could not be used.
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
 - "Change repository" takes a folder's path, typed or chosen in a tree of
@@ -212,6 +220,14 @@ from `explore`.
 
 ## Result screen
 
-Success shows the result in white and any `warnings` in gold; failure shows
-`detail` in red and, when present, `data.errors` as a table with repair
-hints. `Enter` returns to the menu.
+Success shows what adrpy did in the result color and any `warnings` in the
+warning color; failure shows `detail` in the error color and, when present,
+`data.errors` in the `ErrorList` with its repair hints. The preview key
+opens the file the command wrote; `Esc` goes back to the screen the
+command ran from -- after a successful `init`, `config` or `migrate`,
+which change what the menus offer, the repository is read again and the
+menus rebuilt.
+
+---
+
+[← README](../README.md) · **Screens and forms** · [Architecture](architecture.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)

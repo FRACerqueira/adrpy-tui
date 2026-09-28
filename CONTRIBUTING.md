@@ -1,3 +1,5 @@
+[← README](README.md)
+
 # Contributing to adrpy-tui
 
 Thanks for considering a contribution. Read this before opening a pull request, it will save you a round trip.
@@ -31,7 +33,9 @@ python -m venv .venv
 .venv/bin/adrpy-tui
 ```
 
-The version comes from git (hatch-vcs), so build from a git checkout.
+To work against your own copy of adrpy-ai instead, install it editable first (`pip install -e <path to adrpy-ai>`). Its version comes from git too (`0.1.devN`), which the declared range `adrpy-ai>=0.1.dev0,<0.2` takes ([ADR003V01](doc/adr/ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)); an editable install keeps the version it had when installed.
+
+The version comes from git (hatch-vcs), so build from a git checkout. After changing `dependencies` in `pyproject.toml`, reinstall (`pip install -e ".[dev]"`): the start-up check reads the range from the installed metadata, and a test fails while the two disagree.
 
 A runtime dependency beyond `adrpy-ai` and `textual` is a significant decision ([ADR002V01](doc/adr/ADR002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md)) — discuss it in an issue first.
 

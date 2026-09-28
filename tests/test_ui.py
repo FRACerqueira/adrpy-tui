@@ -2229,6 +2229,22 @@ def test_an_adrpy_within_the_range_says_nothing(tmp_path, user_state, monkeypatc
     run_app(app, scenario)
 
 
+def test_the_decision_log_group_says_it_also_browses_the_entries(tmp_path, user_state):
+    """Found in a documentation review: the group's description still said
+    only "Write a decision-log entry." after "Browse the entries" joined it."""
+    (tmp_path / "adr-config.adrplus").write_text("{}", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=FakeClient(answers={"config": {
+        "success": True, "data": {"config": REPO_CONFIG, "warnings": []}}}), user_state=user_state)
+
+    async def scenario(pilot):
+        options = _options(app.screen)
+        options.highlighted = options.get_option_index("log")
+        await pilot.pause()
+        assert _text(app.screen, "#description") == "Write a decision-log entry or browse the existing ones."
+
+    run_app(app, scenario)
+
+
 def test_a_saved_key_that_cannot_be_used_is_ignored_and_said(tmp_path, user_state):
     user_state.set_key("run", "escape")
     user_state.set_key("nonsense", "f9")

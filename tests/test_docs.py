@@ -13,7 +13,11 @@ ICON = "src/adrpy_tui/icon.png"
 ICON_URL = f"https://raw.githubusercontent.com/FRACerqueira/adrpy-tui/main/{ICON}"
 REPOSITORY = "https://github.com/FRACerqueira/adrpy-tui/blob/main/"
 PAGES = sorted((ROOT / "doc").glob("*.md"))
-LINKED = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", *PAGES]
+# The order a reader goes through them: using it, how it is built, releasing it.
+READING_ORDER = [("forms.md", "Screens and forms"), ("architecture.md", "Architecture"),
+                 ("manual-test-checklist.md", "Manual test checklist")]
+ROOT_PAGES = [ROOT / name for name in ("CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", "CHANGELOG.md")]
+LINKED = [ROOT / "README.md", *ROOT_PAGES, *PAGES]
 _LINK = re.compile(r"\]\(([^)\s]+)\)")
 
 
@@ -52,14 +56,28 @@ def test_the_readme_opens_with_the_icon_and_links_every_page():
     assert missing == []
 
 
+def _navigation(current):
+    """The line to the README, every page in reading order (the current one
+    in bold, not a link) and the decisions."""
+    pages = [f"**{title}**" if name == current else f"[{title}]({name})" for name, title in READING_ORDER]
+    return " · ".join(["[← README](../README.md)", *pages, "[Decisions](adr/)"])
+
+
+def test_the_reading_order_is_every_page():
+    assert sorted(name for name, _ in READING_ORDER) == [page.name for page in PAGES]
+
+
 @pytest.mark.parametrize("page", PAGES, ids=lambda page: page.name)
-def test_every_page_opens_with_the_icon_and_a_line_to_the_others(page):
-    lines = page.read_text(encoding="utf-8").splitlines()
+def test_every_page_opens_with_the_icon_and_the_navigation_and_ends_with_it(page):
+    lines = page.read_text(encoding="utf-8").strip().splitlines()
     assert lines[0] == f'<img src="../{ICON}" width="160" alt="adrpy-tui icon">'
-    navigation = lines[2]
-    assert navigation.startswith("[← README](../README.md)")
-    missing = [other.name for other in PAGES if other != page and f"]({other.name})" not in navigation]
-    assert missing == []
+    assert (lines[2], lines[-1]) == (_navigation(page.name), _navigation(page.name))
+    assert lines[4] == f"# {dict(READING_ORDER)[page.name]}"
+
+
+@pytest.mark.parametrize("page", ROOT_PAGES, ids=lambda page: page.name)
+def test_every_root_page_opens_with_a_line_back_to_the_readme(page):
+    assert page.read_text(encoding="utf-8").splitlines()[0] == "[← README](README.md)"
 
 
 @pytest.mark.parametrize("document", LINKED, ids=lambda document: document.name)

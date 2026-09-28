@@ -41,7 +41,7 @@
   "menu.explore.check": "Controleren",
   "menu.explore.check.description": "Alle inconsistenties in de repository, met een hersteltip.",
   "menu.log": "Beslissingslogboek",
-  "menu.log.description": "Een item in het beslissingslogboek schrijven.",
+  "menu.log.description": "Een item in het beslissingslogboek schrijven of de bestaande bekijken.",
   "menu.log.log": "Nieuw item",
   "menu.log.log.description": "Het lichtere zusje van een formele ADR.",
   "menu.repository": "Repository",

@@ -41,7 +41,7 @@
   "menu.explore.check": "Проверка",
   "menu.explore.check.description": "Все несоответствия в репозитории с подсказкой по исправлению.",
   "menu.log": "Журнал решений",
-  "menu.log.description": "Записать запись в журнал решений.",
+  "menu.log.description": "Записать запись в журнал решений или просмотреть существующие.",
   "menu.log.log": "Новая запись",
   "menu.log.log.description": "Облегчённый родственник формального ADR.",
   "menu.repository": "Репозиторий",

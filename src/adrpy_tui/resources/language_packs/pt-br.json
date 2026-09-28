@@ -41,7 +41,7 @@
   "menu.explore.check": "Verificar",
   "menu.explore.check.description": "Todas as inconsistências do repositório, com dica de reparo.",
   "menu.log": "Registro de decisões",
-  "menu.log.description": "Escrever uma entrada no registro de decisões.",
+  "menu.log.description": "Escrever uma entrada no registro de decisões ou consultar as existentes.",
   "menu.log.log": "Nova entrada",
   "menu.log.log.description": "A irmã mais leve de um ADR formal.",
   "menu.repository": "Repositório",

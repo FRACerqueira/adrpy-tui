@@ -41,7 +41,7 @@
   "menu.explore.check": "Check",
   "menu.explore.check.description": "Every inconsistency in the repository, with a repair hint.",
   "menu.log": "Decision log",
-  "menu.log.description": "Write a decision-log entry.",
+  "menu.log.description": "Write a decision-log entry or browse the existing ones.",
   "menu.log.log": "New entry",
   "menu.log.log.description": "The lighter-weight sibling of a formal ADR.",
   "menu.repository": "Repository",
