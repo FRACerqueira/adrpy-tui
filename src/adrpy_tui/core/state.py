@@ -1,5 +1,5 @@
-"""Per-user state: the interface language and the last item selected in
-each menu.
+"""Per-user state: the interface language, the appearance preset and the
+last item selected in each menu.
 
 A file that can't be read starts empty, and one that can't be written is
 skipped, without interrupting the person: losing it only means choosing the
@@ -25,6 +25,8 @@ class UserState:
         data = self._load()
         language = data.get("language")
         self.language = language if isinstance(language, str) else None
+        appearance = data.get("appearance")
+        self.appearance = appearance if isinstance(appearance, str) else None
         items = data.get("last_menu_item")
         self._items = {k: v for k, v in items.items() if isinstance(v, str)} if isinstance(items, dict) else {}
 
@@ -46,8 +48,12 @@ class UserState:
         self.language = language
         self._save()
 
+    def set_appearance(self, preset):
+        self.appearance = preset
+        self._save()
+
     def _save(self):
-        data = {"language": self.language, "last_menu_item": self._items}
+        data = {"language": self.language, "appearance": self.appearance, "last_menu_item": self._items}
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")

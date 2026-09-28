@@ -29,7 +29,23 @@ dependency), between two double rules.
 
 ## Colors
 
-CSS colors, as Textual theme variables:
+Every color is a role, a Textual theme variable (`$tui-*`) set by the
+appearance preset chosen in the main menu's "Appearance" item
+(`core/themes.py`): **Default** (dark, the palette below), **Light** (a
+light theme with dark text) and **High contrast**. Highlighting a preset
+previews it; Enter keeps it, Back or `Esc` restores the saved one. The
+choice is stored with the language; an unknown stored name is the default.
+Every text role of every preset meets WCAG AA contrast (4.5:1) on its
+theme's background (`tests/test_themes.py`), and so does text drawn on a
+widget's own background -- the highlighted item on its cursor color
+(`tui-cursor`, shared by menus and tables), a typed value, the command to
+confirm and the buttons -- measured on the rendered screen
+(`tests/test_ui.py`); Default is the default
+because it already does while keeping each kind of text distinct, and High
+contrast is one choice away. Textual honors `NO_COLOR`. Editing single roles on top of a preset is a
+later step, after the presets are validated.
+
+The Default preset:
 
 | Role | Color |
 |---|---|
@@ -41,7 +57,8 @@ CSS colors, as Textual theme variables:
 | Error | red `#FF0000` |
 | Result | white `#FFFFFF` |
 | Typed value | cyan `#00FFFF` (approximate, to validate) |
-| Highlighted item | green `#00FF00` (approximate, to validate) |
+| Highlighted item | green `#00FF00` on `#303030` |
+| Buttons | white on `#00509E` |
 
 ## Components
 
@@ -75,6 +92,7 @@ Main menu
 ├─ 7 Command help          one item per adrpy and adrpy-skills command
 ├─ 8 Change repository
 ├─ 9 Language
+├─ 10 Appearance
 └─ 0 Exit
 ```
 

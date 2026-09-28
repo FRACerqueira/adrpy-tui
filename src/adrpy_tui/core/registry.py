@@ -61,6 +61,7 @@ MAIN_MENU = Item("main", submenu=(
     )),
     Item("change-repository"),
     Item("language"),
+    Item("appearance"),
     Item("exit"),
 ))
 

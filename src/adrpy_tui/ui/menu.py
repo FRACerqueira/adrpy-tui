@@ -12,7 +12,7 @@ from adrpy_tui.core.registry import FORMS, MAIN_MENU, command_name
 from adrpy_tui.ui.base import AdrpyScreen
 
 # Items that open no form but are available.
-_ACTIONS = ("language", "exit")
+_ACTIONS = ("language", "appearance", "exit")
 # The first option of every submenu: back to the menu it was opened from.
 BACK = "back"
 

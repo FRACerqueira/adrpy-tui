@@ -1,12 +1,15 @@
 """The screens, driven headless through Textual's Pilot."""
 
 import threading
+
+import pytest
 from pathlib import Path
 
 from textual.widgets import DataTable, Markdown, OptionList, Static
 
 from adrpy_tui.core.state import UserState
 from adrpy_tui.ui.app import AdrpyTui
+from adrpy_tui.ui.appearance import AppearanceScreen
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.help import HelpScreen
@@ -77,6 +80,113 @@ def test_the_first_run_language_choice_has_no_back(tmp_path):
         assert "back" not in {languages.get_option_at_index(i).id for i in range(languages.option_count)}
 
     run_app(app, scenario)
+
+
+def _open_appearance(pilot):
+    async def go():
+        options = _options(pilot.app.screen)
+        options.highlighted = options.get_option_index("appearance")
+        await pilot.press("enter")
+        assert isinstance(pilot.app.screen, AppearanceScreen)
+        return pilot.app.screen.query_one("#presets", OptionList)
+
+    return go()
+
+
+def _banner_color(app):
+    return app.screen.query_one("AppHeader .banner").styles.color.hex
+
+
+def test_appearance_previews_a_preset_and_saves_it_on_enter(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert _banner_color(app) == "#FF8C00"
+        presets = await _open_appearance(pilot)
+        assert [presets.get_option_at_index(i).id for i in range(presets.option_count)] == [
+            "back", "default", "light", "high-contrast",
+        ]
+        assert presets.get_option_at_index(presets.highlighted).id == "default"  # the current one
+        presets.highlighted = presets.get_option_index("light")
+        await pilot.pause()
+        assert _banner_color(app) == "#8A4700"  # previewed live
+        await pilot.press("enter")
+        await pilot.pause()
+        assert isinstance(app.screen, MenuScreen) and _banner_color(app) == "#8A4700"
+
+    run_app(app, scenario)
+    assert user_state.appearance == "light"
+
+
+def test_leaving_appearance_without_choosing_restores_the_saved_preset(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        presets = await _open_appearance(pilot)
+        presets.highlighted = presets.get_option_index("high-contrast")
+        await pilot.pause()
+        assert _banner_color(app) != "#FF8C00"
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(app.screen, MenuScreen) and _banner_color(app) == "#FF8C00"
+
+    run_app(app, scenario)
+    assert user_state.appearance is None
+
+
+def test_a_stored_appearance_is_applied_on_start_and_an_unknown_one_is_the_default(tmp_path, user_state):
+    for stored, banner in (("light", "#8A4700"), ("from-a-newer-version", "#FF8C00")):
+        user_state.set_appearance(stored)
+        app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+        async def scenario(pilot):
+            assert _banner_color(app) == banner
+
+        run_app(app, scenario)
+
+
+def _contrast(foreground, background):
+    """WCAG contrast of `foreground` drawn on `background`, blending a
+    translucent foreground first, as the terminal shows it."""
+    from test_themes import _contrast as ratio
+
+    foreground = background.blend(foreground.with_alpha(1.0), foreground.a)
+    return ratio(foreground, background)
+
+
+def _drawn(widget):
+    return widget.styles.color, widget.background_colors[1]
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_text_drawn_on_its_own_background_meets_wcag_aa(tmp_path, user_state, preset):
+    """The role colors against the screen are checked in test_themes.py;
+    this checks the text drawn on a widget's own background -- the menu
+    cursor, a field, the confirmation and its buttons."""
+    from textual.color import Color
+    from textual.widgets import Button, Input
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    found = {}
+
+    async def scenario(pilot):
+        cursor = _options(app.screen).get_component_rich_style("option-list--option-highlighted")
+        found["menu cursor"] = (Color.from_rich_color(cursor.color), Color.from_rich_color(cursor.bgcolor))
+        await _open_new_form(pilot)
+        title = app.screen.query_one("#field-title", Input)
+        title.focus()
+        await pilot.press(*"abc")
+        found["typed value"] = _drawn(title)
+        found["run button"] = _drawn(app.screen.query_one("#run", Button))
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        found["command to confirm"] = _drawn(app.screen.query_one("#command-line", Static))
+        found["focused yes"] = _drawn(app.screen.query_one("#yes", Button))
+
+    run_app(app, scenario)
+    too_low = {name: round(_contrast(*pair), 2) for name, pair in found.items() if _contrast(*pair) < 4.5}
+    assert too_low == {}
 
 
 def test_a_stored_language_skips_the_choice(tmp_path, user_state):

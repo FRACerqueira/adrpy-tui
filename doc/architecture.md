@@ -56,7 +56,7 @@ graph TD
     UI["ui/*.py<br/>Textual app, header, one module per screen"] --> FORMS
     UI --> CORE
     FORMS["forms/*.py<br/>one form per command"] --> CORE
-    CORE["core/*.py<br/>client, registry, fields, i18n, state, suggest<br/>(no Textual)"] --> CLI[("adrpy / adrpy.skills")]
+    CORE["core/*.py<br/>client, registry, fields, i18n, themes, state, suggest<br/>(no Textual)"] --> CLI[("adrpy / adrpy.skills")]
     UI --> RES[("resources/<br/>banner, app.tcss, language_packs/")]
     CORE --> RES
 ```
@@ -68,7 +68,8 @@ graph TD
 | `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources. Choices and ranges live here because `adrpy help` exposes them only as prose (ADR004V01). |
 | `core/fields.py` | Field checks before running and the translation of values into flags. |
 | `core/i18n.py` | The language packs, the language list and the operating system's language (ADR005V01). |
-| `core/state.py` | Per-user state: the chosen language and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
+| `core/themes.py` | The appearance presets: the color of each screen role on top of a Textual base theme. |
+| `core/state.py` | Per-user state: the chosen language, the appearance preset and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
 | `core/suggest.py` | Suggestions from the values a repository already uses. |
 | `ui/*.py` | The Textual app and one module per screen, each under the same header. |
 

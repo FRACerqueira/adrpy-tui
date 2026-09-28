@@ -1,13 +1,5 @@
-/* The palette of doc/forms.md, "Colors". */
-$tui-banner: #FF8C00;
-$tui-info: #808080;
-$tui-warning: #FFD700;
-$tui-summary: #FFDEAD;
-$tui-help: #87CEEB;
-$tui-error: #FF0000;
-$tui-result: #FFFFFF;
-$tui-value: #00FFFF;
-$tui-highlight: #00FF00;
+/* The $tui-* colors come from the appearance preset's theme
+   (core/themes.py), so a preset can change them while running. */
 
 AppHeader {
     height: auto;
@@ -63,10 +55,6 @@ Input {
 OptionList {
     height: auto;
     max-height: 20;
-}
-
-OptionList > .option-list--option-highlighted {
-    color: $tui-highlight;
 }
 
 HelpScreen Markdown {
