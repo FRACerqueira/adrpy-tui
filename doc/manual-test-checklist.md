@@ -27,6 +27,18 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 - [ ] `Esc` goes back one level; on the main menu it leaves.
 - [ ] A list longer than eight rows shows "Items … · page … · PgUp/PgDn";
       `PgUp`, `PgDn`, `Home` and `End` move as it says.
+- [ ] Without touching the mouse, each screen opens with the keys acting
+      where they should: on a list screen the arrows move the list (or,
+      in its filter, typing filters while the arrows still move the list);
+      on a form, typing goes into the first field; only a command's help
+      and a preview scroll with the arrows. Check the screens whose content
+      arrives after they open too: check, migrate, the skills list, the
+      configuration and a decision's detail.
+- [ ] In every preset, the highlighted row stands out from the others at
+      a glance -- its whole row in the highlight color, its text readable
+      on it; with the focus elsewhere (a list's filter, a form's other
+      field), it stays visible, quieter; the row under the mouse is
+      underlined and never mistaken for the highlighted one.
 
 ## Keys and previews (`sample`)
 

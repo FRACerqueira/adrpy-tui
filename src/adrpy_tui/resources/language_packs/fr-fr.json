@@ -5,6 +5,7 @@
   "appearance.preset.default": "Par défaut (sombre)",
   "appearance.preset.light": "Clair",
   "appearance.preset.high-contrast": "Contraste élevé",
+  "app.adrpy_outside_range": "adrpy-ai {found} est installé ; cet adrpy-tui a été validé avec adrpy-ai {expected}. Les commandes peuvent échouer ; installez une version de cette plage ou mettez à jour adrpy-tui.",
   "app.welcome": "Bienvenue dans adrpy-tui ({tui}) · adrpy-ai {adrpy}",
   "app.repo": "Dépôt : {path}",
   "app.command_started": "commande '{command}' démarrée",

@@ -229,6 +229,47 @@ def test_the_active_row_stands_out_from_the_other_rows(tmp_path, user_state, pre
     assert (min(text.values()) >= 4.5, apart >= 3) == (True, True), (text, apart)
 
 
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_markdown_headings_and_table_headers_meet_wcag_aa(tmp_path, user_state, preset):
+    """Reported on help in High contrast: Textual draws a Markdown heading
+    and a table's header in the theme's primary color, which Default and
+    High contrast set as a button's background (#00509E) -- 2.36:1 as text
+    on their dark screen. Measured on help and on a preview, which is
+    Markdown too."""
+    from textual.widgets._markdown import MarkdownBullet, MarkdownHeader, MarkdownTableCellContents
+
+    user_state.set_appearance(preset)
+    contract = {"success": True, "data": {"commands": [{
+        "name": "new", "summary": "Creates.", "description": "Text.",
+        "arguments": [{"name": "title", "type": "string", "required": True, "description": "The title."}],
+        "failure_codes": [{"code": "x-code", "condition": "When."}]}], "warnings": []}}
+    page = tmp_path / "ADR001V01-d.md"
+    page.write_text("\n".join(["# Title", "", "## Context", "", "### Detail", "", "- a point", "",
+                               "| Field | Value |", "|---|---|", "| a | b |", ""]), encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=FakeClient(answers={"help": contract}), user_state=user_state)
+    too_low = {}
+
+    def measure(screen_name):
+        for widget in app.screen.query(Markdown).first().query("*"):
+            if isinstance(widget, (MarkdownHeader, MarkdownBullet)) or (
+                    isinstance(widget, MarkdownTableCellContents) and widget.has_class("header")):
+                ratio = _contrast(widget.styles.color, widget.background_colors[1])
+                if ratio < 4.5:
+                    too_low[f"{screen_name} {type(widget).__name__}"] = round(ratio, 2)
+
+    async def scenario(pilot):
+        app.push_screen(HelpScreen("new"))
+        await settle(pilot)
+        measure("help")
+        app.pop_screen()
+        app.push_screen(PreviewScreen(page))
+        await settle(pilot)
+        measure("preview")
+
+    run_app(app, scenario)
+    assert too_low == {}
+
+
 def _component(widget, component):
     from textual.color import Color
 
@@ -2159,6 +2200,35 @@ def test_backspace_and_restore_every_key_go_back_to_the_defaults(tmp_path, user_
     run_app(app, scenario)
 
 
+def test_an_adrpy_outside_the_validated_range_is_said_on_the_main_menu(tmp_path, user_state, monkeypatch):
+    """An adrpy-ai upgraded apart from the TUI (ADR003V01): a warning, and
+    the TUI keeps working."""
+    from adrpy_tui.core import versions
+
+    monkeypatch.setattr(versions, "adrpy_outside_range", lambda: ("0.2.0", ">=0.1.dev0, <0.2"))
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert _text(app.screen, "#adrpy-outside-range") == (
+            "adrpy-ai 0.2.0 is installed; this adrpy-tui was validated with adrpy-ai >=0.1.dev0, <0.2. "
+            "Commands may fail; install a version in that range or update adrpy-tui.")
+        assert _options(app.screen).option_count > 0
+
+    run_app(app, scenario)
+
+
+def test_an_adrpy_within_the_range_says_nothing(tmp_path, user_state, monkeypatch):
+    from adrpy_tui.core import versions
+
+    monkeypatch.setattr(versions, "adrpy_outside_range", lambda: None)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert not app.screen.query("#adrpy-outside-range")
+
+    run_app(app, scenario)
+
+
 def test_a_saved_key_that_cannot_be_used_is_ignored_and_said(tmp_path, user_state):
     user_state.set_key("run", "escape")
     user_state.set_key("nonsense", "f9")
@@ -2513,6 +2583,22 @@ def _focus_client(tmp_path):
     })
 
 
+async def _walk(app, pilot, path):
+    """Goes down `path` (FOCUS_SCREENS) to its screen."""
+    for step in path:
+        if step == ":detail":
+            app.screen.query_one("#decisions").focus()
+            await pilot.press("enter")
+        elif step == ":preview":
+            app.screen.query_one("#decisions").focus()
+            await pilot.press("f3")
+        else:
+            options = _options(app.screen)
+            options.highlighted = options.get_option_index(step)
+            await pilot.press("enter")
+        await settle(pilot)
+
+
 @pytest.mark.parametrize("screen_name", list(FOCUS_SCREENS))
 def test_every_screen_opens_with_the_keys_where_they_act(tmp_path, user_state, screen_name):
     """Reported on explore, then found on most screens: the scrolling body
@@ -2525,18 +2611,7 @@ def test_every_screen_opens_with_the_keys_where_they_act(tmp_path, user_state, s
     app = AdrpyTui(tmp_path, client=_focus_client(tmp_path), user_state=user_state)
 
     async def scenario(pilot):
-        for step in path:
-            if step == ":detail":
-                app.screen.query_one("#decisions").focus()
-                await pilot.press("enter")
-            elif step == ":preview":
-                app.screen.query_one("#decisions").focus()
-                await pilot.press("f3")
-            else:
-                options = _options(app.screen)
-                options.highlighted = options.get_option_index(step)
-                await pilot.press("enter")
-            await settle(pilot)
+        await _walk(app, pilot, path)
         body = app.screen.query_one("#body")
         if offers == "text":
             assert app.focused is body, f"{screen_name}: {app.focused}"
@@ -2552,6 +2627,105 @@ def test_every_screen_opens_with_the_keys_where_they_act(tmp_path, user_state, s
             assert target.highlighted == (before or 0) + 1, f"{screen_name}: #{target.id} {before} -> {target.highlighted} of {target.option_count}, focus {focused_before} -> {app.focused}"
 
     run_app(app, scenario)
+
+
+async def _show_every_decision(app, pilot):
+    app.screen.query_one("#field-file-options").focus()
+    await pilot.press("f2")
+
+
+async def _open_a_select(app, pilot):
+    from textual.widgets import Select
+
+    app.screen.query(Select).first().focus()
+    await pilot.press("enter")
+
+
+async def _notify(app, pilot):
+    for severity in ("information", "warning", "error"):
+        app.notify(f"A notice to read ({severity}).", severity=severity)
+
+
+# Beyond each screen as it opens: the picker showing every decision (F2,
+# the unavailable ones disabled), a Select's open list, the notifications.
+CONTRAST_STATES = {
+    **{name: (path, None) for name, (path, _) in FOCUS_SCREENS.items()},
+    "approve showing every decision": (["decisions", "decisions.approve"], _show_every_decision),
+    "a select open": (["repository", "repository.init"], _open_a_select),
+    "notifications": ([], _notify),
+}
+# What tells a control's state apart, WCAG's 3:1 for a component: a radio
+# button or checkbox (checked or not) and a select's arrow.
+_INDICATORS = {"●", "X", "▼", "▲"}
+
+
+def _drawn_segments(app):
+    """Every run of text on the screen as the terminal gets it: (text,
+    foreground, background), colors resolved."""
+    import io
+
+    from rich.console import Console
+    from textual.color import Color
+
+    console = Console(width=app.size.width, height=app.size.height, file=io.StringIO(), force_terminal=True,
+                      color_system="truecolor", record=True, legacy_windows=False, safe_box=False)
+    console.print(app.screen._compositor.render_update(full=True, screen_stack=app._background_screens))
+    for segment in console._record_buffer:
+        style = segment.style
+        if segment.control or not segment.text.strip() or style is None:
+            continue
+        foreground, background = style.color.get_truecolor(), style.bgcolor.get_truecolor()
+        if style.reverse:
+            foreground, background = background, foreground
+        yield segment.text.strip(), Color(*foreground), Color(*background)
+
+
+def _too_low(app):
+    """What falls below WCAG on the screen: text under 4.5:1, a state
+    indicator or the focused widget's border under 3:1. Box and block
+    characters otherwise are decoration -- a field's or a button's edges,
+    a scrollbar -- that no state depends on, so they are not measured."""
+    found = {}
+    for text, foreground, background in _drawn_segments(app):
+        graphic = all(0x2500 <= ord(c) <= 0x25FF or c == " " for c in text)
+        indicator = text in _INDICATORS
+        if graphic and not indicator:
+            continue
+        ratio = _contrast(foreground, background)
+        if ratio < (3 if indicator else 4.5):
+            found[f"{text[:24]} {foreground.hex} on {background.hex}"] = round(ratio, 2)
+    focused = app.focused
+    if focused is not None and focused.styles.border_left[0] not in ("", "none", "hidden", "blank"):
+        ratio = _contrast(focused.styles.border_left[1], focused.background_colors[0])
+        if ratio < 3:
+            found[f"focus border of {type(focused).__name__}"] = round(ratio, 2)
+    return found
+
+
+@pytest.mark.parametrize("state", list(CONTRAST_STATES))
+def test_every_screen_meets_wcag_contrast_in_every_preset(tmp_path, user_state, state):
+    """Reported on help (a heading in the buttons' blue, 2.36:1), then
+    swept on every screen: whatever Textual draws in a theme color no
+    preset sets for it -- a placeholder, a disabled option, the focus
+    border, an unchecked toggle, a select's arrow -- is measured as the
+    terminal gets it. The presets are switched on the open screen, which
+    measures the same as opening it in each (checked when this was written)."""
+    path, act = CONTRAST_STATES[state]
+    app = AdrpyTui(tmp_path, client=_focus_client(tmp_path), user_state=user_state)
+    too_low = {}
+
+    async def scenario(pilot):
+        await _walk(app, pilot, path)
+        if act:
+            await act(app, pilot)
+            await settle(pilot)
+        for preset in ("default", "light", "high-contrast"):
+            app.apply_preset(preset)
+            await settle(pilot)
+            too_low.update({f"{preset}: {key}": ratio for key, ratio in _too_low(app).items()})
+
+    run_app(app, scenario)
+    assert too_low == {}
 
 
 def test_help_shows_the_command_s_contract(tmp_path, user_state):

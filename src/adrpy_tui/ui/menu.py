@@ -33,6 +33,10 @@ class MenuScreen(AdrpyScreen):
         if self.menu is MAIN_MENU and problem is not None:
             yield Static(texts("menu.repo_problem", detail=problem.detail or problem.code), classes="error", markup=False)
         back = [] if self.menu is MAIN_MENU else [row(texts("menu.back"), id=BACK)]
+        if self.menu is MAIN_MENU and self.app.adrpy_outside_range:
+            found, expected = self.app.adrpy_outside_range
+            yield Static(texts("app.adrpy_outside_range", found=found, expected=expected), id="adrpy-outside-range",
+                         classes="warning", markup=False)
         if self.menu is MAIN_MENU and self.app.ignored_keys:
             yield Static(texts("keys.ignored", actions=", ".join(self.app.ignored_keys)), id="ignored-keys",
                          classes="warning", markup=False)

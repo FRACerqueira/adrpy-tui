@@ -25,8 +25,9 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Documentation",
 ]
-# adrpy-ai by name only, no URL and no floor: ADR003V01.
-dependencies = ["adrpy-ai", "textual>=8.2"]
+# adrpy-ai with the series adrpy-tui was validated against, no URL; the
+# start-up check reads this same range from the installed metadata (ADR003V01).
+dependencies = ["adrpy-ai>=0.1.dev0,<0.2", "textual>=8.2"]
 
 [project.urls]
 Homepage = "https://github.com/FRACerqueira/adrpy-tui"
@@ -49,6 +50,10 @@ addopts = "-n auto --dist loadgroup"
 packages = ["src/adrpy_tui"]
 # The documentation's image, not used by the package: kept in the sdist only.
 exclude = ["src/adrpy_tui/icon.png"]
+
+[tool.hatch.build.targets.sdist]
+# Repository-only material: the CI workflows and the release's manual checklist.
+exclude = [".github/", "doc/manual-test-checklist.md"]
 
 [tool.hatch.version]
 source = "vcs"

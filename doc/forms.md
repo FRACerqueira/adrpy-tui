@@ -47,7 +47,16 @@ confirm and the buttons -- measured on the rendered screen
 cursor roles inverted: its whole row in `tui-highlight` with its text in
 `tui-cursor`, so it stands apart from the other rows at 3:1 or more, not by
 its text color alone; out of focus, the theme's text on `tui-cursor`; under
-the mouse, underlined. Default is the default
+the mouse, underlined. The headings and table headers of a command's help
+and of a preview are the theme's text in bold, not Textual's primary color
+-- a button's background, too dark as text on a dark screen. So is every
+other color Textual draws that no preset sets for it: a placeholder, a
+disabled option (a group's title, a decision the command cannot take)
+and a select's arrow read at 4.5:1, an unchecked radio button or checkbox
+and the focused widget's border -- in the highlight role -- at WCAG's 3:1
+for a component. `tests/test_ui.py` measures everything drawn on every
+screen, in every preset; a field's or a button's edges and the scrollbars
+are decoration no state depends on, and are not measured. Default is the default
 because it already does while keeping each kind of text distinct, and High
 contrast is one choice away. Textual honors `NO_COLOR`. "Customize colors" sets any role's own color
 (`#RRGGBB` or a CSS name) on top of the chosen preset, shown at once and

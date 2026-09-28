@@ -5,6 +5,7 @@
   "appearance.preset.default": "標準 (ダーク)",
   "appearance.preset.light": "ライト",
   "appearance.preset.high-contrast": "ハイコントラスト",
+  "app.adrpy_outside_range": "adrpy-ai {found} がインストールされています。この adrpy-tui は adrpy-ai {expected} で検証されています。コマンドが失敗する可能性があります。この範囲のバージョンをインストールするか、adrpy-tui を更新してください。",
   "app.welcome": "adrpy-tui ({tui}) へようこそ · adrpy-ai {adrpy}",
   "app.repo": "リポジトリ: {path}",
   "app.command_started": "コマンド '{command}' を開始しました",

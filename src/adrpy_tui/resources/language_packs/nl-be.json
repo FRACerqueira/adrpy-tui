@@ -5,6 +5,7 @@
   "appearance.preset.default": "Standaard (donker)",
   "appearance.preset.light": "Licht",
   "appearance.preset.high-contrast": "Hoog contrast",
+  "app.adrpy_outside_range": "adrpy-ai {found} is geïnstalleerd; deze adrpy-tui is gevalideerd met adrpy-ai {expected}. Opdrachten kunnen mislukken; installeer een versie in dat bereik of werk adrpy-tui bij.",
   "app.welcome": "Welkom bij adrpy-tui ({tui}) · adrpy-ai {adrpy}",
   "app.repo": "Repository: {path}",
   "app.command_started": "opdracht '{command}' gestart",

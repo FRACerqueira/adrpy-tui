@@ -5,6 +5,7 @@
   "appearance.preset.default": "По умолчанию (тёмное)",
   "appearance.preset.light": "Светлое",
   "appearance.preset.high-contrast": "Высокий контраст",
+  "app.adrpy_outside_range": "Установлен adrpy-ai {found}; этот adrpy-tui проверен с adrpy-ai {expected}. Команды могут завершаться ошибкой; установите версию из этого диапазона или обновите adrpy-tui.",
   "app.welcome": "Добро пожаловать в adrpy-tui ({tui}) · adrpy-ai {adrpy}",
   "app.repo": "Репозиторий: {path}",
   "app.command_started": "команда '{command}' запущена",

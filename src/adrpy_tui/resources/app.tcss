@@ -94,6 +94,32 @@ Switch.-on > .switch--slider {
     color: $tui-highlight;
 }
 
+/* A Markdown table's header: the theme's text in bold, as the headings --
+   Textual's own is the primary color, a button's background. */
+MarkdownTableContent > .header {
+    color: $foreground;
+    text-style: bold;
+}
+
+/* An unchecked radio button or checkbox: Textual's is nearly the box's own
+   color (1.4:1), the control all but gone. Checked stays the success color. */
+ToggleButton > .toggle--button,
+SelectionList > .selection-list--button,
+SelectionList > .selection-list--button-highlighted {
+    color: $text-muted;
+}
+
+ToggleButton.-on > .toggle--button,
+SelectionList > .selection-list--button-selected,
+SelectionList > .selection-list--button-selected-highlighted {
+    color: $text-success;
+}
+
+/* A select's arrow: Textual's is half the text (2.97:1 on Light). */
+SelectCurrent .arrow {
+    color: $text-muted;
+}
+
 /* The row under the mouse: underlined, apart from the highlighted one. */
 OptionList > .option-list--option-hover {
     text-style: underline;

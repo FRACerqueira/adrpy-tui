@@ -7,7 +7,7 @@ from pathlib import Path
 from textual.app import App
 from textual.color import Color, ColorParseError
 
-from adrpy_tui.core import decisions, i18n, keys, themes
+from adrpy_tui.core import decisions, i18n, keys, themes, versions
 from adrpy_tui.core.client import Client
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
@@ -50,6 +50,9 @@ class AdrpyTui(App):
         # A failed read of the repository's config other than "there is
         # none", shown on the main menu.
         self.repo_problem = None
+        # An adrpy-ai outside the range this adrpy-tui was validated with,
+        # (found, range), shown on the main menu (ADR003V01).
+        self.adrpy_outside_range = versions.adrpy_outside_range()
         # Each decision state's label in this repository, for display, and
         # the decisions folder the explore screen's folders are relative to.
         self.labels = decisions.labels({})
@@ -85,18 +88,29 @@ class AdrpyTui(App):
         # whole row in the highlight role, its text in the cursor role, so it
         # stands apart from the other rows by more than a text color. Out of
         # focus, the theme's text on the cursor role: still shown, quieter.
+        foreground = base.to_color_system().generate()["foreground"]
         cursor = {
             "block-cursor-foreground": colors["tui-cursor"],
             "block-cursor-background": colors["tui-highlight"],
-            "block-cursor-blurred-foreground": base.to_color_system().generate()["foreground"],
+            "block-cursor-blurred-foreground": foreground,
             "block-cursor-blurred-background": colors["tui-cursor"],
         }
+        # Markdown headings (help, previews) in the theme's text, not in the
+        # primary color: that is a button's background, too dark as text.
+        # Every level in bold (Textual only underlines an H2).
+        headings = {f"markdown-h{level}-color": foreground for level in range(1, 7)}
+        headings["markdown-h2-text-style"] = "bold underline"
+        # Textual's quieter text -- a placeholder, a disabled option, a
+        # select's arrow, an unchecked toggle -- reads at 4.5:1 on any field
+        # (its 38% and 60% of the text do not); the focused widget's border
+        # is the highlight role, not the primary color (a button's).
+        quieter = {"text-disabled": "auto 65%", "text-muted": "auto 75%", "border": colors["tui-highlight"]}
         # A new name each time: setting the app's theme to the name it already
         # has would not repaint it.
         self._themes_built += 1
         name = f"{themes.theme_name(preset)}-{self._themes_built}"
         self.register_theme(replace(base, name=name, primary=spec.get("primary", base.primary),
-                                    variables={**base.variables, **colors, **cursor}))
+                                    variables={**base.variables, **colors, **cursor, **headings, **quieter}))
         return name
 
     def set_color(self, role, color):
