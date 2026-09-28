@@ -31,9 +31,11 @@ def test_the_icon_is_in_the_repository_but_not_in_the_wheel():
 
 
 def test_the_sdist_leaves_out_what_only_the_repository_needs():
-    """The CI workflows and the release's manual checklist; the tests stay,
-    for whoever packages adrpy-tui from its source."""
-    assert set(_build_targets()["sdist"]["exclude"]) == {".github/", "doc/manual-test-checklist.md"}
+    """The CI workflows, the release's manual checklist and the project's
+    own decision log, as adrpy-ai leaves them out; the tests stay, for
+    whoever packages adrpy-tui from its source."""
+    assert set(_build_targets()["sdist"]["exclude"]) == {".github/", "doc/manual-test-checklist.md",
+                                                          "doc/decision-log/"}
 
 
 def test_the_readme_links_only_by_absolute_url():

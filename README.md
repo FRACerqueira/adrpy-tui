@@ -140,6 +140,7 @@ Deleting it starts again from the language choice.
 | [Architecture](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/architecture.md) | Contributors | Why it exists, its boundaries, how adrpy is run and version-checked, the module map, testing |
 | [Manual test checklist](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/manual-test-checklist.md) | Maintainers | What to walk through in a real terminal before a release |
 | [Architecture decisions](https://github.com/FRACerqueira/adrpy-tui/tree/main/doc/adr/) | Contributors | The recorded decisions, written with adrpy itself (list below) |
+| [Decision log](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/decision-log/INDEX.md) | Contributors | Audit findings and other non-architectural decisions, one entry each, written with `adrpy log` |
 | [Contributing](https://github.com/FRACerqueira/adrpy-tui/blob/main/CONTRIBUTING.md) | Contributors | Development setup, tests, translations, pull requests |
 | [Changelog](https://github.com/FRACerqueira/adrpy-tui/blob/main/CHANGELOG.md) | Everyone | What changed |
 
