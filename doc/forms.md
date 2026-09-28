@@ -160,7 +160,7 @@ them. `tests/test_untrusted_text.py` drives every screen with such names.
 | Date | refdate | `MaskedInput` `9999-99-99`, defaults to today |
 | On/off | `--empty`, booleans | `Switch` |
 | Several of a list | explore columns, migrate list | `SelectionList` |
-| Rows with columns | explore | `PagedList` rows whose columns are padded by terminal cells (a CJK label takes two), the last never cut, under a header line; a filter `Input` |
+| Rows with columns | explore | `PagedList` rows whose columns are padded by terminal cells (a CJK label takes two), the last never cut, under a header line; a filter `Input`; below the list, the highlighted row's values whole (explore) or the entry's whole file name and folder (the log browser), since every other column is cut to its width |
 | Errors | check, a failed command | `ErrorList`: a `PagedList` row per error (file · code), the highlighted one's detail, hint and related files below, in adrpy's words -- a hint is too long for a table cell |
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |

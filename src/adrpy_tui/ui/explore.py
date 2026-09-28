@@ -60,6 +60,9 @@ class ExploreScreen(AdrpyScreen):
         yield Static(_cells([texts(f"column.{name}") for name in ("file", "folder", "status", "scope", "domain")]),
                      classes="info", markup=False)
         yield PagedList(list_id="decisions")
+        # Every column but the last is cut to its width: the highlighted row's
+        # values are shown here whole.
+        yield Static("", id="explore-current", classes="summary", markup=False)
         yield Static("", id="explore-count", classes="info", markup=False)
         yield Static("", id="explore-notes", classes="warning", markup=False)
 
@@ -114,6 +117,7 @@ class ExploreScreen(AdrpyScreen):
             if not isinstance(self.app.focused, (Input, Select)):
                 options.focus()  # the arrows move the list, not the page
         self.query_one(PagedList).update_page()
+        self._show_current()
         self.query_one("#explore-count", Static).update(
             self.app.texts("explore.count", shown=options.option_count, total=len(self._decisions)))
 
@@ -126,6 +130,21 @@ class ExploreScreen(AdrpyScreen):
 
     def on_input_submitted(self, event):
         self.query_one("#decisions").focus()
+
+    def on_option_list_option_highlighted(self, event):
+        if event.option_list.id == "decisions":
+            self._show_current()
+
+    def _show_current(self):
+        options = self.query_one("#decisions")
+        text = ""
+        if options.highlighted is not None and options.option_count:
+            decision = self._decisions[int(options.get_option_at_index(options.highlighted).id)]
+            header = decision.get("header") or {}
+            values = (decision["filename"], self._folders.get(decision["path"], ""),
+                      self.app.labels.get(state(decision), "?"), header.get("scope"), header.get("domain"))
+            text = "  ·  ".join(visible(str(value)) for value in values if value)
+        self.query_one("#explore-current", Static).update(text)
 
     def on_option_list_option_selected(self, event):
         self.app.push_screen(DetailScreen(self._decisions[int(event.option.id)]))

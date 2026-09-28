@@ -3165,3 +3165,48 @@ def test_a_failed_init_does_not_rebuild_the_menus(tmp_path, user_state):
         assert len(app.screen_stack) == 3  # back where it was: no rebuild
 
     run_app(app, scenario)
+
+
+def test_explore_shows_every_column_of_the_highlighted_row_uncut_below_the_list(tmp_path, user_state):
+    """Every column but the last is cut to its width, by design (doc/forms.md):
+    a name is often three times the file column, and a folder, a status
+    label or a scope can pass theirs. The highlighted row's values are shown
+    whole below the list, and follow the cursor."""
+    long_name = "ADR003V01R01-" + "a-decision-whose-title-goes-on-far-longer-than-any-column" * 2 + ".md"
+    first = _decision(long_name, update="Accepted", updated="2026-02-01",
+                      scope="a-scope-longer-than-its-column", domain="platform")
+    first["path"] = str(tmp_path / "doc" / "adr" / "a-team-folder-with-a-long-name" / long_name)
+    second = _decision("ADR004V01-short.md", update="Accepted", updated="2026-02-01")
+    second["path"] = str(tmp_path / "doc" / "adr" / "ADR004V01-short.md")
+    labels = {**REPO_CONFIG, "statusacc": "Accepted-by-the-architecture-board"}
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": labels, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [first, second], "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        assert _text(app.screen, "#explore-current") == "  ·  ".join((
+            long_name, "a-team-folder-with-a-long-name", "Accepted-by-the-architecture-board",
+            "a-scope-longer-than-its-column", "platform"))
+        await pilot.press("down")
+        await settle(pilot)
+        assert _text(app.screen, "#explore-current") == "ADR004V01-short.md  ·  .  ·  Accepted-by-the-architecture-board"
+
+    run_app(app, scenario)
+
+
+def test_the_log_browser_shows_the_highlighted_entry_s_whole_name_below_the_list(tmp_path, user_state):
+    """The classification and scope columns are cut to their width; the
+    entry's file name holds every column, and is shown whole below the list."""
+    log = tmp_path / "doc" / "decision-log" / "2026"
+    log.mkdir(parents=True)
+    name = "2026-03-01--a-classification-longer-than-its-column--a-scope-longer-than-its-column--slug.md"
+    (log / name).write_text("# x\n", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert _text(app.screen, "#logs-current") == f"{name}  ·  2026"
+
+    run_app(app, scenario)

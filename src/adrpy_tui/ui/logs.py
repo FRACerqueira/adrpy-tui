@@ -45,6 +45,9 @@ class LogScreen(AdrpyScreen):
         yield Static(_cells([texts(f"column.{name}") for name in ("date", "classification", "scope", "slug")],
                             _WIDTHS), classes="info", markup=False)
         yield PagedList(list_id="entries")
+        # The classification and scope columns are cut to their width: the
+        # highlighted entry's file name, which holds every column, is shown whole.
+        yield Static("", id="logs-current", classes="summary", markup=False)
         yield Static("", id="logs-count", classes="info", markup=False)
 
     def on_mount(self):
@@ -71,11 +74,25 @@ class LogScreen(AdrpyScreen):
         if options.option_count:
             options.highlighted = 0
         self.query_one(PagedList).update_page()
+        self._show_current()
         self.query_one("#logs-count", Static).update(
             self.app.texts("logs.count", shown=options.option_count, total=len(self._entries)))
 
     def on_input_changed(self, event):
         self._fill()
+
+    def on_option_list_option_highlighted(self, event):
+        if event.option_list.id == "entries":
+            self._show_current()
+
+    def _show_current(self):
+        options = self.query_one("#entries")
+        text = ""
+        if options.highlighted is not None and options.option_count:
+            path = self._entries[int(options.get_option_at_index(options.highlighted).id)]
+            folder = path.parent.relative_to(self.app.repo / self.app.folderlog).as_posix()
+            text = f"{visible(path.name)}  ·  {visible(folder)}"
+        self.query_one("#logs-current", Static).update(text)
 
     def on_input_submitted(self, event):
         self.query_one("#entries").focus()
