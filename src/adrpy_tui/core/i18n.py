@@ -20,8 +20,9 @@ class Texts:
         self.language = language
         self._messages = messages
 
-    def __call__(self, key, **params):
-        return self._messages[key].format(**params)
+    def __call__(self, message, /, **params):
+        # Positional only: a message may well have a {key} of its own.
+        return self._messages[message].format(**params)
 
 
 def load(language):

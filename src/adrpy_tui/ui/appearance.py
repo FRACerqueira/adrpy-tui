@@ -9,7 +9,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, OptionList, Static
 
 from adrpy_tui.core import contrast, themes
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -19,7 +19,7 @@ CHANGED = "•"
 
 
 class AppearanceScreen(AdrpyScreen):
-    HINTS = "hints.menu"
+    HINTS = HINTS_MENU
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def compose_body(self):
@@ -75,7 +75,7 @@ def contrast_of(app, role, value):
 
 
 class ColorsScreen(AdrpyScreen):
-    HINTS = "hints.menu"
+    HINTS = HINTS_MENU
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def compose_body(self):

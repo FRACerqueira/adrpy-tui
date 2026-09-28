@@ -75,12 +75,37 @@ page 2 of 3 · PgUp/PgDn"; a list that fits one page has no such line.
 on its first item or on the one remembered, whatever its page.
 `tests/test_ui.py` checks that every list a screen shows is paged. The one exception is a field's short, fixed list of choices (the providers and skills of the skills forms, four and three): never more than a page, it is a `SelectionList` capped at eight rows rather than a `PagedList`.
 
+## Keys
+
+Three actions have a key that can be changed, in the main menu's "Keys"
+(`core/keys.py`, `ui/keys.py`): **run the screen's action** (`Ctrl+R`: run
+a form, save a config, migrate, use a folder -- one action, so one key for
+all four), **preview** (`F3`, as file managers' "view") and **show all /
+only the available ones** (`F2`, in the decision picker). Enter waits for
+the new key; one that another action has, or that every screen relies on,
+is refused with the reason; Backspace and "Restore every key" go back to the
+defaults. The keys are kept with the language; a saved key that can't be
+used is ignored and named on the main menu. Esc, Enter, Tab, the arrows,
+`PgUp`/`PgDn`/`Home`/`End`, and Textual's own `Ctrl+C`/`Ctrl+Q`/`Ctrl+P`
+never change. The key line under every screen is built from the keys in
+use, so it always names the key that works.
+
+## Previews
+
+The preview key opens the rendered content of the decision or log entry
+under the cursor, from every list of them: explore and a decision's detail,
+the decision picker (before choosing), check's errors, a command's result
+(the file it wrote), migrate's files, and the decision-log browser. A link
+to another `.md`, relative to the file, opens that file's preview; `Esc`
+goes back, as a browser does. A link to anything else is only named, never
+opened in a browser: the file may not be the person's own.
+
 ## Components
 
 | Input | Used for | Textual |
 |---|---|---|
 | Menu | menus | `OptionList` (disabled items), description panel below |
-| Decision choice | choosing a decision | `AdrPicker`: a filter `Input` by name (`Enter` moves to the list) over an `OptionList` of the decisions with the repository's label for their state, paged like every list (see "Lists"); a `Switch`, on by default, lists only the ones the command can take, and off lists them all with the others disabled; the choice is shown below |
+| Decision choice | choosing a decision | `AdrPicker`: a filter `Input` by name (`Enter` moves to the list) over an `OptionList` of the decisions with the repository's label for their state, paged like every list (see "Lists"); a `Switch`, on by default, lists only the ones the command can take, and off lists them all with the others disabled -- `F2` flips it from any field, and a line says what it hides ("3 of 49 decisions (only the available ones · F2 shows all)"); the choice is shown below |
 | Enum | separator, casetransform, language, log enums | `Select` |
 | Validated text | titles, labels, prefix | `Input(max_length, restrict, validators)` |
 | Text with suggestions | scope, domain | `Input` whose inline suggestion continues what was typed (prefix match, `→` accepts it), plus a line below listing existing values that contain the text or look like it (`difflib`) |
@@ -146,12 +171,13 @@ from `explore`.
 | `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` |
 | `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` |
 | `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) |
-| `explore` | its own screen: File, Status (the repository's label), Scope, Domain for every decision, a filter by name, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
+| `explore` | its own screen: File, Folder (relative to the decisions folder, `.` straight in it: adrpy finds decisions in subfolders too), Status (the repository's label), Scope, Domain for every decision, a folder `Select` and a filter by name or folder, with "12 of 49 decisions" below, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
 | `check` | its own screen, run as it opens and again when it comes back to the top: "No inconsistencies in N decisions", or the `ErrorList` |
 | `init` | the current repository only (another folder goes through "Change repository") · the config's source, a `RadioSet`: adrpy's defaults in a language (a `Select`, preselected with the UI language), the default (the install-level config, or English when there is none), or a config file (a path, required and existing while chosen); only the chosen source's field is shown and sent. On an initialized repository a warning says a config file replaces it and the other sources are refused. Once it succeeds the repository is read again and the menus rebuilt |
 | `config` | a list of the fields in groups (folders, names, status labels, header labels, template, plugins), each with its current value; `Enter` edits one with the editor of its type (enum → `Select`, integer → `Select` over its range, boolean → `Switch`, template → `TextArea`, text → `Input`); changed fields are marked, and saving runs one `config` with only them. Fields adrpy guards once decisions exist say so in their description; adrpy's refusal stays the final word |
 | `installconfig` | the same editor, with no `--path`; while this machine has no install-level config, it offers to create one first, from a language pack or a config file. Its tests use a fake client only: the real adrpy would write the machine's own install-level config |
 | `migrate` | a guided builder: (1) the files to migrate; (2) on a sample file name, the position and length of each part (number, title, optional version, revision, prefix) chosen one by one, each showing what it reads from the sample; (3) a preview of what the pattern reads from every file, through `explore --migrationpattern`; (4) confirm the two commands, `config --migrationpattern` then `migrate` |
+| `log` (browse) | its own screen: every entry under the decision-log folder (subfolders too; the generated `INDEX.md` left out), Date, Classification, Scope, Slug read from its name, a classification `Select` and a filter, with "3 of 12 entries" below; `Enter` or the preview key opens the entry rendered |
 | `log` | classification, severity and resolution `Select` (adrpy's own vocabulary, as is) · scope, slug `Input` that only take kebab-case · summary · body `TextArea` · refdate · front, severity, resolution, round (digits only, empty for the next one) shown only for `audit-finding`/`doc-drift`, reopenwhen only for `deferred`; front and reopenwhen are required while shown |
 | `skills list` | its own screen: skill, provider, scope, state (installed, not installed, changed by hand) and file of every row adrpy-skills reports, in the paged list |
 | `skills install`, `skills remove` | providers and skills, each a `SelectionList` sent comma-separated (nothing chosen: all, adrpy-skills' default) · where, a `RadioSet`: this repository or my user folder (claude only) · force, allow external links `Switch`. Tests only send `global` to a fake client: the real adrpy-skills would write to the user's own home |

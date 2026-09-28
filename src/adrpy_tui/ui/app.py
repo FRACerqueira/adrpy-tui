@@ -7,7 +7,7 @@ from pathlib import Path
 from textual.app import App
 from textual.color import Color, ColorParseError
 
-from adrpy_tui.core import decisions, i18n, themes
+from adrpy_tui.core import decisions, i18n, keys, themes
 from adrpy_tui.core.client import Client
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
@@ -17,7 +17,9 @@ from adrpy_tui.ui.config import ConfigScreen
 from adrpy_tui.ui.explore import ExploreScreen
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.help import HelpScreen
+from adrpy_tui.ui.keys import KeysScreen
 from adrpy_tui.ui.language import LanguageScreen
+from adrpy_tui.ui.logs import LogScreen
 from adrpy_tui.ui.menu import MenuScreen
 from adrpy_tui.ui.migrate import MigrateScreen
 from adrpy_tui.ui.repository import RepositoryScreen
@@ -48,8 +50,11 @@ class AdrpyTui(App):
         # A failed read of the repository's config other than "there is
         # none", shown on the main menu.
         self.repo_problem = None
-        # Each decision state's label in this repository, for display.
+        # Each decision state's label in this repository, for display, and
+        # the decisions folder the explore screen's folders are relative to.
         self.labels = decisions.labels({})
+        self.folderadr = "doc/adr"
+        self.folderlog = "doc/decision-log"
         self._themes_built = 0
         # The customized colors this app can read; the others are ignored
         # and named on the main menu.
@@ -61,6 +66,15 @@ class AdrpyTui(App):
                 self.ignored_colors.append(role)
         self.preset = themes.preset_or_default(self.user_state.appearance)
         self.apply_preset(self.preset)
+        # The keys chosen for the configurable actions (core/keys.py) that can
+        # be used; the others are ignored and named on the main menu.
+        self.chosen_keys, self.ignored_keys = {}, []
+        for action, key in self.user_state.keys.items():
+            if action in keys.ACTIONS and keys.problem(key) is None:
+                self.chosen_keys[action] = key
+            else:
+                self.ignored_keys.append(action)
+        self.set_keymap(keys.keymap(self.chosen_keys))
 
     def _theme(self, preset):
         """A theme of `preset` with the customized colors on top."""
@@ -99,6 +113,24 @@ class AdrpyTui(App):
 
     def effective_colors(self):
         return {**themes.PRESETS[self.preset]["colors"], **self.custom_colors}
+
+    def set_key(self, action, key):
+        """Keeps an action's own key (None: its default) and uses it."""
+        if key is None:
+            self.chosen_keys.pop(action, None)
+        else:
+            self.chosen_keys[action] = key
+        self.user_state.set_key(action, key)
+        self.set_keymap(keys.keymap(self.chosen_keys))
+
+    def reset_keys(self):
+        self.chosen_keys = {}
+        self.user_state.reset_keys()
+        self.set_keymap({})
+
+    def key_of(self, action):
+        """The key an action has now: the person's, else its default."""
+        return self.chosen_keys.get(action, keys.ACTIONS[action])
 
     def get_theme_variable_defaults(self):
         # Read while the stylesheet is parsed, before any theme applies.
@@ -143,7 +175,10 @@ class AdrpyTui(App):
 
     def repository_read(self, result):
         self.configured = result.success
-        self.labels = decisions.labels(result.data.get("config") or {})
+        config = result.data.get("config") or {}
+        self.labels = decisions.labels(config)
+        self.folderadr = config.get("folderadr") or "doc/adr"
+        self.folderlog = config.get("folderlog") or "doc/decision-log"
         self.repo_problem = None if result.success or result.code == "config-not-found" else result
         self.switch_screen(MenuScreen())
 
@@ -154,6 +189,10 @@ class AdrpyTui(App):
             self.push_screen(LanguageScreen(first_run=False))
         elif item.id == "appearance":
             self.push_screen(AppearanceScreen())
+        elif item.id == "log.browse":
+            self.push_screen(LogScreen())
+        elif item.id == "keys":
+            self.push_screen(KeysScreen())
         elif item.id == "change-repository":
             self.push_screen(RepositoryScreen())
         elif item.submenu:

@@ -72,6 +72,7 @@ graph TD
 | `core/migration.py` | The legacy naming pattern: built part by part, parsed, what a part reads from a name, and a first proposal. |
 | `core/text.py` | Text from files made safe to show: no control character reaches the terminal. |
 | `core/contrast.py` | WCAG contrast between two colors. |
+| `core/keys.py` | The actions whose key can be changed, their defaults, the keys that never change, and how a key is named on screen. |
 | `core/i18n.py` | The language packs, the language list and the operating system's language (ADR005V01). |
 | `core/themes.py` | The appearance presets: the color of each screen role on top of a Textual base theme. |
 | `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
@@ -82,6 +83,8 @@ graph TD
 | `ui/running.py` | Confirming and running a screen's commands, then the result; nothing leaves the screen or runs again meanwhile. Forms, the config editors and migrate go through it. |
 | `ui/form.py`, `ui/config.py`, `ui/migrate.py` | A command's form; the config and install-level config editor; the guided migrate builder. |
 | `ui/explore.py`, `ui/check.py`, `ui/skills.py`, `ui/help.py` | The screens that read: explore and a decision's detail, check, the skills list, a command's help. |
+| `ui/preview.py`, `ui/logs.py` | A decision's or log entry's content rendered, its links to other `.md` files followed; the decision-log browser. |
+| `ui/keys.py` | The keys of the configurable actions, and the capture of a new one. |
 | `ui/menu.py`, `ui/language.py`, `ui/appearance.py`, `ui/repository.py`, `ui/startup.py`, `ui/confirm.py`, `ui/result.py` | The menus, the language choice, the appearance and colors, change repository, the first read of the repository, the confirmation and the result. |
 
 ## Languages

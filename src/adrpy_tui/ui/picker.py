@@ -7,6 +7,7 @@ from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import Input, Label, OptionList, Static, Switch
 
+from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import state
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -45,6 +46,7 @@ class AdrPicker(Vertical):
             yield Switch(value=True, id=f"{self.id}-only-available")
             yield Label(texts("picker.only_available"))
         yield PagedList(list_id=f"{self.id}-options", page_id=f"{self.id}-page")
+        yield Static("", id=f"{self.id}-filter-note", classes="info", markup=False)
         yield Static("", id=f"{self.id}-selected", classes="info", markup=False)
 
     def focus(self, scroll_visible=True):
@@ -78,6 +80,31 @@ class AdrPicker(Vertical):
         paged = self.query_one(PagedList)
         paged.empty_text = self.app.texts("picker.none" if self._decisions else "picker.empty")
         paged.update_page()
+        self._show_filter_note()
+
+    def _show_filter_note(self):
+        """Says what the list leaves out, and the key that shows it."""
+        texts = self.app.texts
+        key = keys.display(self.app.key_of("toggle"), texts)
+        shown, total = self.query_one(OptionList).option_count, len(self._decisions)
+        if not total:
+            note = ""
+        elif self.query_one(Switch).value:
+            note = texts("picker.count_available", shown=shown, total=total, key=key)
+        else:
+            note = texts("picker.count_all", total=total, key=key)
+        self.query_one(f"#{self.id}-filter-note", Static).update(note)
+
+    def toggle_available(self):
+        switch = self.query_one(Switch)
+        switch.value = not switch.value
+
+    def highlighted_path(self):
+        """The path of the decision the cursor is on, for its preview."""
+        options = self.query_one(OptionList)
+        if options.highlighted is None or not options.option_count:
+            return None
+        return self._decisions[int(options.get_option_at_index(options.highlighted).id)]["path"]
 
     def show_failure(self, detail):
         """explore could not list the decisions: says why, in adrpy's words."""

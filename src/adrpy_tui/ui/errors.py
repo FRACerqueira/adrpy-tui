@@ -37,6 +37,12 @@ class ErrorList(Vertical):
         if options.option_count:
             options.highlighted = 0
 
+    def highlighted_path(self):
+        options = self.query_one(f"#{self.id}-options")
+        if options.highlighted is None or not options.option_count:
+            return None
+        return self._errors[int(options.get_option_at_index(options.highlighted).id)].get("file")
+
     def on_option_list_option_highlighted(self, event):
         event.stop()
         error = self._errors[int(event.option.id)]

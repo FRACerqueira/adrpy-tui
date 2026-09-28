@@ -9,11 +9,11 @@ from textual.widgets import OptionList, Static
 from textual.widgets.option_list import OptionDoesNotExist
 
 from adrpy_tui.core.registry import FORMS, MAIN_MENU, command_name
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen
 from adrpy_tui.ui.paged import PagedList, row
 
 # Items that open no form but are available.
-_ACTIONS = ("change-repository", "language", "appearance", "exit")
+_ACTIONS = ("log.browse", "change-repository", "language", "appearance", "keys", "exit")
 # The first option of every submenu: back to the menu it was opened from.
 BACK = "back"
 
@@ -24,7 +24,7 @@ class MenuScreen(AdrpyScreen):
     def __init__(self, menu=MAIN_MENU):
         super().__init__()
         self.menu = menu
-        self.HINTS = "hints.main" if menu is MAIN_MENU else "hints.menu"
+        self.HINTS = HINTS_MAIN if menu is MAIN_MENU else HINTS_MENU
 
     def compose_body(self):
         texts = self.app.texts
@@ -33,6 +33,9 @@ class MenuScreen(AdrpyScreen):
         if self.menu is MAIN_MENU and problem is not None:
             yield Static(texts("menu.repo_problem", detail=problem.detail or problem.code), classes="error", markup=False)
         back = [] if self.menu is MAIN_MENU else [row(texts("menu.back"), id=BACK)]
+        if self.menu is MAIN_MENU and self.app.ignored_keys:
+            yield Static(texts("keys.ignored", actions=", ".join(self.app.ignored_keys)), id="ignored-keys",
+                         classes="warning", markup=False)
         if self.menu is MAIN_MENU and self.app.ignored_colors:
             yield Static(texts("appearance.ignored", roles=", ".join(self.app.ignored_colors)), id="ignored-colors",
                          classes="warning", markup=False)

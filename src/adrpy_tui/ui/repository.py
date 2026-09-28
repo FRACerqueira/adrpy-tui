@@ -8,6 +8,7 @@ from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import DirectoryTree, Input, Static
 
+from adrpy_tui.core import keys
 from adrpy_tui.core.text import printable
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.paged import PAGE_SIZE
@@ -24,8 +25,8 @@ class FoldersTree(DirectoryTree):
 
 
 class RepositoryScreen(AdrpyScreen):
-    HINTS = "hints.repository"
-    BINDINGS = [Binding("escape", "back", show=False), Binding("ctrl+r", "use", show=False)]
+    HINTS = (("tab", "tree"), ("enter", "open_choose"), ("@run", "use"), ("escape", "back"))
+    BINDINGS = [Binding("escape", "back", show=False), Binding(keys.ACTIONS["run"], "use", id=keys.binding_id("run"), show=False)]
 
     def compose_body(self):
         texts = self.app.texts

@@ -2,6 +2,7 @@
 deletes a folder it did not build."""
 
 import importlib.util
+import pathlib
 from pathlib import Path
 
 import pytest
@@ -40,6 +41,7 @@ def test_the_sample_repository_has_a_decision_in_every_state(samples, client):
     # the revision `revise` wrote is R02, the version `version` wrote V02.
     assert any("R02" in name for name in names) and any("V02" in name for name in names)
     assert client.run("check", ("--path", str(samples / "sample"))).success
+    assert any("backend" in pathlib.Path(decision["path"]).parent.name for decision in decisions)
 
 
 def test_the_sample_repository_uses_the_chosen_language_s_labels(samples, client):

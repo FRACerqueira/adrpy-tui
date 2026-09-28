@@ -5,6 +5,14 @@ def test_escape_sequences_and_other_control_characters_are_dropped():
     assert printable("# Title\x1b[2J\x1b]0;owned\x07 end\x9b") == "# Title[2J]0;owned end"
 
 
+def test_a_log_entry_s_name_gives_its_date_classification_scope_and_slug():
+    from adrpy_tui.ui.logs import entry_parts
+
+    assert entry_parts("2026-02-05--audit-finding--security--no-expiry.md") == (
+        "2026-02-05", "audit-finding", "security", "no-expiry")
+    assert entry_parts("notes.md") == ("", "", "", "notes")
+
+
 def test_text_layout_is_kept():
     assert printable("a\tb\r\nc\n") == "a\tb\nc\n"
 

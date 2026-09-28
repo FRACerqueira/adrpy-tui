@@ -6,6 +6,8 @@ report `Proposed`, `Accepted`, ... whatever labels a repository
 configures); the labels are for display only (ADR001V01).
 """
 
+from pathlib import Path
+
 PROPOSED = "Proposed"
 ACCEPTED = "Accepted"
 REJECTED = "Rejected"
@@ -34,6 +36,20 @@ def state(decision):
     if current:
         return current
     return MIGRATED if header.get("is_migrated") else INVALID
+
+
+TOP = "."  # a decision straight in the decisions folder
+
+
+def folder_of(path, decisions_folder):
+    """The folder of a decision relative to the decisions folder, "." for one
+    straight in it: adrpy finds decisions in its subfolders too."""
+    parent = Path(path).parent
+    try:
+        relative = parent.relative_to(decisions_folder)
+    except ValueError:
+        return parent.name
+    return relative.as_posix() if relative.parts else TOP
 
 
 def labels(config):

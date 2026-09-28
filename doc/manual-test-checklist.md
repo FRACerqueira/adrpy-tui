@@ -24,6 +24,17 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 - [ ] A list longer than eight rows shows "Items … · page … · PgUp/PgDn";
       `PgUp`, `PgDn`, `Home` and `End` move as it says.
 
+## Keys and previews (`sample`)
+
+- [ ] F2 and F3 reach the program in this terminal. On a Mac laptop they
+      need Fn unless the system is set otherwise; VS Code's integrated
+      terminal may take some F keys itself.
+- [ ] F3 on explore, the picker, check's errors, a result, migrate's files
+      and the log browser opens the rendered file; a link to another ADR
+      opens it; Esc comes back.
+- [ ] Keys: give Run another key; the key line of a form names it and it
+      runs; a key another action has is refused.
+
 ## First run and appearance (`empty`)
 
 - [ ] With no state file (`%APPDATA%\adrpy-tui\state.json` removed on
@@ -60,9 +71,10 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 
 ## Explore and validate (`sample`, `broken`)
 
-- [ ] Explore: the columns line up, in every language; a decision's detail
-      shows its content and the actions its state allows, each opening its
-      form with the decision chosen.
+- [ ] Explore: the columns line up, in every language; the folder column
+      and the folder select show ADR003, which lives in `backend/`; a
+      decision's detail shows its content and the actions its state allows,
+      each opening its form with the decision chosen.
 - [ ] After an action, the detail and the list show the change.
 - [ ] Check on `broken`: the errors list, each hint below it; on `sample`,
       "No inconsistencies".
@@ -70,6 +82,8 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 ## Decision log and AI skills (`sample`)
 
 - [ ] New entry: the fields each classification takes appear with it.
+- [ ] Browse the entries: the classification select filters them; Enter
+      opens one rendered.
 - [ ] AI skills: install for this repository, list shows it installed,
       remove takes it away. (Installing in the user folder writes to your
       real home.)

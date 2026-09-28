@@ -11,15 +11,21 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Switch
 
 from adrpy_tui.core.text import printable
+from adrpy_tui.core import keys
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.paged import PagedList, row
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 from adrpy_tui.ui.running import CommandRunner
 
 
 class MigrateScreen(CommandRunner, AdrpyScreen):
-    HINTS = "hints.migrate"
-    BINDINGS = [Binding("escape", "back", show=False), Binding("ctrl+r", "migrate", show=False)]
+    HINTS = (("tab", "next"), ("enter", "choose"), ("@preview", "preview"), ("@run", "migrate"), ("escape", "back"))
+    BINDINGS = [
+        Binding("escape", "back", show=False),
+        Binding(keys.ACTIONS["run"], "migrate", id=keys.binding_id("run"), show=False),
+        PREVIEW_BINDING,
+    ]
     DEFAULT_CSS = """
     MigrateScreen .part { height: auto; }
     MigrateScreen .part > Label { width: 12; padding: 1 1; }
@@ -186,6 +192,12 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         # Stops at the first that fails: migrate never runs on a pattern
         # that was not saved.
         self.confirm_and_run(self._commands())
+
+    def action_preview(self):
+        files = self.query("#files")
+        if files and files.first().highlighted is not None:
+            options = files.first()
+            open_preview(self.app, self._files[int(options.get_option_at_index(options.highlighted).id)])
 
     def action_back(self):
         if not self.command_running:

@@ -5,7 +5,7 @@ from textual.binding import Binding
 from textual.widgets import OptionList, Static
 
 from adrpy_tui.core import i18n
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -16,7 +16,7 @@ class LanguageScreen(AdrpyScreen):
     def __init__(self, first_run):
         super().__init__()
         self._first_run = first_run
-        self.HINTS = "hints.main" if first_run else "hints.menu"
+        self.HINTS = HINTS_MAIN if first_run else HINTS_MENU
 
     def compose_body(self):
         texts = self.app.texts

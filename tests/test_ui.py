@@ -1,5 +1,6 @@
 """The screens, driven headless through Textual's Pilot."""
 
+import pathlib
 import threading
 
 import pytest
@@ -16,9 +17,12 @@ from adrpy_tui.ui.explore import DetailScreen, ExploreScreen
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.help import HelpScreen
+from adrpy_tui.ui.keys import KeyCaptureScreen, KeysScreen
 from adrpy_tui.ui.language import LanguageScreen
+from adrpy_tui.ui.logs import LogScreen
 from adrpy_tui.ui.menu import MenuScreen
 from adrpy_tui.ui.migrate import MigrateScreen
+from adrpy_tui.ui.preview import PreviewScreen
 from adrpy_tui.ui.repository import RepositoryScreen
 from adrpy_tui.ui.result import ResultScreen
 
@@ -560,6 +564,7 @@ async def _open(pilot, item):
     options = _options(pilot.app.screen)
     options.highlighted = options.get_option_index("decisions")  # not the remembered item
     await pilot.press("enter")
+    await settle(pilot)  # the submenu is mounted before it is queried
     options = _options(pilot.app.screen)
     options.highlighted = options.get_option_index(f"decisions.{item}")
     await pilot.press("enter")
@@ -752,7 +757,7 @@ def test_a_remembered_item_past_the_first_page_opens_on_its_page(tmp_path, user_
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
     async def scenario(pilot):
-        assert _page_text(app.screen, "options") == "Items 9–11 of 11 · page 2 of 2 · PgUp/PgDn"
+        assert _page_text(app.screen, "options") == "Items 9–12 of 12 · page 2 of 2 · PgUp/PgDn"
 
     run_app(app, scenario)
 
@@ -841,11 +846,17 @@ def test_every_list_of_the_other_screens_is_paged(tmp_path, user_state):
         await back(pilot)
         await _open_colors(pilot)
         _check_paged(app, seen)
+        await back(pilot)  # colors -> appearance -> main menu
+        await _open_group_item(pilot, "log", "browse")
+        _check_paged(app, seen)
+        await back(pilot)
+        await _open_keys(pilot)
+        _check_paged(app, seen)
 
     run_app(app, scenario)
     assert set(seen) == {"ExploreScreen", "DetailScreen", "CheckScreen", "MigrateScreen", "SkillsListScreen",
-                         "FormScreen", "ColorsScreen"}
-    assert len(seen) == 8
+                         "FormScreen", "ColorsScreen", "LogScreen", "KeysScreen"}
+    assert len(seen) == 10
 
 
 def test_every_list_of_every_screen_is_paged(tmp_path, user_state):
@@ -1049,6 +1060,7 @@ async def _open_group_item(pilot, group, item):
     options = _options(pilot.app.screen)
     options.highlighted = options.get_option_index(group)
     await pilot.press("enter")
+    await settle(pilot)  # the submenu is mounted before it is queried
     options = _options(pilot.app.screen)
     options.highlighted = options.get_option_index(f"{group}.{item}")
     await pilot.press("enter")
@@ -1065,11 +1077,13 @@ def test_explore_lists_every_decision_with_its_label_scope_and_domain(tmp_path, 
     async def scenario(pilot):
         await _open_group_item(pilot, "explore", "explore")
         assert isinstance(app.screen, ExploreScreen)
+        # The fake decisions' paths are outside this repository: their folder
+        # shows as its own name.
         assert _rows(app.screen.query_one("#decisions", OptionList)) == [
-            "ADR001V01-proposed.md Proposto",
-            "ADR002V01-accepted.md Aceito backend dados",
-            "ADR003V01-rejected.md Rejeitado",
-            "ADR004V01-migrated.md Migrado",
+            "ADR001V01-proposed.md adr Proposto",
+            "ADR002V01-accepted.md adr Aceito backend dados",
+            "ADR003V01-rejected.md adr Rejeitado",
+            "ADR004V01-migrated.md adr Migrado",
         ]
 
     run_app(app, scenario)
@@ -2020,6 +2034,352 @@ def _rendered_rows(options):
     for match in re.finditer(r'<text[^>]*?y="([\d.]+)"[^>]*>(.*?)</text>', svg):
         rows.setdefault(float(match.group(1)), []).append(html.unescape(re.sub(r"<[^>]+>", "", match.group(2))))
     return "\n".join("".join(parts) for _, parts in sorted(rows.items())).replace("\xa0", " ")
+
+
+async def _open_keys(pilot):
+    options = _options(pilot.app.screen)
+    options.highlighted = options.get_option_index("keys")
+    await pilot.press("enter")
+    await settle(pilot)
+    assert isinstance(pilot.app.screen, KeysScreen)
+    return pilot.app.screen.query_one("#actions", OptionList)
+
+
+async def _capture(pilot, actions, action, *pressed):
+    actions.focus()
+    actions.highlighted = actions.get_option_index(action)
+    await pilot.press("enter")
+    await pilot.pause()
+    assert isinstance(pilot.app.screen, KeyCaptureScreen)
+    await pilot.press(*pressed)
+    await settle(pilot)
+
+
+def test_a_new_key_runs_the_action_everywhere_and_the_key_line_says_it(tmp_path, user_state):
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        actions = await _open_keys(pilot)
+        await _capture(pilot, actions, "run", "f5")
+        assert "Run the screen's action (run, save, migrate, use): F5 •" in _rows(actions)
+        await pilot.press("escape")
+        await pilot.pause()
+        await _open_group_item(pilot, "decisions", "new")
+        assert "F5 run" in _text(app.screen, "#hints") and "Ctrl+R" not in _text(app.screen, "#hints")
+        app.screen.query_one("#field-title").value = "Anything"
+        await pilot.press("ctrl+r")  # no longer the key
+        await pilot.pause()
+        assert isinstance(app.screen, FormScreen)
+        await pilot.press("f5")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmScreen)
+
+    run_app(app, scenario)
+    assert user_state.keys == {"run": "f5"}
+
+
+def test_a_chosen_key_is_used_again_in_the_next_session(tmp_path, user_state):
+    user_state.set_key("preview", "f6")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        actions = await _open_keys(pilot)
+        assert "Preview a decision or log entry: F6 •" in _rows(actions)
+
+    run_app(app, scenario)
+
+
+def test_a_key_every_screen_relies_on_or_another_action_s_is_refused(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        actions = await _open_keys(pilot)
+        await _capture(pilot, actions, "run", "tab")
+        assert _text(app.screen, "#key-problem") == "Tab is one every screen relies on."
+        await pilot.press("f3")  # the preview's
+        await settle(pilot)
+        assert _text(app.screen, "#key-problem") == "F3 is already the key of Preview a decision or log entry."
+        await pilot.press("x")
+        await settle(pilot)
+        assert _text(app.screen, "#key-problem") == "X would be typed into a field."
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(app.screen, KeysScreen)
+
+    run_app(app, scenario)
+    assert user_state.keys == {}
+
+
+def test_backspace_and_restore_every_key_go_back_to_the_defaults(tmp_path, user_state):
+    user_state.set_key("run", "f5")
+    user_state.set_key("toggle", "f7")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        actions = await _open_keys(pilot)
+        await _capture(pilot, actions, "run", "backspace")
+        assert user_state.keys == {"toggle": "f7"} and app.key_of("run") == "ctrl+r"
+        actions.highlighted = actions.get_option_index("reset-all")
+        await pilot.press("enter")
+        await pilot.pause()
+        assert user_state.keys == {} and app.key_of("toggle") == "f2"
+
+    run_app(app, scenario)
+
+
+def test_a_saved_key_that_cannot_be_used_is_ignored_and_said(tmp_path, user_state):
+    user_state.set_key("run", "escape")
+    user_state.set_key("nonsense", "f9")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert app.key_of("run") == "ctrl+r"
+        assert _text(app.screen, "#ignored-keys") == "A saved key could not be used and is ignored: run, nonsense."
+
+    run_app(app, scenario)
+
+
+def test_the_key_lines_read_as_before_in_the_interface_s_language(tmp_path, user_state):
+    """The key line is built from keys and hints now; in Portuguese it reads
+    as the fixed texts did."""
+    user_state.set_language("pt-br")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert _text(app.screen, "#hints") == "↑↓ mover · Enter selecionar · Esc sair"
+        await _open_group_item(pilot, "decisions", "new")
+        assert _text(app.screen, "#hints") == "Tab próximo campo · → aceitar sugestão · Ctrl+R executar · Esc voltar"
+
+    run_app(app, scenario)
+
+
+def test_f2_shows_every_decision_and_says_what_it_hides(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=_client_with(DECISIONS), user_state=user_state)
+
+    async def scenario(pilot):
+        options = await _open(pilot, "approve")
+        assert options.option_count == 2
+        assert _text(app.screen, "#field-file-filter-note") == \
+            "2 of 4 decisions (only the available ones · F2 shows all)"
+        app.screen.query_one("#field-refdate").focus()
+        await pilot.press("f2")  # from any field of the form, not only the list
+        await settle(pilot)
+        assert options.option_count == 4
+        assert _text(app.screen, "#field-file-filter-note") == "4 decisions, all shown (F2: only the available ones)"
+        assert "F2 all / only available" in _text(app.screen, "#hints")
+
+    run_app(app, scenario)
+
+
+def _repo_with_linked_decisions(client, root):
+    """Two decisions, the second linking to the first as ADR Links do."""
+    from conftest import FIXTURE_CONFIG
+
+    assert client.run("init", ("--path", str(root), "--seed", str(FIXTURE_CONFIG))).success
+    first = pathlib.Path(client.run("new", ("--path", str(root), "--title", "Use PostgreSQL")).data["created"])
+    second = pathlib.Path(client.run("new", ("--path", str(root), "--title", "Add replicas")).data["created"])
+    with open(second, "a", encoding="utf-8") as file:
+        file.write(f"\n## Links\n\n* Refines [{first.stem}]({first.name})\n")
+    return first, second
+
+
+async def _preview_from_explore(pilot, name_start):
+    await _open_group_item(pilot, "explore", "explore")
+    decisions = pilot.app.screen.query_one("#decisions", OptionList)
+    decisions.focus()
+    decisions.highlighted = next(i for i in range(decisions.option_count)
+                                 if str(decisions.get_option_at_index(i).prompt).startswith(name_start))
+    await pilot.press("f3")
+    await settle(pilot)
+    assert isinstance(pilot.app.screen, PreviewScreen)
+
+
+def test_f3_previews_the_highlighted_decision_and_esc_comes_back(repo, user_state, client):
+    first, _ = _repo_with_linked_decisions(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        await _preview_from_explore(pilot, "ADR001")
+        assert app.screen.path == first
+        assert "Use PostgreSQL" in app.screen.query_one(Markdown).source
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(app.screen, ExploreScreen)
+
+    run_app(app, scenario)
+
+
+def test_a_link_to_another_decision_opens_its_preview_like_a_browser(repo, user_state, client):
+    first, second = _repo_with_linked_decisions(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        await _preview_from_explore(pilot, "ADR002")
+        assert app.screen.path == second
+        app.screen.query_one(Markdown).post_message(Markdown.LinkClicked(app.screen.query_one(Markdown), first.name))
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen) and app.screen.path == first
+        await pilot.press("escape")
+        await pilot.pause()
+        assert app.screen.path == second  # back, as a browser does
+
+    run_app(app, scenario)
+
+
+def test_a_web_link_is_never_opened(repo, user_state, client, monkeypatch):
+    _repo_with_linked_decisions(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+    opened = []
+    monkeypatch.setattr(app, "open_url", lambda url, **kwargs: opened.append(url))
+
+    async def scenario(pilot):
+        await _preview_from_explore(pilot, "ADR001")
+        markdown = app.screen.query_one(Markdown)
+        markdown.post_message(Markdown.LinkClicked(markdown, "https://example.com/x"))
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen)
+
+    run_app(app, scenario)
+    assert opened == []
+
+
+def test_f3_in_the_picker_previews_the_decision_before_choosing_it(repo, user_state, client):
+    first, _ = _repo_with_linked_decisions(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        options = await _open(pilot, "approve")
+        options.focus()
+        options.highlighted = 0
+        await pilot.press("f3")
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen) and app.screen.path == first
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(app.screen, FormScreen)
+        assert app.screen.query_one("#field-file").selected is None  # previewing is not choosing
+
+    run_app(app, scenario)
+
+
+def test_f3_on_a_result_previews_the_file_the_command_wrote(repo, user_state):
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "decisions", "new")
+        app.screen.query_one("#field-title").value = "Use PostgreSQL"
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        await pilot.press("enter")
+        await settle(pilot)
+        assert isinstance(app.screen, ResultScreen)
+        await pilot.press("f3")
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen) and app.screen.path.name == "ADR001V01-use-postgre-sql.md"
+
+    run_app(app, scenario)
+
+
+def _repo_with_subfolders(client, root):
+    """Decisions in the decisions folder and in two levels of subfolders,
+    which adrpy finds too."""
+    from conftest import FIXTURE_CONFIG
+
+    assert client.run("init", ("--path", str(root), "--seed", str(FIXTURE_CONFIG))).success
+    top = client.run("new", ("--path", str(root), "--title", "Top level")).data["created"]
+    for title, folder in (("In backend", "backend"), ("In data", "backend/data")):
+        created = pathlib.Path(client.run("new", ("--path", str(root), "--title", title)).data["created"])
+        (root / "doc" / "adr" / folder).mkdir(parents=True, exist_ok=True)
+        created.rename(root / "doc" / "adr" / folder / created.name)
+    return top
+
+
+def test_explore_shows_each_decision_s_folder_and_filters_by_it(repo, user_state, client):
+    _repo_with_subfolders(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "explore", "explore")
+        decisions = app.screen.query_one("#decisions", OptionList)
+        assert _rows(decisions) == [
+            "ADR001V01-top-level.md . Proposed",
+            "ADR002V01-in-backend.md backend Proposed",
+            "ADR003V01-in-data.md backend/data Proposed",
+        ]
+        folder = app.screen.query_one("#explore-folder")
+        folder.value = "backend"
+        await settle(pilot)
+        assert _rows(decisions) == ["ADR002V01-in-backend.md backend Proposed"]
+        assert _text(app.screen, "#explore-count") == "1 of 3 decisions"
+        folder.value = "*"
+        app.screen.query_one("#explore-filter").value = "data"
+        await settle(pilot)
+        assert _rows(decisions) == ["ADR003V01-in-data.md backend/data Proposed"]  # the folder matches too
+
+    run_app(app, scenario)
+
+
+def _repo_with_log_entries(client, root):
+    from conftest import FIXTURE_CONFIG
+
+    assert client.run("init", ("--path", str(root), "--seed", str(FIXTURE_CONFIG))).success
+    assert client.run("config", ("--path", str(root), "--folderlog", "doc/decision-log")).success
+    path = ("--path", str(root))
+    for flags in (
+        ("--classification", "scope-note", "--scope", "backend", "--slug", "first-note", "--summary", "First note",
+         "--body", "Body.", "--refdate", "2026-02-04"),
+        ("--classification", "deferred", "--scope", "packaging", "--slug", "later", "--summary", "Later",
+         "--body", "Why.", "--reopenwhen", "adrpy-ai is on PyPI", "--refdate", "2026-02-05"),
+    ):
+        assert client.run("log", (*path, *flags)).success
+
+
+async def _open_log_browser(pilot):
+    await _open_group_item(pilot, "log", "browse")
+    assert isinstance(pilot.app.screen, LogScreen)
+    return pilot.app.screen.query_one("#entries", OptionList)
+
+
+def test_the_log_browser_lists_every_entry_and_filters_by_classification(repo, user_state, client):
+    _repo_with_log_entries(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        entries = await _open_log_browser(pilot)
+        assert _rows(entries) == ["2026-02-04 scope-note backend first-note",
+                                  "2026-02-05 deferred packaging later"]  # no INDEX.md
+        app.screen.query_one("#logs-classification").value = "deferred"
+        await settle(pilot)
+        assert _rows(entries) == ["2026-02-05 deferred packaging later"]
+        assert _text(app.screen, "#logs-count") == "1 of 2 entries"
+
+    run_app(app, scenario)
+
+
+def test_enter_opens_an_entry_rendered(repo, user_state, client):
+    _repo_with_log_entries(client, repo)
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_log_browser(pilot)
+        await pilot.press("down", "enter")
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen)
+        assert app.screen.path.name == "2026-02-05--deferred--packaging--later.md"
+        assert "Later" in app.screen.query_one(Markdown).source
+
+    run_app(app, scenario)
+
+
+def test_the_log_browser_says_so_when_there_is_no_entry(repo, user_state):
+    app = AdrpyTui(repo, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_log_browser(pilot)
+        assert _text(app.screen, "#entries-page").startswith("No entries in ")
+
+    run_app(app, scenario)
 
 
 def test_help_shows_the_command_s_contract(tmp_path, user_state):

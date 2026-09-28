@@ -27,6 +27,10 @@ class UserState:
         self.language = language if isinstance(language, str) else None
         appearance = data.get("appearance")
         self.appearance = appearance if isinstance(appearance, str) else None
+        chosen = data.get("keys")
+        # action -> key; checked by the app, which ignores (and reports) one
+        # it cannot use.
+        self.keys = {k: v for k, v in chosen.items() if isinstance(v, str)} if isinstance(chosen, dict) else {}
         colors = data.get("colors")
         # role -> color as typed; checked by the app, which ignores (and
         # reports) one it cannot read.
@@ -68,9 +72,21 @@ class UserState:
         self.colors = {}
         self._save()
 
+    def set_key(self, action, key):
+        """An action's own key, or None for its default."""
+        if key is None:
+            self.keys.pop(action, None)
+        else:
+            self.keys[action] = key
+        self._save()
+
+    def reset_keys(self):
+        self.keys = {}
+        self._save()
+
     def _save(self):
         data = {"language": self.language, "appearance": self.appearance, "colors": self.colors,
-                "last_menu_item": self._items}
+                "keys": self.keys, "last_menu_item": self._items}
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")

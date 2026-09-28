@@ -23,6 +23,15 @@ def test_state(decision, expected):
     assert state(decision) == expected
 
 
+def test_folder_of_is_relative_to_the_decisions_folder(tmp_path):
+    from adrpy_tui.core.decisions import folder_of
+
+    root = tmp_path / "doc" / "adr"
+    assert folder_of(root / "ADR001V01-x.md", root) == "."
+    assert folder_of(root / "backend" / "data" / "ADR002V01-y.md", root) == "backend/data"
+    assert folder_of(tmp_path / "elsewhere" / "ADR003V01-z.md", root) == "elsewhere"
+
+
 def test_labels_come_from_the_repository_s_config():
     config = {"statusnew": "Proposto", "statusacc": "Aceito", "statusrej": "Rejeitado", "statussup": "Substituído",
               "headermigrated": "Migrado"}

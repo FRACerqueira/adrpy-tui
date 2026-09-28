@@ -88,7 +88,10 @@ def _group(id, commands, needs_repo=False):
 MAIN_MENU = Item("main", submenu=(
     _group("decisions", ("new", "approve", "reject", "undo", "version", "revise", "supersede"), needs_repo=True),
     _group("explore", ("explore", "check"), needs_repo=True),
-    _group("log", ("log",), needs_repo=True),
+    Item("log", needs_repo=True, submenu=(
+        Item("log.log", command="log", needs_repo=True),
+        Item("log.browse", needs_repo=True),
+    )),
     Item("repository", submenu=(
         Item("repository.init", command="init"),
         Item("repository.config", command="config", needs_repo=True),
@@ -102,6 +105,7 @@ MAIN_MENU = Item("main", submenu=(
     Item("change-repository"),
     Item("language"),
     Item("appearance"),
+    Item("keys"),
     Item("exit"),
 ))
 

@@ -6,9 +6,11 @@ import json
 from textual.binding import Binding
 from textual.widgets import Static
 
+from adrpy_tui.core import keys
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.errors import ErrorList
+from adrpy_tui.ui.preview import open_preview
 
 
 def _text(value):
@@ -38,7 +40,9 @@ def result_widgets(texts, result, success_text=None):
 
 
 class ResultScreen(AdrpyScreen):
-    BINDINGS = [Binding("escape", "back", show=False)]
+    HINTS = (("@preview", "preview"), ("escape", "back"))
+    BINDINGS = [Binding("escape", "back", show=False),
+                Binding(keys.ACTIONS["preview"], "preview", id=keys.binding_id("preview"), show=False)]
 
     def __init__(self, command, result):
         super().__init__(command, finished=True)
@@ -46,6 +50,15 @@ class ResultScreen(AdrpyScreen):
 
     def compose_body(self):
         yield from result_widgets(self.app.texts, self.result)
+
+    def action_preview(self):
+        """The file the command wrote (created, file), else the highlighted
+        error's."""
+        written = self.result.data.get("created") or self.result.data.get("file")
+        errors = list(self.query(ErrorList).results(ErrorList))
+        path = errors[0].highlighted_path() if errors else written
+        if isinstance(path, str):
+            open_preview(self.app, path)
 
     def action_back(self):
         form = FORMS.get(self.command)

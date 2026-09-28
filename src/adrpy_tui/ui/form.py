@@ -11,13 +11,14 @@ from textual.widgets import (
     Button, Input, Label, MaskedInput, RadioButton, RadioSet, Select, SelectionList, Static, Switch, TextArea,
 )
 
-from adrpy_tui.core import i18n
+from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.fields import build_flags, problem, shown
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import HINTS_FORM, HINTS_PICKER_FORM, AdrpyScreen
 from adrpy_tui.ui.paged import PAGE_SIZE
 from adrpy_tui.ui.picker import AdrPicker
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 from adrpy_tui.ui.running import CommandRunner
 
 _SIMILAR_SHOWN = 8
@@ -35,12 +36,19 @@ class RepositorySuggester(Suggester):
 
 
 class FormScreen(CommandRunner, AdrpyScreen):
-    HINTS = "hints.form"
-    BINDINGS = [Binding("escape", "back", show=False), Binding("ctrl+r", "run", show=False)]
+    HINTS = HINTS_FORM
+    BINDINGS = [
+        Binding("escape", "back", show=False),
+        Binding(keys.ACTIONS["run"], "run", id=keys.binding_id("run"), show=False),
+        Binding(keys.ACTIONS["toggle"], "toggle_available", id=keys.binding_id("toggle"), show=False),
+        PREVIEW_BINDING,
+    ]
 
     def __init__(self, command, decision=None):
         super().__init__(command)
         self.form = FORMS[command]
+        if any(field.kind == "decision" for field in self.form.FIELDS):
+            self.HINTS = HINTS_PICKER_FORM
         # The path of a decision to choose once the decisions are read.
         self._preselected = decision
         self._candidates = {}
@@ -204,6 +212,14 @@ class FormScreen(CommandRunner, AdrpyScreen):
             self.query_one(f"#field-{first_problem.flag}").focus()
             return
         self.confirm_and_run([(self.command, build_flags(self.form, self.app.repo, values))])
+
+    def action_toggle_available(self):
+        for picker in self.query(AdrPicker).results(AdrPicker):
+            picker.toggle_available()
+
+    def action_preview(self):
+        for picker in self.query(AdrPicker).results(AdrPicker):
+            open_preview(self.app, picker.highlighted_path())
 
     def action_back(self):
         if not self.command_running:

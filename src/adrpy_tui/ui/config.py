@@ -9,7 +9,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, LoadingIndicator, RadioButton, RadioSet, Select, Static, Switch, TextArea
 
-from adrpy_tui.core import i18n
+from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.confirm import ConfirmScreen
@@ -84,8 +84,8 @@ class FieldEditScreen(ModalScreen):
 
 
 class ConfigScreen(CommandRunner, AdrpyScreen):
-    HINTS = "hints.config"
-    BINDINGS = [Binding("escape", "back", show=False), Binding("ctrl+r", "save", show=False)]
+    HINTS = (("arrows", "move"), ("enter", "edit"), ("@run", "save"), ("escape", "back"))
+    BINDINGS = [Binding("escape", "back", show=False), Binding(keys.ACTIONS["run"], "save", id=keys.binding_id("run"), show=False)]
 
     def __init__(self, command):
         super().__init__(command)

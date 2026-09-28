@@ -3,7 +3,8 @@
     python scripts/make_sample_repo.py <folder> [--language pt-br] [--extra N] [--reset]
 
 Creates, under <folder>:
-- sample/  decisions in every state, and decision-log entries; `--extra N`
+- sample/  decisions in every state (one in a subfolder), and decision-log
+           entries; `--extra N`
            adds N more, in turn Proposed, Accepted and Rejected, for
            lists of several pages;
 - legacy/  hand-written decision files with no header, for `migrate`;
@@ -77,6 +78,11 @@ def build_sample(client, repo, language):
     _run(client, "approve", "--file", accepted, "--refdate", "2026-01-10")                          # Accepted
     rejected = _new(client, repo, "Usar MongoDB", "backend", "dados", "2026-01-07")
     _run(client, "reject", "--file", rejected, "--refdate", "2026-01-11")                           # Rejected
+    # adrpy finds decisions in subfolders of the decisions folder too: one
+    # lives in backend/, for explore's folder column and select.
+    subfolder = Path(rejected).parent / "backend"
+    subfolder.mkdir()
+    Path(rejected).rename(subfolder / Path(rejected).name)
     old = _new(client, repo, "Autenticar com sessões", "security", "seguranca", "2026-01-08")
     _run(client, "approve", "--file", old, "--refdate", "2026-01-12")
     _run(client, "supersede", "--file", old, "--title", "Autenticar com OAuth", "--refdate", "2026-02-01")

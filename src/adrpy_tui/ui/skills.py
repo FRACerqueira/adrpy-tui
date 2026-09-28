@@ -6,7 +6,7 @@ from pathlib import PureWindowsPath
 from textual.binding import Binding
 from textual.widgets import LoadingIndicator, Static
 
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import HINTS_BACK, AdrpyScreen
 from adrpy_tui.ui.explore import _cells
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -14,7 +14,7 @@ _WIDTHS = (20, 12, 10, 26)
 
 
 class SkillsListScreen(AdrpyScreen):
-    HINTS = "hints.back"
+    HINTS = HINTS_BACK
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def __init__(self):

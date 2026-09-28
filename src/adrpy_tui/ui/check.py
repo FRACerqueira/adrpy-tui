@@ -5,12 +5,15 @@ adrpy's repair hint."""
 from textual.binding import Binding
 from textual.widgets import LoadingIndicator
 
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
+from adrpy_tui.ui.errors import ErrorList
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 from adrpy_tui.ui.result import result_widgets
 
 
 class CheckScreen(AdrpyScreen):
-    BINDINGS = [Binding("escape", "back", show=False)]
+    HINTS = HINTS_LIST
+    BINDINGS = [Binding("escape", "back", show=False), PREVIEW_BINDING]
 
     def __init__(self):
         super().__init__("check")
@@ -33,6 +36,10 @@ class CheckScreen(AdrpyScreen):
         await body.remove_children()
         count = result.data.get("decisions", 0)
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))
+
+    def action_preview(self):
+        for errors in self.query(ErrorList).results(ErrorList):
+            open_preview(self.app, errors.highlighted_path())
 
     def action_back(self):
         self.app.pop_screen()
