@@ -26,7 +26,7 @@ from adrpy_tui.ui.preview import PreviewScreen
 from adrpy_tui.ui.repository import RepositoryScreen
 from adrpy_tui.ui.result import ResultScreen
 
-from conftest import FakeClient, run_app, settle
+from conftest import FakeClient, command_of, run_app, settle
 
 NOT_CONFIGURED = {"config": {"success": False, "code": "config-not-found", "detail": "no config"}}
 
@@ -69,12 +69,14 @@ def test_the_language_menu_item_offers_back_on_top_of_the_languages(tmp_path, us
         options = _options(app.screen)
         options.highlighted = options.get_option_index("language")
         await pilot.press("enter")
+        await settle(pilot)
         assert isinstance(app.screen, LanguageScreen)
         languages = app.screen.query_one("#languages", OptionList)
         assert (languages.get_option_at_index(0).id, languages.option_count) == ("back", 12)
         assert languages.get_option_at_index(languages.highlighted).id == "en-us"  # the current one
         languages.highlighted = 0
         await pilot.press("enter")
+        await settle(pilot)
         assert isinstance(app.screen, MenuScreen) and app.screen.menu.id == "main"
 
     run_app(app, scenario)
@@ -96,6 +98,7 @@ def _open_appearance(pilot):
         options = _options(pilot.app.screen)
         options.highlighted = options.get_option_index("appearance")
         await pilot.press("enter")
+        await settle(pilot)
         assert isinstance(pilot.app.screen, AppearanceScreen)
         return pilot.app.screen.query_one("#presets", OptionList)
 
@@ -133,10 +136,10 @@ def test_leaving_appearance_without_choosing_restores_the_saved_preset(tmp_path,
     async def scenario(pilot):
         presets = await _open_appearance(pilot)
         presets.highlighted = presets.get_option_index("high-contrast")
-        await pilot.pause()
+        await settle(pilot)
         assert _banner_color(app) != "#FF8C00"
         await pilot.press("escape")
-        await pilot.pause()
+        await settle(pilot)
         assert isinstance(app.screen, MenuScreen) and _banner_color(app) == "#FF8C00"
 
     run_app(app, scenario)
@@ -428,6 +431,7 @@ def test_a_submenu_starts_with_back_and_highlights_its_first_command(tmp_path, u
 
     async def scenario(pilot):
         await pilot.press("enter")  # Decisions
+        await settle(pilot)
         options = _options(app.screen)
         back = options.get_option_at_index(0)
         assert (back.id, str(back.prompt)) == ("back", "← Back")
@@ -441,9 +445,11 @@ def test_back_returns_to_the_previous_menu_and_is_not_remembered(tmp_path, user_
 
     async def scenario(pilot):
         await pilot.press("enter")  # Decisions
+        await settle(pilot)
         options = _options(app.screen)
         options.highlighted = options.get_option_index("back")
         await pilot.press("enter")
+        await settle(pilot)
         assert isinstance(app.screen, MenuScreen) and app.screen.menu.id == "main"
 
     run_app(app, scenario)
@@ -570,10 +576,10 @@ class BlockingClient(FakeClient):
         super().__init__()
         self.release = threading.Event()
 
-    def _answer(self, argv):
-        if argv[3] == "new":
+    def _answer(self, argv, **options):
+        if command_of(argv) == "new":
             self.release.wait(timeout=10)
-        return super()._answer(argv)
+        return super()._answer(argv, **options)
 
 
 def test_keys_pressed_while_a_command_runs_neither_leave_nor_run_it_again(tmp_path, user_state):
@@ -765,6 +771,7 @@ def test_a_date_before_the_decision_s_creation_is_shown_without_running_adrpy(tm
         options.focus()
         options.highlighted = 0
         await pilot.press("enter")  # ADR001V01-proposed.md, created 2026-01-10
+        await settle(pilot)
         assert _text(app.screen, "#field-file-selected") == "Selected: ADR001V01-proposed.md"
         refdate = app.screen.query_one("#field-refdate")
         refdate.value = "2026-01-09"
@@ -813,6 +820,7 @@ def test_the_help_menu_shows_a_page_of_eight_commands(tmp_path, user_state):
         options = _options(app.screen)
         options.highlighted = options.get_option_index("help")
         await pilot.press("enter")
+        await settle(pilot)
         options = _options(app.screen)
         assert options.option_count == 20  # Back and the 19 commands
         assert options.scrollable_content_region.height == 8
@@ -945,11 +953,13 @@ def test_every_list_of_every_screen_is_paged(tmp_path, user_state):
         options = _options(app.screen)
         options.highlighted = options.get_option_index("help")
         await pilot.press("enter")
+        await settle(pilot)
         check()  # a submenu
         await pilot.press("escape")
         options = _options(app.screen)
         options.highlighted = options.get_option_index("language")
         await pilot.press("enter")
+        await settle(pilot)
         check()  # language
         await pilot.press("escape")
         await _open_appearance(pilot)
@@ -1426,6 +1436,7 @@ def test_setting_a_field_back_to_its_value_is_no_change(tmp_path, user_state):
         editor = await _edit(pilot, fields, "headerscope")
         editor.value = "Other"
         await pilot.press("enter")
+        await settle(pilot)
         editor = await _edit(pilot, fields, "headerscope")
         editor.value = "Scope"
         await pilot.press("enter")
@@ -2001,16 +2012,16 @@ class BlockingOn(FakeClient):
         self.command = command
         self.release = threading.Event()
 
-    def _answer(self, argv):
-        verb = argv[4] if argv[2] == "adrpy.skills" else argv[3]
+    def _answer(self, argv, **options):
+        verb = command_of(argv)
         if verb == self.command and self.calls_to(verb) >= self.reads_before:
             self.release.wait(timeout=10)
-        return super()._answer(argv)
+        return super()._answer(argv, **options)
 
     reads_before = 0
 
     def calls_to(self, verb):
-        return sum(1 for argv in self.calls if argv[3] == verb)
+        return sum(1 for argv in self.calls if command_of(argv) == verb)
 
 
 async def _keys_while_running(pilot, client):
@@ -2356,6 +2367,85 @@ def test_a_web_link_is_never_opened(repo, user_state, client, monkeypatch):
         markdown.post_message(Markdown.LinkClicked(markdown, "https://example.com/x"))
         await settle(pilot)
         assert isinstance(app.screen, PreviewScreen)
+
+    run_app(app, scenario)
+    assert opened == []
+
+
+def test_a_link_opens_only_a_file_inside_the_repository(tmp_path, user_state, monkeypatch):
+    """ADR006V01: a link in a file the person may not have written opens
+    only a .md inside the repository. A network path made the machine
+    connect to another host on one click (Path.is_file on //host/share)."""
+    repo = tmp_path / "repo"
+    adr = repo / "doc" / "adr"
+    (adr / "sub").mkdir(parents=True)
+    source = adr / "ADR001V01-a.md"
+    source.write_text("# A\n", encoding="utf-8")
+    (adr / "sub" / "inside.md").write_text("# Inside\n", encoding="utf-8")
+    outside = tmp_path / "outside.md"
+    outside.write_text("# Outside\n", encoding="utf-8")
+    touched = []
+    for name in ("is_file", "exists", "resolve"):
+        original = getattr(pathlib.Path, name)
+        monkeypatch.setattr(pathlib.Path, name,
+                            lambda self, *a, _original=original, **k: touched.append(str(self)) or _original(self, *a, **k))
+    app = AdrpyTui(repo, client=FakeClient(), user_state=user_state)
+
+    async def follow(pilot, href):
+        markdown = app.screen.query_one(Markdown)
+        markdown.post_message(Markdown.LinkClicked(markdown, href))
+        await settle(pilot)
+
+    async def scenario(pilot):
+        app.push_screen(PreviewScreen(source))
+        await settle(pilot)
+        for href in ("../../../outside.md", "//127.0.0.1/share/x.md", str(outside), "C:/x.md"):
+            await follow(pilot, href)
+            assert app.screen.path == source, href
+        assert not [path for path in touched if "127.0.0.1" in path]
+        await follow(pilot, "sub/inside.md")  # the positive control: inside, it opens
+        assert app.screen.path.name == "inside.md"
+
+    run_app(app, scenario)
+
+
+def test_a_large_file_is_previewed_as_its_first_lines(tmp_path, user_state):
+    """A file of thousands of lines froze the preview for tens of seconds
+    (headless: 5.5 ms a line). The first PREVIEW_LINES are rendered, and a
+    line says so, with the whole file's path."""
+    from adrpy_tui.ui.preview import PREVIEW_LINES
+
+    page = tmp_path / "big.md"
+    page.write_text("# Big\n\n" + "\n".join(f"line {n}" for n in range(3000)) + "\n", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(PreviewScreen(page))
+        await settle(pilot)
+        assert len(app.screen.query_one(Markdown).source.splitlines()) == PREVIEW_LINES
+        assert _text(app.screen, "#excerpt") == (
+            f"Excerpt: the first {PREVIEW_LINES} of 3002 lines. The whole file: {page}")
+
+    run_app(app, scenario)
+
+
+def test_a_link_in_a_command_s_help_is_never_opened(tmp_path, user_state, monkeypatch):
+    """The help's Markdown kept Textual's default and opened the browser on
+    a link, where every other preview only names it."""
+    contract = {"success": True, "data": {"commands": [{
+        "name": "new", "summary": "Creates.", "description": "See https://example.invalid/doc.", "arguments": [],
+        "failure_codes": []}], "warnings": []}}
+    app = AdrpyTui(tmp_path, client=FakeClient(answers={"help": contract}), user_state=user_state)
+    opened = []
+    monkeypatch.setattr(app, "open_url", lambda url, **kwargs: opened.append(url))
+
+    async def scenario(pilot):
+        app.push_screen(HelpScreen("new"))
+        await settle(pilot)
+        markdown = app.screen.query_one(Markdown)
+        markdown.post_message(Markdown.LinkClicked(markdown, "https://example.invalid/doc"))
+        await settle(pilot)
+        assert isinstance(app.screen, HelpScreen)
 
     run_app(app, scenario)
     assert opened == []
@@ -2744,6 +2834,35 @@ def test_every_screen_meets_wcag_contrast_in_every_preset(tmp_path, user_state, 
     assert too_low == {}
 
 
+def test_a_long_command_fits_the_confirmation_and_scrolls_by_keyboard(tmp_path, user_state):
+    """A 60-line log body made the dialog taller than the screen: the
+    command's start and the Yes button off it, the keyboard unable to bring
+    them back. The command line now scrolls in a box of its own, from its
+    start, with the keys a list uses."""
+    lines = "adrpy log --path C:/r --body " + chr(10).join(f"line {n}" for n in range(60))
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ConfirmScreen(lines))
+        await settle(pilot)
+        dialog = app.screen.query_one("#dialog")
+        assert dialog.region.y >= 0 and dialog.region.bottom <= app.size.height, dialog.region
+        assert app.screen.query_one("#yes").region.bottom <= app.size.height
+        box = app.screen.query_one("#command-scroll")
+        assert box.scroll_y == 0 and box.max_scroll_y > 0
+        await pilot.press("end")
+        await pilot.pause()
+        assert box.scroll_y == box.max_scroll_y
+        await pilot.press("home")
+        await pilot.pause()
+        assert box.scroll_y == 0
+        await pilot.press("pagedown", "down")
+        await pilot.pause()
+        assert box.scroll_y > 0
+
+    run_app(app, scenario, size=(120, 40))
+
+
 def test_help_shows_the_command_s_contract(tmp_path, user_state):
     app = AdrpyTui(tmp_path, user_state=user_state)
 
@@ -2751,6 +2870,7 @@ def test_help_shows_the_command_s_contract(tmp_path, user_state):
         options = _options(app.screen)
         options.highlighted = options.get_option_index("help")
         await pilot.press("enter")
+        await settle(pilot)
         options = _options(app.screen)
         options.highlighted = options.get_option_index("help.new")
         await pilot.press("enter")
@@ -2758,5 +2878,290 @@ def test_help_shows_the_command_s_contract(tmp_path, user_state):
         assert isinstance(app.screen, HelpScreen)
         markdown = app.screen.query_one(Markdown).source
         assert markdown.startswith("# adrpy new") and "`--title`" in markdown and "`title-already-exists`" in markdown
+
+    run_app(app, scenario)
+
+
+def test_change_repository_refuses_an_empty_path_and_an_unknown_home(tmp_path, user_state):
+    """An empty field switched to the process's own folder with no word; a
+    path starting "~name" raised RuntimeError and ended the app."""
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(RepositoryScreen())
+        await settle(pilot)
+        for value in ("   ", "~no_such_user_zz/x"):
+            app.screen.query_one("#repository-path").value = value
+            app.screen.action_use()
+            await pilot.pause()
+            assert isinstance(app.screen, RepositoryScreen), value
+            assert _text(app.screen, "#problem-path"), value
+        assert app.repo == tmp_path.resolve()
+
+    run_app(app, scenario)
+
+
+def test_choosing_another_decision_replaces_what_the_first_one_filled_in(tmp_path, user_state):
+    """version kept the first decision's scope and domain when another was
+    chosen -- the new version was created with them. What the person typed
+    is kept."""
+    first = _decision("ADR001V01-a.md", update="Accepted", updated="2026-02-01", scope="alpha", domain="d-alpha")
+    second = _decision("ADR002V01-b.md", update="Accepted", updated="2026-02-01", scope="beta", domain="d-beta")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [first, second], "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def choose(pilot, index):
+        options = app.screen.query_one("#field-file-options")
+        options.focus()
+        options.highlighted = index
+        await pilot.press("enter")
+        await settle(pilot)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["decisions", "decisions.version"])
+        await choose(pilot, 0)
+        assert app.screen.query_one("#field-scope").value == "alpha"
+        await choose(pilot, 1)
+        assert (app.screen.query_one("#field-scope").value, app.screen.query_one("#field-domain").value) == (
+            "beta", "d-beta")
+        app.screen.query_one("#field-scope").value = "mine"
+        await choose(pilot, 0)
+        assert (app.screen.query_one("#field-scope").value, app.screen.query_one("#field-domain").value) == (
+            "mine", "d-alpha")
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("answer", ["no", "escape"])
+def test_no_or_esc_on_the_confirmation_runs_nothing(tmp_path, user_state, answer):
+    """The one reason the confirmation exists; only Yes was ever tested, so
+    running the command whatever the answer passed every test."""
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_new_form(pilot)
+        app.screen.query_one("#field-title").value = "Use it"
+        await pilot.press("ctrl+r")
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen)
+        if answer == "no":
+            app.screen.query_one("#no").press()
+        else:
+            await pilot.press("escape")
+        await settle(pilot)
+        assert isinstance(app.screen, FormScreen)
+
+    run_app(app, scenario)
+    assert "new" not in client.verbs()
+
+
+@pytest.mark.parametrize("success", [True, False])
+def test_a_result_shows_adrpy_s_warnings(tmp_path, user_state, success):
+    from adrpy_tui.core.client import Result
+
+    result = Result((), 0 if success else 1, success, data={}, code=None if success else "x",
+                    detail=None if success else "d", warnings=["Plugin skipped: AdrIndexer"])
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("new", result))
+        await settle(pilot)
+        shown = [str(s.render()) for s in app.screen.query(".warning")]
+        assert "Plugin skipped: AdrIndexer" in shown
+
+    run_app(app, scenario)
+
+
+def test_explore_and_the_skills_list_show_adrpy_s_warnings(tmp_path, user_state):
+    client = _focus_client(tmp_path)
+    client.answers["explore"]["data"]["warnings"] = ["A legacy name is ignored: 0001-x.md"]
+    client.answers["skills:list"]["data"]["warnings"] = ["claude: no project folder"]
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        assert "A legacy name is ignored: 0001-x.md" in _text(app.screen, "#explore-notes")
+        await pilot.press("escape")
+        await pilot.press("escape")
+        await settle(pilot)
+        await _walk(app, pilot, ["skills", "skills.list"])
+        assert "claude: no project folder" in [str(s.render()) for s in app.screen.query(".warning")]
+
+    run_app(app, scenario)
+
+
+def test_a_remembered_item_disabled_in_this_repository_is_not_highlighted(tmp_path, user_state):
+    """architecture.md: a remembered item that is disabled in the current
+    repository is ignored -- only an item that no longer existed was tested."""
+    user_state.remember("main", "decisions")
+    app = AdrpyTui(tmp_path, client=FakeClient(answers=NOT_CONFIGURED), user_state=user_state)
+
+    async def scenario(pilot):
+        options = _options(app.screen)
+        assert not options.get_option_at_index(options.highlighted).disabled
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("count, paged", [(8, False), (9, True)])
+def test_a_list_of_exactly_one_page_shows_no_page_line(tmp_path, user_state, count, paged):
+    decisions = [_decision(f"ADR{n:03}V01-d.md", update="Accepted", updated="2026-02-01") for n in range(count)]
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": decisions, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        assert bool(_text(app.screen, "#decisions-page")) is paged
+
+    run_app(app, scenario)
+
+
+def test_migrate_with_nothing_to_migrate_runs_nothing(tmp_path, user_state):
+    client = _config_client(explore={"success": True, "data": {"decisions": [], "warnings": []}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        await pilot.press("ctrl+r")
+        await settle(pilot)
+        assert not isinstance(app.screen, ConfirmScreen)
+
+    run_app(app, scenario)
+    assert "migrate" not in client.verbs()
+
+
+def test_migrate_does_not_save_a_pattern_the_repository_already_has(tmp_path, user_state):
+    client = _focus_client(tmp_path)
+    client.answers["config"]["data"]["config"]["migrationpattern"] = "N00:04T05"
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert app.screen.pattern() == "N00:04T05"
+        await pilot.press("ctrl+r")
+        await settle(pilot)
+        line = _text(app.screen, "#command-line")
+        assert "migrate" in line and "config" not in line
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("language", ["en-us", "nl-be"])
+def test_the_skills_list_says_when_a_skill_was_changed_by_hand(tmp_path, user_state, language):
+    """The state column was 26 cells wide: "installed, changed by hand" lost
+    its last letter, and 8 of the 11 languages' labels were cut (nl-be's is
+    36). The columns fit the longest label of the language in use."""
+    user_state.set_language(language)
+    skills = [{"skill": "adrpy", "provider": "claude", "scope": "project", "installed": True, "drifted": True,
+               "file": "f"}]
+    client = _config_client(**{"skills:list": {"success": True, "data": {"skills": skills, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["skills", "skills.list"])
+        row = str(app.screen.query_one("#skills").get_option_at_index(0).prompt)
+        assert app.texts("skills.state.drifted") in row
+
+    run_app(app, scenario)
+
+
+def test_explore_says_when_it_cannot_read_the_decisions(tmp_path, user_state):
+    client = _config_client(explore={"success": False, "code": "target-directory-not-found",
+                                     "detail": "Directory does not exist: X", "warnings": []})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        drawn = " ".join(str(s.render()) for s in app.screen.query(Static))
+        assert "Directory does not exist: X" in drawn
+
+    run_app(app, scenario)
+
+
+def test_explore_s_folders_are_relative_to_the_configured_decisions_folder(tmp_path, user_state):
+    """Every test repository used doc/adr, so a folderadr hard-coded to it
+    passed them all."""
+    decision = _decision("ADR001V01-a.md", update="Accepted", updated="2026-02-01")
+    decision["path"] = str(tmp_path / "records" / "team" / "ADR001V01-a.md")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": {**REPO_CONFIG, "folderadr": "records"}, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [decision], "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        row = str(app.screen.query_one("#decisions").get_option_at_index(0).prompt)
+        assert "team" in row and "records" not in row
+
+    run_app(app, scenario)
+
+
+def test_check_reads_again_when_it_comes_back_to_the_top(tmp_path, user_state):
+    client = _focus_client(tmp_path)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.check"])
+        app.push_screen(HelpScreen("check"))
+        await settle(pilot)
+        app.pop_screen()
+        await settle(pilot)
+
+    run_app(app, scenario)
+    assert client.verbs().count("check") == 2
+
+
+def test_a_preview_of_a_missing_file_says_so(tmp_path, user_state):
+    from adrpy_tui.ui.preview import open_preview
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    missing = tmp_path / "gone.md"
+
+    async def scenario(pilot):
+        open_preview(app, missing)
+        await settle(pilot)
+        assert [n.message for n in app._notifications] == [app.texts("preview.missing", path=str(missing))]
+
+    run_app(app, scenario)
+
+
+def test_the_preview_key_opens_a_check_error_s_file(tmp_path, user_state):
+    page = tmp_path / "0001-legacy.md"
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text("# legacy\n", encoding="utf-8")
+    errors = [{"code": "no-header", "file": str(page), "hint": "Run migrate."}]
+    client = _config_client(check={"success": False, "code": "repository-inconsistent", "detail": "x",
+                                   "warnings": [], "data": {"errors": errors}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.check"])
+        await pilot.press("f3")
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen) and app.screen.path == page
+
+    run_app(app, scenario)
+
+
+def test_a_failed_init_does_not_rebuild_the_menus(tmp_path, user_state):
+    """RELOADS_REPOSITORY reads the repository again after init, config or
+    migrate -- only when they succeeded."""
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(MenuScreen())
+        await settle(pilot)
+        app.push_screen(ResultScreen("init", Result((), 1, False, code="config-exists", detail="d")))
+        await settle(pilot)
+        await pilot.press("escape")
+        await settle(pilot)
+        assert len(app.screen_stack) == 3  # back where it was: no rebuild
 
     run_app(app, scenario)

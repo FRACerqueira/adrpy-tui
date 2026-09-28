@@ -4,6 +4,7 @@ Textual draws ESC as it is, so an escape sequence in a file name, a header
 cell or a decision's content would reach the terminal (SECURITY.md)."""
 
 import re
+import unicodedata
 
 # C0 and C1 control characters but tab and line feed.
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
@@ -15,6 +16,17 @@ _CONTROL_BUT_CRLF = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]|\r(?!\n)"
 def printable(text):
     """Text to show, with its line breaks as LF."""
     return _CONTROL.sub("", text.replace("\r\n", "\n"))
+
+
+def visible(text):
+    """A name, a path or a command line to show: `printable`, and every
+    character that changes how the rest of the line reads without showing
+    itself -- a bidirectional override, a zero-width one, a line
+    separator (Unicode Cf, Zl, Zp) -- written out as <U+XXXX>, so
+    "abc<U+202E>dm.txt" is not read as "abctxt.md". Not for a decision's
+    own text, where such a character may be meant."""
+    return "".join(f"<U+{ord(c):04X}>" if unicodedata.category(c) in ("Cf", "Zl", "Zp") else c
+                   for c in printable(text))
 
 
 def safe(text):

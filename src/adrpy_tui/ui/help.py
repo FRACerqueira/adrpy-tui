@@ -5,6 +5,7 @@ from textual.binding import Binding
 from textual.widgets import LoadingIndicator, Markdown, Static
 
 from adrpy_tui.core.registry import command_name
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import AdrpyScreen
 
 
@@ -45,11 +46,8 @@ class HelpScreen(AdrpyScreen):
         yield LoadingIndicator()
 
     def on_mount(self):
-        self.run_worker(self._read_contract, thread=True)
-
-    def _read_contract(self):
-        result = self.app.client.help(self.command)
-        self.app.call_from_thread(self._show, result)
+        command = self.command
+        self.read(lambda app: app.client.help(command), self._show)
 
     def _show(self, result):
         if not self.is_attached:  # the person left meanwhile
@@ -58,9 +56,13 @@ class HelpScreen(AdrpyScreen):
         body.query(LoadingIndicator).remove()
         commands = result.data.get("commands") if result.success else None
         if commands:
-            body.mount(Markdown(contract_markdown(self.app.texts, self.command, commands[0])))
+            # Like every other Markdown here, a link is named, never opened in a browser.
+            body.mount(Markdown(contract_markdown(self.app.texts, self.command, commands[0]), open_links=False))
         else:
             body.mount(Static(result.detail or result.code or "", classes="error", markup=False))
+
+    def on_markdown_link_clicked(self, event):
+        self.app.notify(visible(event.href), markup=False)
 
     def action_back(self):
         self.app.pop_screen()

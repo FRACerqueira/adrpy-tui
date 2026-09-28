@@ -4,9 +4,10 @@ adrpy's own explanation, shown as adrpy sent it (ADR005V01)."""
 import json
 
 from textual.binding import Binding
-from textual.widgets import Static
+from textual.widgets import Button, Static
 
 from adrpy_tui.core import keys
+from adrpy_tui.core.client import ABANDONED
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.errors import ErrorList
@@ -50,6 +51,14 @@ class ResultScreen(AdrpyScreen):
 
     def compose_body(self):
         yield from result_widgets(self.app.texts, self.result)
+        if self.result.code == ABANDONED:  # the repository's state is unknown: Check says it
+            yield Button(self.app.texts("result.run_check"), id="run-check", variant="primary",
+                         action="screen.run_check")
+
+    def action_run_check(self):
+        from adrpy_tui.ui.check import CheckScreen  # check.py shows results through this module
+
+        self.app.push_screen(CheckScreen())
 
     def action_preview(self):
         """The file the command wrote (created, file), else the highlighted

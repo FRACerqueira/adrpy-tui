@@ -29,7 +29,10 @@ def adrpy_range():
 
 
 def _release(text):
-    return tuple(int(part) for part in re.match(r"\d+(?:\.\d+)*", text.strip()).group(0).split("."))
+    numbers = re.match(r"\d+(?:\.\d+)*", str(text or "").strip())
+    if not numbers:
+        raise ValueError(f"not a version: {text!r}")
+    return tuple(int(part) for part in numbers.group(0).split("."))
 
 
 def _compare(first, second):
@@ -62,8 +65,13 @@ def adrpy_outside_range():
     declared range; None when it is within, or not installed (the header
     says so already)."""
     specifier = adrpy_range()
-    found = installed_version("adrpy-ai")
-    if not specifier or found == NOT_INSTALLED or within(found, specifier):
+    found = installed_version("adrpy-ai") or "unknown"
+    if not specifier or found == NOT_INSTALLED:
         return None
+    try:
+        if within(found, specifier):
+            return None
+    except ValueError:
+        pass  # a version that cannot be compared is named, never a refusal (ADR003V01)
     clauses = sorted((clause.strip() for clause in specifier.split(",")), key=lambda clause: not clause.startswith(">"))
     return found, ", ".join(clauses)

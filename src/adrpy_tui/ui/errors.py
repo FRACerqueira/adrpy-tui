@@ -7,6 +7,7 @@ from pathlib import PureWindowsPath
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.paged import PagedList, row
 
 
@@ -17,7 +18,7 @@ def _name(path):
 
 
 def error_row(error):
-    return "  ·  ".join(part for part in (_name(error.get("file")), error.get("code")) if part)
+    return "  ·  ".join(visible(part) for part in (_name(error.get("file")), error.get("code")) if part)
 
 
 class ErrorList(Vertical):

@@ -10,7 +10,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Switch
 
-from adrpy_tui.core.text import printable
+from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen
@@ -43,13 +43,11 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         yield LoadingIndicator()
 
     def on_mount(self):
-        self.run_worker(self._read, thread=True)
+        def work(app):
+            path = ("--path", str(app.repo))
+            return app.client.run("config", path), app.client.run("explore", path)
 
-    def _read(self):
-        path = ("--path", str(self.app.repo))
-        config = self.app.client.run("config", path)
-        explore = self.app.client.run("explore", path)
-        self.app.call_from_thread(self._show, config, explore)
+        self.read(work, lambda both: self._show(*both))
 
     async def _show(self, config, explore):
         if not self.is_attached:
@@ -73,10 +71,10 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         with_header = {d["path"] for d in explore.data.get("decisions", []) if (d.get("header") or {}).get("is_valid")}
         self._files = sorted(p for p in folder.glob("*.md") if str(p) not in with_header)
         if not self._files:
-            await body.mount(Static(texts("migrate.none", folder=str(folder)), classes="info", markup=False))
+            await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))
             return
         await body.mount(Static(texts("migrate.files"), classes="title"))
-        await body.mount(PagedList(*(row(printable(p.name), id=str(i)) for i, p in enumerate(self._files)),
+        await body.mount(PagedList(*(row(visible(p.name), id=str(i)) for i, p in enumerate(self._files)),
                                    list_id="files"))
         await body.mount(Static("", id="sample", classes="info", markup=False))
         await body.mount_all(self._part_rows())
@@ -138,6 +136,8 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         return build(self._parts())
 
     def _refresh(self):
+        if not self.is_open():  # a change delivered after the screen was left
+            return
         parts = self._parts()
         for name in PARTS:
             text = self.app.texts("migrate.reads", text=read(self._sample, parts[name])) if name in parts else ""
@@ -159,16 +159,13 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
     def on_button_pressed(self, event):
         if event.button.id == "preview":
             pattern = self.pattern()
-            self.run_worker(lambda: self._preview(pattern), thread=True)
+            self.read(lambda app: (pattern, app.client.run(
+                "explore", ("--path", str(app.repo), "--migrationpattern", pattern))), lambda both: self._show_preview(*both))
         elif event.button.id == "migrate":
             self.action_migrate()
 
-    def _preview(self, pattern):
-        result = self.app.client.run("explore", ("--path", str(self.app.repo), "--migrationpattern", pattern))
-        self.app.call_from_thread(self._show_preview, result)
-
-    async def _show_preview(self, result):
-        if not self.is_attached:
+    async def _show_preview(self, pattern, result):
+        if pattern != self.pattern():  # changed while adrpy read it: this preview is not of it
             return
         area = self.query_one("#preview-area")
         await area.remove_children()
@@ -200,6 +197,8 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         self.confirm_and_run(self._commands())
 
     def action_preview(self):
+        if self.command_running:
+            return
         files = self.query("#files")
         if files and files.first().highlighted is not None:
             options = files.first()

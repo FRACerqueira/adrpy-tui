@@ -38,10 +38,16 @@ class UserState:
         items = data.get("last_menu_item")
         self._items = {k: v for k, v in items.items() if isinstance(v, str)} if isinstance(items, dict) else {}
 
+    @property
+    def error_log(self):
+        """Where the TUI writes the traceback of a failure of its own."""
+        return self._path.parent / "error.log"
+
     def _load(self):
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            # utf-8-sig: a file saved by an editor that writes a BOM is read too.
+            data = json.loads(self._path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, RecursionError):
             return {}
         return data if isinstance(data, dict) else {}
 
@@ -87,8 +93,12 @@ class UserState:
     def _save(self):
         data = {"language": self.language, "appearance": self.appearance, "colors": self.colors,
                 "keys": self.keys, "last_menu_item": self._items}
+        # Written aside, then put in place: a save that fails half-way (a full
+        # disk) leaves the previous file as it was, not a truncated one.
+        partial = self._path.with_name(self._path.name + ".partial")
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            partial.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            os.replace(partial, self._path)
         except OSError:
             pass

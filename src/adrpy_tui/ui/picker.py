@@ -7,6 +7,7 @@ from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import Input, Label, OptionList, Static, Switch
 
+from adrpy_tui.core.text import visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import state
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
@@ -69,7 +70,8 @@ class AdrPicker(Vertical):
             if folded not in decision["filename"].casefold() or (only_available and not eligible):
                 continue
             label = self._labels.get(decision_state, UNKNOWN_LABEL)
-            options.add_option(row(f"{decision['filename']}  ·  {label}", id=str(index), disabled=not eligible))
+            options.add_option(row(f"{visible(decision['filename'])}  ·  {label}", id=str(index),
+                                   disabled=not eligible))
         if options.option_count:
             # On the first row, so the page shown is page 1: with no row
             # highlighted, PgDn would jump to the last one.
@@ -143,7 +145,7 @@ class AdrPicker(Vertical):
     def _chose(self, decision):
         self.selected = decision
         self.query_one(f"#{self.id}-selected", Static).update(
-            self.app.texts("picker.selected", file=self.selected["filename"])
+            self.app.texts("picker.selected", file=visible(self.selected["filename"]))
         )
         self.screen.query_one(f"#problem-{self._field.flag}", Static).update("")
         self.post_message(self.Chosen(self.selected))

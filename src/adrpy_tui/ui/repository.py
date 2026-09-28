@@ -9,7 +9,7 @@ from textual.binding import Binding
 from textual.widgets import DirectoryTree, Input, Static
 
 from adrpy_tui.core import keys
-from adrpy_tui.core.text import printable
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.paged import PAGE_SIZE
 
@@ -21,7 +21,7 @@ class FoldersTree(DirectoryTree):
     def process_label(self, label):
         # A folder's name as plain text: Textual would read it as markup
         # ("[red]x"), and draw an escape sequence in it as is.
-        return Text(printable(label)) if isinstance(label, str) else label
+        return Text(visible(label)) if isinstance(label, str) else label
 
 
 class RepositoryScreen(AdrpyScreen):
@@ -45,8 +45,12 @@ class RepositoryScreen(AdrpyScreen):
 
     def action_use(self):
         value = self.query_one("#repository-path", Input).value.strip()
-        path = Path(value).expanduser()
-        if not path.is_dir():
+        try:
+            # An empty value would be "." -- the folder the TUI was started in.
+            path = Path(value).expanduser() if value else None
+        except RuntimeError:  # "~name" of a user this machine does not know
+            path = None
+        if path is None or not path.is_dir():
             self.query_one("#problem-path", Static).update(self.app.texts("repository.not_a_folder", path=value))
             return
         self.app.use_repository(path)

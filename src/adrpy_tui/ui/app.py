@@ -1,6 +1,7 @@
 """The Textual app: the repository, the client, the language and the
 navigation between screens."""
 
+import traceback
 from dataclasses import replace
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from adrpy_tui.core import decisions, i18n, keys, themes, versions
 from adrpy_tui.core.client import Client
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.appearance import AppearanceScreen
 from adrpy_tui.ui.check import CheckScreen
 from adrpy_tui.ui.config import ConfigScreen
@@ -38,6 +40,9 @@ def _is_color(value):
 class AdrpyTui(App):
     CSS_PATH = Path(__file__).parent.parent / "resources" / "app.tcss"
     TITLE = "adrpy-tui"
+    # Textual's command palette (Ctrl+P) is not part of the product; it could
+    # open over a screen while its command ran (and core/keys.py reserves it).
+    ENABLE_COMMAND_PALETTE = False
 
     def __init__(self, repo, client=None, user_state=None):
         super().__init__()
@@ -50,6 +55,9 @@ class AdrpyTui(App):
         # A failed read of the repository's config other than "there is
         # none", shown on the main menu.
         self.repo_problem = None
+        # The "leave" of every write still running: quitting leaves them all,
+        # so the TUI never waits for one (ADR006V01).
+        self.running_leaves = set()
         # An adrpy-ai outside the range this adrpy-tui was validated with,
         # (found, range), shown on the main menu (ADR003V01).
         self.adrpy_outside_range = versions.adrpy_outside_range()
@@ -185,9 +193,28 @@ class AdrpyTui(App):
 
     async def _restart(self):
         """Rebuilds every screen, so all of them speak the new language."""
+        if isinstance(self.screen, StartupScreen):  # a restart already under way
+            return
         while len(self.screen_stack) > 1:
             await self.pop_screen()
         await self.push_screen(StartupScreen())
+
+    def exit(self, *args, **kwargs):
+        for leave in list(self.running_leaves):
+            leave.set()
+        super().exit(*args, **kwargs)
+
+    def internal_error_text(self, error):
+        """A failure of the TUI itself, said on the screen; its traceback goes
+        to the error log, when it can be written."""
+        log = self.user_state.error_log
+        try:
+            log.parent.mkdir(parents=True, exist_ok=True)
+            log.write_text("".join(traceback.format_exception(error)), encoding="utf-8")
+        except OSError:
+            pass
+        return self.texts("app.internal_error", error=visible(f"{type(error).__name__}: {error}"),
+                          path=visible(str(log)))
 
     def repository_read(self, result):
         self.configured = result.success

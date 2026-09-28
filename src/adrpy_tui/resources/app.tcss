@@ -65,9 +65,15 @@ ConfirmScreen {
     align: center middle;
 }
 
+#command-scroll {
+    height: auto;
+    max-height: 60vh;
+}
+
 #dialog {
     width: 80%;
     height: auto;
+    max-height: 100%;
     border: double $tui-banner;
     padding: 1 2;
     background: $surface;

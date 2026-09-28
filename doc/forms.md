@@ -128,7 +128,24 @@ the decision picker (before choosing), check's errors, a command's result
 (the file it wrote), migrate's files, and the decision-log browser. A link
 to another `.md`, relative to the file, opens that file's preview; `Esc`
 goes back, as a browser does. A link to anything else is only named, never
-opened in a browser: the file may not be the person's own.
+opened in a browser: the file may not be the person's own. A link opens only
+a `.md` inside the repository: an absolute or network path (`//host/share`),
+or one leading outside it, is named and refused before the file system is
+touched ([ADR006V01](adr/ADR006V01R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). A command's help follows the same rule. A
+file longer than `PREVIEW_LINES` (500, `ui/preview.py`) shows its first
+500 lines, with a line saying so and naming the whole file: rendering costs
+about 5.5 ms a line, and 500 lines open in 2 to 3 s.
+
+## Text from files and adrpy
+
+Nothing the TUI did not write -- file and folder names, a decision's links,
+adrpy's answers -- is read as markup, so `[b]` or `[/x]` in a name shows
+as it is. No control character reaches the terminal (`core/text.py`). A
+name, a path or a command line also shows the characters that change how
+the rest of a line reads without showing themselves -- a bidirectional
+override, a zero-width one -- as `<U+202E>` and the like, so
+`abc<U+202E>dm.txt` is not read as `abctxt.md`; a decision's own text keeps
+them. `tests/test_untrusted_text.py` drives every screen with such names.
 
 ## Components
 
@@ -217,6 +234,20 @@ from `explore`.
 | `skills list` | its own screen: skill, provider, scope, state (installed, not installed, changed by hand) and file of every row adrpy-skills reports, in the paged list |
 | `skills install`, `skills remove` | providers and skills, each a `SelectionList` sent comma-separated (nothing chosen: all, adrpy-skills' default) · where, a `RadioSet`: this repository or my user folder (claude only) · force, allow external links `Switch`. Tests only send `global` to a fake client: the real adrpy-skills would write to the user's own home |
 | `help` | description, arguments table and failure codes table, in the help color |
+
+## Running a command
+
+The confirmation shows every command line, a value holding a line break
+quoted, in a box that scrolls with the keys a list uses while Yes keeps the
+focus. While a command runs, nothing leaves its screen -- the preview and
+show-all keys do nothing, and Textual's command palette (Ctrl+P) is off --
+and its result replaces that screen. A write is never stopped: past the time
+a read may take (60 s, `READ_TIMEOUT` in `core/client.py`), the screen says
+adrpy is still running and its result unknown, and offers to leave; the
+result then says so, with Check at hand. A read that does not answer in that
+time is stopped and shown as `tui-timeout` ([ADR006V01](adr/ADR006V01R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). A failure
+of the TUI itself is shown on the screen where it happened, never the end of
+the app, and its traceback goes to `error.log`, next to the state file.
 
 ## Result screen
 

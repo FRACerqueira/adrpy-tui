@@ -35,6 +35,14 @@ def user_state(tmp_path_factory):
     return state
 
 
+def command_of(argv):
+    """The command an adrpy argv runs ("new", "skills:list"): the verb
+    right after `-m <module>`, wherever the interpreter's options put it."""
+    at = argv.index("-m")
+    module, verb = argv[at + 1], argv[at + 2]
+    return f"skills:{verb}" if module == "adrpy.skills" else verb
+
+
 def completed(payload, returncode=0, stderr=""):
     stdout = payload if isinstance(payload, str) else json.dumps(payload)
     return subprocess.CompletedProcess([], returncode, stdout=stdout, stderr=stderr)
@@ -51,14 +59,12 @@ class FakeClient(Client):
     def __post_init__(self):
         super().__init__(runner=self._answer)
 
-    def _answer(self, argv):
+    def _answer(self, argv, **_):
         self.calls.append(argv)
-        verb = argv[3]
-        command = f"skills:{verb}" if argv[2] == "adrpy.skills" else verb
-        return completed(self.answers.get(command, {"success": True, "data": {"warnings": []}}))
+        return completed(self.answers.get(command_of(argv), {"success": True, "data": {"warnings": []}}))
 
     def verbs(self):
-        return [argv[3] for argv in self.calls]
+        return [command_of(argv).removeprefix("skills:") for argv in self.calls]
 
 
 def run_app(app, scenario, size=(120, 60)):

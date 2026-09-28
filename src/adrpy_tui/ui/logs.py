@@ -5,10 +5,11 @@ the preview key opens it."""
 
 from pathlib import Path
 
+from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, Select, Static
 
-from adrpy_tui.core.text import printable
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
 from adrpy_tui.ui.explore import _cells
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
@@ -52,8 +53,8 @@ class LogScreen(AdrpyScreen):
             if folder.is_dir() else []
         classifications = sorted({entry_parts(path.name)[1] for path in self._entries} - {""})
         self.query_one("#logs-classification", Select).set_options(
-            [(self.app.texts("logs.all_classifications"), ALL), *((c, c) for c in classifications)])
-        self.query_one(PagedList).empty_text = self.app.texts("logs.empty", folder=str(folder))
+            [(self.app.texts("logs.all_classifications"), ALL), *((Text(visible(c)), c) for c in classifications)])
+        self.query_one(PagedList).empty_text = self.app.texts("logs.empty", folder=visible(str(folder)))
         self._fill()
         self.query_one("#entries").focus()
 
@@ -66,7 +67,7 @@ class LogScreen(AdrpyScreen):
             parts = entry_parts(path.name)
             if wanted not in (ALL, parts[1]) or folded not in path.name.casefold():
                 continue
-            options.add_option(row(_cells([printable(part) for part in parts], _WIDTHS), id=str(index)))
+            options.add_option(row(_cells([visible(part) for part in parts], _WIDTHS), id=str(index)))
         if options.option_count:
             options.highlighted = 0
         self.query_one(PagedList).update_page()

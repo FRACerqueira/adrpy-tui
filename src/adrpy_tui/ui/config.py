@@ -105,12 +105,9 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         yield LoadingIndicator()
 
     def on_mount(self):
-        self.run_worker(self._read, thread=True)
-
-    def _read(self):
-        result = self.app.client.run(self.command, self._read_flags())
-        contract = self.app.client.help(self.command)
-        self.app.call_from_thread(self._show, result, contract)
+        command, flags = self.command, self._read_flags()
+        self.read(lambda app: (app.client.run(command, flags), app.client.help(command)),
+                  lambda both: self._show(*both))
 
     async def _show(self, result, contract):
         if not self.is_attached:
@@ -202,7 +199,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         if self.command_running:
             return
         if not self._changed:
-            self.app.notify(self.app.texts("config.unchanged"))
+            self.app.notify(self.app.texts("config.unchanged"), markup=False)
             return
         self.confirm_and_run([(self.command, self._save_flags())])
 

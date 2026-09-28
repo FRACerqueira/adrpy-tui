@@ -1,9 +1,11 @@
 """The screen every other one extends: the header, a scrolling body and a
 line of key hints, built from the keys in use (core/keys.py)."""
 
+import inspect
+
 from textual.containers import VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Static
+from textual.widgets import LoadingIndicator, Static
 
 from adrpy_tui.core import keys
 from adrpy_tui.core.registry import command_name
@@ -40,6 +42,7 @@ class AdrpyScreen(Screen):
         super().__init__()
         self.command = command
         self._finished = finished
+        self._reads = 0  # the latest read's number: an older one's answer is dropped
 
     def compose(self):
         line = None
@@ -56,6 +59,48 @@ class AdrpyScreen(Screen):
     def compose_body(self):
         yield from ()
 
+    def read(self, work, show):
+        """Runs `work(app)` -- adrpy calls -- in a thread and hands what it
+        returns to `show` on this screen, once it answers. Only while this
+        screen is still open and only the latest read: the person may have
+        left, or asked again, meanwhile. A failure of either becomes a note
+        on the screen, never the end of the app."""
+        self._reads += 1
+        number, app = self._reads, self.app  # the thread never reaches the app through this screen
+
+        def thread():
+            try:
+                outcome = work(app)
+            except Exception as error:  # noqa: BLE001 -- shown, never lost
+                outcome = _Failed(error)
+            app.call_from_thread(self._deliver, number, show, outcome)
+
+        self.run_worker(thread, thread=True)
+
+    def is_open(self):
+        return self.is_attached and self in self.app.screen_stack
+
+    async def _deliver(self, number, show, outcome):
+        if number != self._reads or not self.is_open():
+            return
+        try:
+            if isinstance(outcome, _Failed):
+                raise outcome.error
+            shown = show(outcome)
+            if inspect.isawaitable(shown):
+                await shown
+        except Exception as error:  # noqa: BLE001
+            if self.is_open():  # a screen left half-way through is not a failure
+                await self.show_internal_error(error)
+
+    async def show_internal_error(self, error):
+        note = self.app.internal_error_text(error)
+        body = self.query_one("#body")
+        await body.query(LoadingIndicator).remove()
+        await body.query("#internal-error").remove()
+        await body.mount(Static(note, id="internal-error", classes="error", markup=False), before=0)
+        self.focus_first()
+
     def focus_first(self):
         """Gives the focus to the first widget that takes keys, once content
         mounted after the screen opened is there; to the body, to scroll it,
@@ -71,3 +116,10 @@ class AdrpyScreen(Screen):
             body = self.query_one("#body")
             body.can_focus = True
             body.focus()
+
+
+class _Failed:
+    """What a read's thread returns when its work raised."""
+
+    def __init__(self, error):
+        self.error = error

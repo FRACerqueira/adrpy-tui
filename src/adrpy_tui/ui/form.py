@@ -46,6 +46,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
 
     def __init__(self, command, decision=None):
         super().__init__(command)
+        self._prefilled = {}  # flag -> the value a chosen decision filled in
         self.form = FORMS[command]
         if any(field.kind == "decision" for field in self.form.FIELDS):
             self.HINTS = HINTS_PICKER_FORM
@@ -131,14 +132,13 @@ class FormScreen(CommandRunner, AdrpyScreen):
     def on_mount(self):
         self._show_rows()
         if any(field.suggest_from or field.kind == "decision" for field in self.form.FIELDS):
-            self.run_worker(self._read_decisions, thread=True)
+            self.read(lambda app: app.client.run("explore", ("--path", str(app.repo))), self._decisions_read)
 
-    def _read_decisions(self):
-        result = self.app.client.run("explore", ("--path", str(self.app.repo)))
+    def _decisions_read(self, result):
         if result.success:
-            self.app.call_from_thread(self._set_decisions, result.data.get("decisions", []))
+            self._set_decisions(result.data.get("decisions", []))
         else:
-            self.app.call_from_thread(self._explore_failed, result)
+            self._explore_failed(result)
 
     def _explore_failed(self, result):
         if not self.is_attached:
@@ -173,8 +173,12 @@ class FormScreen(CommandRunner, AdrpyScreen):
         header = event.decision.get("header") or {}
         for field in self.form.FIELDS:
             editor = self.query_one(f"#field-{field.flag}")
-            if field.prefill_from and not editor.value and header.get(field.prefill_from):
-                editor.value = header[field.prefill_from]
+            # Filled from the previous choice and left as it was: the new one's
+            # replaces it; what the person typed stays.
+            untouched = not editor.value or editor.value == self._prefilled.get(field.flag)
+            if field.prefill_from and untouched:
+                editor.value = header.get(field.prefill_from) or ""
+                self._prefilled[field.flag] = editor.value
             if field.default_from:
                 editor.placeholder = self.app.texts("form.default", value=event.decision.get(field.default_from) or "")
 
@@ -214,10 +218,14 @@ class FormScreen(CommandRunner, AdrpyScreen):
         self.confirm_and_run([(self.command, build_flags(self.form, self.app.repo, values))])
 
     def action_toggle_available(self):
+        if self.command_running:
+            return
         for picker in self.query(AdrPicker).results(AdrPicker):
             picker.toggle_available()
 
     def action_preview(self):
+        if self.command_running:
+            return
         for picker in self.query(AdrPicker).results(AdrPicker):
             open_preview(self.app, picker.highlighted_path())
 

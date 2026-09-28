@@ -77,6 +77,8 @@ class PagedList(Vertical):
         self.update_page()
 
     def update_page(self):
+        if not self.is_attached or not self.query(OptionList):  # mounted as its screen was left
+            return
         options = self.option_list
         total = options.option_count
         if not total:

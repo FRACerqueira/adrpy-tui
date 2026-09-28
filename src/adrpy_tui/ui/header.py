@@ -6,6 +6,7 @@ from importlib import resources
 from textual.containers import Vertical
 from textual.widgets import Rule, Static
 
+from adrpy_tui.core.text import visible
 from adrpy_tui.core.versions import installed_version
 
 BANNER = resources.files("adrpy_tui.resources").joinpath("banner.txt").read_text(encoding="utf-8").rstrip("\n")
@@ -33,6 +34,6 @@ class AppHeader(Vertical):
             classes="info",
             markup=False,
         )
-        yield Static(texts("app.repo", path=str(self.app.repo)), classes="info", markup=False)
+        yield Static(texts("app.repo", path=visible(str(self.app.repo))), classes="info", markup=False)
         if self._line:
             yield Static(self._line, classes="banner", markup=False)

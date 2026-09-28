@@ -46,3 +46,13 @@ def test_an_adrpy_within_the_range_or_not_installed_is_not_named(monkeypatch):
     assert versions.adrpy_outside_range() is None
     monkeypatch.setattr(versions, "installed_version", lambda name: versions.NOT_INSTALLED)
     assert versions.adrpy_outside_range() is None  # the header already says it is not installed
+
+
+@pytest.mark.parametrize("found", ["v0.1", "", None, "unknown", "local-build"])
+def test_an_installed_version_that_cannot_be_read_is_named_not_a_crash(monkeypatch, found):
+    """ADR003V01: the check warns, it never refuses -- a damaged dist-info
+    (None, "") or a version with no leading number raised AttributeError
+    in the app's constructor, before any screen."""
+    monkeypatch.setattr(versions, "installed_version", lambda name: found)
+    monkeypatch.setattr(versions, "adrpy_range", lambda: "<0.2,>=0.1.dev0")
+    assert versions.adrpy_outside_range() == (found or "unknown", ">=0.1.dev0, <0.2")

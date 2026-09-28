@@ -23,11 +23,7 @@ class CheckScreen(AdrpyScreen):
 
     def on_screen_resume(self):
         # Also sent when the screen first opens.
-        self.run_worker(self._run, thread=True)
-
-    def _run(self):
-        result = self.app.client.run("check", ("--path", str(self.app.repo)))
-        self.app.call_from_thread(self._show, result)
+        self.read(lambda app: app.client.run("check", ("--path", str(app.repo))), self._show)
 
     async def _show(self, result):
         if not self.is_attached:

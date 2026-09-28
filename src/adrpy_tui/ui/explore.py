@@ -4,18 +4,18 @@ commands its state allows, each opening its form with the decision chosen.
 Both read the repository again when they come back to the top, so they show
 what a command just changed."""
 
-from pathlib import Path
 
 from rich.cells import cell_len
+from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, LoadingIndicator, Markdown, Select, Static
 
 from adrpy_tui.core.decisions import folder_of, state
 from adrpy_tui.core.registry import commands_taking
-from adrpy_tui.core.text import printable
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
 from adrpy_tui.ui.form import FormScreen
-from adrpy_tui.ui.preview import PREVIEW_BINDING, follow_link, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, excerpt, follow_link, open_preview
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
 
 _WIDTHS = (40, 18, 14, 14, 14)
@@ -65,7 +65,7 @@ class ExploreScreen(AdrpyScreen):
 
     def on_screen_resume(self):
         # Also sent when the screen first opens.
-        self.run_worker(lambda: self.app.call_from_thread(self._show, _read_explore(self.app)), thread=True)
+        self.read(_read_explore, self._show)
 
     def _show(self, result):
         if not self.is_attached:
@@ -86,7 +86,9 @@ class ExploreScreen(AdrpyScreen):
         chosen = self.query_one("#explore-folder", Select)
         keep = chosen.value
         folders = sorted(set(self._folders.values()))
-        chosen.set_options([(texts("explore.all_folders"), ALL_FOLDERS), *((folder, folder) for folder in folders)])
+        # A folder's name as it is: a str prompt would be read as markup.
+        chosen.set_options([(texts("explore.all_folders"), ALL_FOLDERS),
+                            *((Text(visible(folder)), folder) for folder in folders)])
         chosen.value = keep if keep in folders else ALL_FOLDERS
         self._fill()
 
@@ -103,8 +105,9 @@ class ExploreScreen(AdrpyScreen):
                 continue
             if folded in decision["filename"].casefold() or folded in folder.casefold():
                 header = decision.get("header") or {}
-                cells = (decision["filename"], folder, labels.get(state(decision), "?"), header.get("scope"),
-                         header.get("domain"))
+                cells = tuple(visible(str(cell)) if cell else cell for cell in (
+                    decision["filename"], folder, labels.get(state(decision), "?"), header.get("scope"),
+                    header.get("domain")))
                 options.add_option(row(_cells(cells), id=str(index)))
         if options.option_count:
             options.highlighted = 0
@@ -150,7 +153,7 @@ class DetailScreen(AdrpyScreen):
     def on_screen_resume(self):
         # Also sent when the screen first opens: read again, since a command
         # run from here may have changed this decision.
-        self.run_worker(lambda: self.app.call_from_thread(self._show, _read_explore(self.app)), thread=True)
+        self.read(_read_explore, self._show)
 
     async def _show(self, result):
         if not self.is_attached:
@@ -161,18 +164,22 @@ class DetailScreen(AdrpyScreen):
                 self.decision = again[0]
         body = self.query_one("#body")
         await body.remove_children()
-        await body.mount_all(self._widgets())
+        if not result.success:
+            # What is on screen may no longer be so: say it, and offer no action on it.
+            await body.mount(Static(self.app.texts("detail.read_failed", detail=result.detail or result.code or ""),
+                                    id="read-failed", classes="error", markup=False))
+        await body.mount_all(self._widgets(actions=result.success))
         actions = self.query("#actions")
         if actions:
             actions.first().focus()
         else:
             self.focus_first()  # no action to take: the arrows scroll its content
 
-    def _widgets(self):
+    def _widgets(self, actions=True):
         texts, decision = self.app.texts, self.decision
         header = decision.get("header") or {}
         decision_state = state(decision)
-        yield Static(decision["filename"], classes="title", markup=False)
+        yield Static(visible(decision["filename"]), classes="title", markup=False)
         rows = [
             ("detail.status", self.app.labels.get(decision_state, "?")),
             ("detail.scope", header.get("scope")),
@@ -183,19 +190,16 @@ class DetailScreen(AdrpyScreen):
         ]
         for key, value in rows:
             if value:
-                yield Static(f"{texts(key)}: {value}", classes="info", markup=False)
-        commands = commands_taking(decision_state)
+                yield Static(f"{texts(key)}: {visible(str(value))}", classes="info", markup=False)
+        commands = commands_taking(decision_state) if actions else []
         if commands:
             yield Static(texts("detail.actions"), classes="title")
             yield PagedList(*(row(texts(f"menu.decisions.{command}"), id=command) for command in commands),
                             list_id="actions")
-        yield Markdown(self._content(), open_links=False)
-
-    def _content(self):
-        try:
-            return printable(Path(self.decision["path"]).read_text(encoding="utf-8", errors="replace"))
-        except OSError as error:
-            return f"`{error}`"
+        content, note = excerpt(self.app, self.decision["path"])
+        if note:
+            yield Static(note, id="excerpt", classes="warning", markup=False)
+        yield Markdown(content, open_links=False)
 
     def on_option_list_option_selected(self, event):
         self.app.push_screen(FormScreen(event.option.id, decision=self.decision["path"]))

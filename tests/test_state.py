@@ -1,3 +1,5 @@
+import pathlib
+
 from adrpy_tui.core.state import UserState
 
 
@@ -30,3 +32,31 @@ def test_a_file_that_cannot_be_written_is_skipped(tmp_path):
     state = UserState(blocker / "state.json")
     state.set_language("en-us")  # must not raise
     assert state.language == "en-us"
+
+
+def test_a_state_file_saved_with_a_bom_is_read(tmp_path):
+    """Notepad saves UTF-8 with a BOM: json.loads refused it, the person's
+    language, colors and keys were ignored, then overwritten on the next save."""
+    path = tmp_path / "state.json"
+    path.write_bytes(b"\xef\xbb\xbf" + b'{"language": "pt-br", "keys": {"run": "f5"}}')
+    state = UserState(path)
+    assert (state.language, state.keys) == ("pt-br", {"run": "f5"})
+
+
+def test_a_save_that_fails_half_way_leaves_the_file_as_it_was(tmp_path, monkeypatch):
+    """The state was written in place: a full disk or a crash half-way left
+    a truncated file, and the next run lost every setting."""
+    path = tmp_path / "state.json"
+    state = UserState(path)
+    state.set_language("pt-br")
+    before = path.read_text(encoding="utf-8")
+    original = pathlib.Path.write_text
+
+    def half_then_fail(self, text, *args, **kwargs):
+        original(self, text[:5], *args, **kwargs)
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(pathlib.Path, "write_text", half_then_fail)
+    state.set_language("en-us")
+    monkeypatch.undo()
+    assert path.read_text(encoding="utf-8") == before

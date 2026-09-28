@@ -123,7 +123,7 @@ The three in bold can be changed in the main menu's **Keys**. The line at the bo
 
 ## Where adrpy-tui keeps its settings
 
-adrpy-tui writes one file of its own, never in your repositories: the language, the appearance and customized colors, the changed keys and the last item chosen in each menu.
+adrpy-tui writes one file of its own, never in your repositories: the language, the appearance and customized colors, the changed keys and the last item chosen in each menu. Next to it, `error.log` holds the details of the last failure of adrpy-tui itself, if one happened.
 
 | System | File |
 |---|---|

@@ -1,7 +1,7 @@
 import pytest
 from textual.color import Color
 
-from adrpy_tui.core import themes
+from adrpy_tui.core import contrast, themes
 
 
 @pytest.mark.parametrize("preset", themes.PRESETS)
@@ -15,18 +15,19 @@ def test_every_preset_colors_every_role_with_a_valid_color(preset):
 WCAG_AA = 4.5  # minimum contrast ratio for normal text
 
 
-def _luminance(color):
-    def channel(value):
-        value /= 255
-        return value / 12.92 if value <= 0.03928 else ((value + 0.055) / 1.055) ** 2.4
-
-    red, green, blue = color.rgb
-    return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
-
-
 def _contrast(first, second):
-    lighter, darker = sorted((_luminance(first), _luminance(second)), reverse=True)
-    return (lighter + 0.05) / (darker + 0.05)
+    """The production formula (core/contrast.py), checked on known values
+    below -- the sweeps and the color note use one and the same."""
+    return contrast.ratio(first.rgb, second.rgb)
+
+
+@pytest.mark.parametrize("first, second, expected", [
+    ("#000000", "#FFFFFF", 21.0), ("#767676", "#FFFFFF", 4.54), ("#FFFFFF", "#FFFFFF", 1.0),
+    ("#FF0000", "#FFFFFF", 4.0), ("#00FF00", "#000000", 15.3),
+])
+def test_contrast_is_wcag_s_on_known_values(first, second, expected):
+    assert round(_contrast(Color.parse(first), Color.parse(second)), 2) == expected
+    assert round(_contrast(Color.parse(second), Color.parse(first)), 2) == expected
 
 
 def _backgrounds():

@@ -20,13 +20,14 @@ This is a small, early-stage project maintained by one person — there's no for
 
 ## Scope
 
-adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: every change is an `adrpy` or `adrpy-skills` command run from its own interpreter ([ADR001V01](doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)). The only file it writes is its own per-user state (language, appearance and colors, changed keys, last menu items). It does not expose network services and does not handle credentials.
+adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: every change is an `adrpy` or `adrpy-skills` command run from its own interpreter ([ADR001V01](doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)). The only files it writes are its own per-user state (language, appearance and colors, changed keys, last menu items) and, next to it, `error.log` with the traceback of its own last failure. It does not expose network services and does not handle credentials.
 
 Concerns that are in scope:
 
 - The TUI running a command other than the one its confirmation screen showed, or with different flags.
 - The TUI running an executable other than the adrpy installed next to it.
-- A decision file's content, shown in the TUI, being able to act on the terminal (escape sequences).
+- A decision file's content, shown in the TUI, being able to act on the terminal (escape sequences) or on the UI (markup), or a link in it making the TUI open a file outside the repository or reach another machine ([ADR006V01](doc/adr/ADR006V01R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)).
+- A repository's own files running as adrpy (the TUI runs adrpy with `python -P`).
 - Supply-chain issues in its runtime dependencies (`textual` and what it pulls in) or its build/dev toolchain.
 
 Vulnerabilities in adrpy itself belong to [adrpy-ai](https://github.com/FRACerqueira/adrpy-ai/security).
