@@ -94,6 +94,11 @@ Switch.-on > .switch--slider {
     color: $tui-highlight;
 }
 
+/* The row under the mouse: underlined, apart from the highlighted one. */
+OptionList > .option-list--option-hover {
+    text-style: underline;
+}
+
 /* A select's open list: at most a page of rows plus its border, like
    every list (doc/forms.md, "Lists"). */
 SelectOverlay {

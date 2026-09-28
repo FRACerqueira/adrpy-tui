@@ -115,6 +115,12 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
     async def _show(self, result, contract):
         if not self.is_attached:
             return
+        try:
+            await self._mount_editor(result, contract)
+        finally:
+            self.focus_first()
+
+    async def _mount_editor(self, result, contract):
         commands = contract.data.get("commands") if contract.success else None
         arguments = commands[0].get("arguments", []) if commands else []
         self._descriptions = {argument["name"]: " ".join(argument.get("description", "").split())

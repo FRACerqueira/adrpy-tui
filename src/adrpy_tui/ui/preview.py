@@ -35,6 +35,7 @@ def follow_link(app, source, href):
 
 
 class PreviewScreen(AdrpyScreen):
+    READS = True
     HINTS = (("escape", "back"),)
     BINDINGS = [Binding("escape", "back", show=False)]
 

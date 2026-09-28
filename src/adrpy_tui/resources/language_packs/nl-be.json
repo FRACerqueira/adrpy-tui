@@ -238,7 +238,7 @@
   "color.role.tui-result": "Resultaten",
   "color.role.tui-value": "Getypte waarden",
   "color.role.tui-highlight": "Gemarkeerd item",
-  "color.role.tui-cursor": "Achtergrond van het gemarkeerde item",
+  "color.role.tui-cursor": "Tekst van het gemarkeerde item",
   "appearance.customize": "Kleuren aanpassen",
   "appearance.reset_all": "Alle kleuren herstellen",
   "appearance.ignored": "Een opgeslagen kleur is onleesbaar en wordt genegeerd: {roles}.",

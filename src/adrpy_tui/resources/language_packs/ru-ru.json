@@ -238,7 +238,7 @@
   "color.role.tui-result": "Результаты",
   "color.role.tui-value": "Введённые значения",
   "color.role.tui-highlight": "Выделенный элемент",
-  "color.role.tui-cursor": "Фон выделенного элемента",
+  "color.role.tui-cursor": "Текст выделенного элемента",
   "appearance.customize": "Настроить цвета",
   "appearance.reset_all": "Восстановить все цвета",
   "appearance.ignored": "Сохранённый цвет не прочитан и пропущен: {roles}.",

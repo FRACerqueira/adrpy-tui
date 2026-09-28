@@ -30,6 +30,11 @@ def key_line(app, hints):
 
 class AdrpyScreen(Screen):
     HINTS = HINTS_BACK
+    # A screen of text to read (help, preview): its body takes the focus, and
+    # the arrows scroll it. On every other screen the body never takes it --
+    # it would be the first focusable widget, ahead of the list or the first
+    # field, and the arrows would scroll the page instead of moving the list.
+    READS = False
 
     def __init__(self, command=None, finished=False):
         super().__init__()
@@ -42,9 +47,27 @@ class AdrpyScreen(Screen):
             key = "app.command_finished" if self._finished else "app.command_started"
             line = self.app.texts(key, command=command_name(self.command))
         yield AppHeader(line)
-        with VerticalScroll(id="body"):
+        body = VerticalScroll(id="body")
+        body.can_focus = self.READS
+        with body:
             yield from self.compose_body()
         yield Static(key_line(self.app, self.HINTS), id="hints", markup=False)
 
     def compose_body(self):
         yield from ()
+
+    def focus_first(self):
+        """Gives the focus to the first widget that takes keys, once content
+        mounted after the screen opened is there; to the body, to scroll it,
+        when there is none. After the next refresh: the focus order follows
+        where widgets sit, and what was just mounted has no place yet."""
+        self.call_after_refresh(self._focus_first)
+
+    def _focus_first(self):
+        if not self.is_attached or self.focused is not None:
+            return
+        self.focus_next()
+        if self.focused is None:
+            body = self.query_one("#body")
+            body.can_focus = True
+            body.focus()

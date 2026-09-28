@@ -9,7 +9,7 @@ from textual.widgets import Input, Label, OptionList, Static, Switch
 
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import state
-from adrpy_tui.ui.paged import PagedList, row
+from adrpy_tui.ui.paged import FilterInput, PagedList, row
 
 UNKNOWN_LABEL = "?"
 
@@ -41,7 +41,7 @@ class AdrPicker(Vertical):
 
     def compose(self):
         texts = self.app.texts
-        yield Input(placeholder=texts("picker.filter"), id=f"{self.id}-filter")
+        yield FilterInput(f"{self.id}-options", placeholder=texts("picker.filter"), id=f"{self.id}-filter")
         with Horizontal():
             yield Switch(value=True, id=f"{self.id}-only-available")
             yield Label(texts("picker.only_available"))

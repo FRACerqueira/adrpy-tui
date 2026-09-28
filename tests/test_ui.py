@@ -198,6 +198,37 @@ def test_text_drawn_on_its_own_background_meets_wcag_aa(tmp_path, user_state, pr
     assert too_low == {}
 
 
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_the_active_row_stands_out_from_the_other_rows(tmp_path, user_state, preset):
+    """Reported on explore: the active row differed from the others by its
+    text color alone (1.13:1 on Default between the two backgrounds). Its
+    background now stands apart from the rows' own at WCAG's 3:1 for a
+    component, and its text still reads at 4.5:1 -- with the list focused
+    and without."""
+    from textual.color import Color
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    found = {}
+
+    def styles(options):
+        active = options.get_component_rich_style("option-list--option-highlighted")
+        return (Color.from_rich_color(active.color), Color.from_rich_color(active.bgcolor),
+                options.background_colors[1])
+
+    async def scenario(pilot):
+        options = _options(app.screen)
+        found["focused"] = styles(options)
+        app.screen.set_focus(None)
+        await pilot.pause()
+        found["blurred"] = styles(options)
+
+    run_app(app, scenario)
+    text = {state: round(_contrast(fg, bg), 2) for state, (fg, bg, _) in found.items()}
+    apart = round(_contrast(*found["focused"][1:]), 2)
+    assert (min(text.values()) >= 4.5, apart >= 3) == (True, True), (text, apart)
+
+
 def _component(widget, component):
     from textual.color import Color
 
@@ -2378,6 +2409,147 @@ def test_the_log_browser_says_so_when_there_is_no_entry(repo, user_state):
     async def scenario(pilot):
         await _open_log_browser(pilot)
         assert _text(app.screen, "#entries-page").startswith("No entries in ")
+
+    run_app(app, scenario)
+
+
+def test_explore_opens_with_the_list_taking_the_arrow_keys(tmp_path, user_state):
+    """Reported: the arrows did not move explore's list, only the mouse did --
+    the focus was on the scrolling body, not on the list."""
+    app = AdrpyTui(tmp_path, client=_client_with(CHANGE_DECISIONS), user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "explore", "explore")
+        decisions = app.screen.query_one("#decisions", OptionList)
+        assert decisions.highlighted == 0
+        await pilot.press("down", "down")
+        assert decisions.highlighted == 2
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("where", ["explore", "picker", "logs"])
+def test_the_arrow_keys_typed_in_a_filter_move_its_list(tmp_path, user_state, where):
+    """As in a search box: typing filters, the arrows move the list below."""
+    app = AdrpyTui(tmp_path, client=_client_with(CHANGE_DECISIONS), user_state=user_state)
+
+    async def scenario(pilot):
+        if where == "explore":
+            await _open_group_item(pilot, "explore", "explore")
+            filter_id, list_id = "#explore-filter", "#decisions"
+        elif where == "picker":
+            await _open(pilot, "undo")
+            await _show_all(pilot)
+            filter_id, list_id = "#field-file-filter", "#field-file-options"
+        else:
+            folder = tmp_path / "doc" / "decision-log"
+            folder.mkdir(parents=True)
+            for n in range(3):
+                (folder / f"2026-02-0{n + 1}--scope-note--backend--n{n}.md").write_text("# x\n", encoding="utf-8")
+            await _open_group_item(pilot, "log", "browse")
+            filter_id, list_id = "#logs-filter", "#entries"
+        app.screen.query_one(filter_id).focus()
+        await pilot.press("down")
+        assert app.screen.query_one(list_id, OptionList).highlighted == 1
+        assert app.focused is app.screen.query_one(filter_id)  # still typing in the filter
+
+    run_app(app, scenario)
+
+
+# The screens a person reaches, each as the path of menu items to it (":x"
+# for a step of the screen itself), and what it offers the keys when it
+# opens: a list the arrows move, a field to type in, or text to scroll.
+FOCUS_SCREENS = {
+    "main menu": ([], "list"),
+    "submenu": (["decisions"], "list"),
+    "new": (["decisions", "decisions.new"], "field"),
+    "approve": (["decisions", "decisions.approve"], "list"),
+    "supersede": (["decisions", "decisions.supersede"], "list"),
+    "explore": (["explore", "explore.explore"], "list"),
+    "explore detail": (["explore", "explore.explore", ":detail"], "list"),
+    "check with errors": (["explore", "explore.check"], "list"),
+    "log new": (["log", "log.log"], "field"),
+    "log browse": (["log", "log.browse"], "list"),
+    "init": (["repository", "repository.init"], "field"),
+    "config": (["repository", "repository.config"], "list"),
+    "migrate": (["repository", "repository.migrate"], "list"),
+    "installconfig to create": (["install", "install.installconfig"], "field"),
+    "skills list": (["skills", "skills.list"], "list"),
+    "skills install": (["skills", "skills.install"], "list"),
+    "change repository": (["change-repository"], "field"),
+    "language": (["language"], "list"),
+    "appearance": (["appearance"], "list"),
+    "keys": (["keys"], "list"),
+    "help": (["help", "help.new"], "text"),
+    "preview": (["explore", "explore.explore", ":preview"], "text"),
+}
+
+
+def _focus_client(tmp_path):
+    (tmp_path / "doc" / "adr").mkdir(parents=True)
+    for n in (1, 2):
+        (tmp_path / "doc" / "adr" / f"000{n}-legacy.md").write_text("# x\n", encoding="utf-8")
+    log = tmp_path / "doc" / "decision-log"
+    log.mkdir(parents=True)
+    for n in (1, 2):
+        (log / f"2026-02-0{n}--scope-note--backend--n{n}.md").write_text("# x\n", encoding="utf-8")
+    decisions = [_decision(f"ADR00{n}V01-d.md", update="Accepted", updated="2026-02-01") for n in (1, 2, 3)]
+    for decision in decisions:
+        decision["path"] = str(tmp_path / "doc" / "adr" / decision["filename"])
+        pathlib.Path(decision["path"]).write_text("# d\n", encoding="utf-8")
+    for name in ("ADR004V01-p.md", "ADR005V01-p.md"):  # Proposed ones, for approve's arrows to move
+        decisions.append(_decision(name))
+        decisions[-1]["path"] = str(tmp_path / "doc" / "adr" / name)
+    errors = [{"code": "no-header", "file": f"/r/{n}.md", "hint": "Run migrate."} for n in range(3)]
+    skills = [{"skill": "adrpy", "provider": f"p{n}", "scope": "project", "installed": False, "drifted": None,
+               "file": f"f{n}"} for n in range(3)]
+    return FakeClient(answers={
+        "config": {"success": True, "data": {"config": {**REPO_CONFIG, "migrationpattern": ""}, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": decisions, "warnings": []}},
+        "check": {"success": False, "code": "repository-inconsistent", "detail": "x", "warnings": [],
+                  "data": {"errors": errors}},
+        "installconfig": {"success": True, "data": {"configured": False, "warnings": []}},
+        "skills:list": {"success": True, "data": {"skills": skills, "warnings": []}},
+    })
+
+
+@pytest.mark.parametrize("screen_name", list(FOCUS_SCREENS))
+def test_every_screen_opens_with_the_keys_where_they_act(tmp_path, user_state, screen_name):
+    """Reported on explore, then found on most screens: the scrolling body
+    took the focus as a screen opened (it is the first focusable widget), so
+    the arrows scrolled the page instead of moving the list, and typing went
+    nowhere until Tab. A list screen opens with its list taking the arrows
+    (or a filter that passes them on), a form with its first field focused;
+    only a screen of text to read scrolls."""
+    path, offers = FOCUS_SCREENS[screen_name]
+    app = AdrpyTui(tmp_path, client=_focus_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        for step in path:
+            if step == ":detail":
+                app.screen.query_one("#decisions").focus()
+                await pilot.press("enter")
+            elif step == ":preview":
+                app.screen.query_one("#decisions").focus()
+                await pilot.press("f3")
+            else:
+                options = _options(app.screen)
+                options.highlighted = options.get_option_index(step)
+                await pilot.press("enter")
+            await settle(pilot)
+        body = app.screen.query_one("#body")
+        if offers == "text":
+            assert app.focused is body, f"{screen_name}: {app.focused}"
+            return
+        assert app.focused is not None and app.focused is not body, f"{screen_name}: {app.focused}"
+        if offers == "list":
+            lists = [o for o in app.screen.query(OptionList) if type(o).__name__ != "SelectOverlay"]
+            target = lists[0]
+            before = target.highlighted
+            focused_before = app.focused
+            await pilot.press("down")
+            await settle(pilot)
+            assert target.highlighted == (before or 0) + 1, f"{screen_name}: #{target.id} {before} -> {target.highlighted} of {target.option_count}, focus {focused_before} -> {app.focused}"
 
     run_app(app, scenario)
 

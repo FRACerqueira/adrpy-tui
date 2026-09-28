@@ -1,3 +1,7 @@
+<img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
+
+[← README](../README.md) · [Architecture](architecture.md) · [Forms](forms.md) · **Manual test checklist** · [Decisions](adr/)
+
 # Manual test checklist
 
 What the automated tests cannot check -- a real terminal's rendering, keys

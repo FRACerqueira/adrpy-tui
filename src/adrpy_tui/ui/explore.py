@@ -16,7 +16,7 @@ from adrpy_tui.core.text import printable
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.preview import PREVIEW_BINDING, follow_link, open_preview
-from adrpy_tui.ui.paged import PagedList, row
+from adrpy_tui.ui.paged import FilterInput, PagedList, row
 
 _WIDTHS = (40, 18, 14, 14, 14)
 ALL_FOLDERS = "*"
@@ -54,7 +54,7 @@ class ExploreScreen(AdrpyScreen):
 
     def compose_body(self):
         texts = self.app.texts
-        yield Input(placeholder=texts("explore.filter"), id="explore-filter")
+        yield FilterInput("decisions", placeholder=texts("explore.filter"), id="explore-filter")
         yield Select([(texts("explore.all_folders"), ALL_FOLDERS)], value=ALL_FOLDERS, allow_blank=False,
                      id="explore-folder")
         yield Static(_cells([texts(f"column.{name}") for name in ("file", "folder", "status", "scope", "domain")]),
@@ -108,6 +108,8 @@ class ExploreScreen(AdrpyScreen):
                 options.add_option(row(_cells(cells), id=str(index)))
         if options.option_count:
             options.highlighted = 0
+            if not isinstance(self.app.focused, (Input, Select)):
+                options.focus()  # the arrows move the list, not the page
         self.query_one(PagedList).update_page()
         self.query_one("#explore-count", Static).update(
             self.app.texts("explore.count", shown=options.option_count, total=len(self._decisions)))
@@ -163,6 +165,8 @@ class DetailScreen(AdrpyScreen):
         actions = self.query("#actions")
         if actions:
             actions.first().focus()
+        else:
+            self.focus_first()  # no action to take: the arrows scroll its content
 
     def _widgets(self):
         texts, decision = self.app.texts, self.decision

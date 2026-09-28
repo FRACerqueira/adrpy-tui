@@ -238,7 +238,7 @@
   "color.role.tui-result": "결과",
   "color.role.tui-value": "입력한 값",
   "color.role.tui-highlight": "강조된 항목",
-  "color.role.tui-cursor": "강조된 항목의 배경",
+  "color.role.tui-cursor": "강조된 항목의 글자",
   "appearance.customize": "색상 사용자 지정",
   "appearance.reset_all": "모든 색상 복원",
   "appearance.ignored": "저장된 색상을 읽을 수 없어 무시했습니다: {roles}.",

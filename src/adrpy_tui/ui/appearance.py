@@ -62,8 +62,8 @@ def _rgb(value):
 
 def contrast_of(app, role, value):
     """The contrast a role's color would have: a text role on the screen's
-    background, the cursor role under the highlighted item's text, the
-    highlighted item's text on the cursor role."""
+    background; the highlighted item's row (tui-highlight) and its text
+    (tui-cursor), each against the other."""
     colors = app.effective_colors()
     if role == "tui-cursor":
         other = colors["tui-highlight"]

@@ -238,7 +238,7 @@
   "color.role.tui-result": "Risultati",
   "color.role.tui-value": "Valori digitati",
   "color.role.tui-highlight": "Elemento evidenziato",
-  "color.role.tui-cursor": "Sfondo dell'elemento evidenziato",
+  "color.role.tui-cursor": "Testo dell'elemento evidenziato",
   "appearance.customize": "Personalizza i colori",
   "appearance.reset_all": "Ripristina tutti i colori",
   "appearance.ignored": "Un colore salvato non è leggibile ed è ignorato: {roles}.",

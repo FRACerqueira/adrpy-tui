@@ -10,8 +10,8 @@ ROLES = (
     "tui-error",      # errors
     "tui-result",     # a command's result
     "tui-value",      # typed values
-    "tui-highlight",  # the highlighted item's text (menus, tables)
-    "tui-cursor",     # the highlighted item's background
+    "tui-highlight",  # the highlighted item (menus, tables): its row
+    "tui-cursor",     # the highlighted item's text; its row out of focus
 )
 
 DEFAULT_PRESET = "default"

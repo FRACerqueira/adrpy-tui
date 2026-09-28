@@ -54,6 +54,12 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
     async def _show(self, config, explore):
         if not self.is_attached:
             return
+        try:
+            await self._mount_builder(config, explore)
+        finally:
+            self.focus_first()
+
+    async def _mount_builder(self, config, explore):
         texts, body = self.app.texts, self.query_one("#body")
         await body.remove_children()
         await body.mount(Static(texts("form.migrate"), classes="title"))

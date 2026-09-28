@@ -37,6 +37,7 @@ def contract_markdown(texts, command, contract):
 
 
 class HelpScreen(AdrpyScreen):
+    READS = True
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def compose_body(self):

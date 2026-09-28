@@ -238,7 +238,7 @@
   "color.role.tui-result": "Resultados",
   "color.role.tui-value": "Valores digitados",
   "color.role.tui-highlight": "Item destacado",
-  "color.role.tui-cursor": "Fundo do item destacado",
+  "color.role.tui-cursor": "Texto do item destacado",
   "appearance.customize": "Personalizar cores",
   "appearance.reset_all": "Restaurar todas as cores",
   "appearance.ignored": "Uma cor salva não pôde ser lida e foi ignorada: {roles}.",

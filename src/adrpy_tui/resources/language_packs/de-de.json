@@ -238,7 +238,7 @@
   "color.role.tui-result": "Ergebnisse",
   "color.role.tui-value": "Eingegebene Werte",
   "color.role.tui-highlight": "Hervorgehobener Eintrag",
-  "color.role.tui-cursor": "Hintergrund des hervorgehobenen Eintrags",
+  "color.role.tui-cursor": "Text des hervorgehobenen Eintrags",
   "appearance.customize": "Farben anpassen",
   "appearance.reset_all": "Alle Farben wiederherstellen",
   "appearance.ignored": "Eine gespeicherte Farbe war nicht lesbar und wird ignoriert: {roles}.",

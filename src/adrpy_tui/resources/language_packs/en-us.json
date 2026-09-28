@@ -238,7 +238,7 @@
   "color.role.tui-result": "Results",
   "color.role.tui-value": "Typed values",
   "color.role.tui-highlight": "Highlighted item",
-  "color.role.tui-cursor": "Highlighted item's background",
+  "color.role.tui-cursor": "Highlighted item's text",
   "appearance.customize": "Customize colors",
   "appearance.reset_all": "Restore every color",
   "appearance.ignored": "A saved color could not be read and is ignored: {roles}.",

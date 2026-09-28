@@ -238,7 +238,7 @@
   "color.role.tui-result": "结果",
   "color.role.tui-value": "输入的值",
   "color.role.tui-highlight": "高亮项",
-  "color.role.tui-cursor": "高亮项的背景",
+  "color.role.tui-cursor": "高亮项的文字",
   "appearance.customize": "自定义颜色",
   "appearance.reset_all": "恢复所有颜色",
   "appearance.ignored": "已保存的颜色无法读取，已忽略: {roles}。",

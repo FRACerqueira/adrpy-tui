@@ -238,7 +238,7 @@
   "color.role.tui-result": "Resultados",
   "color.role.tui-value": "Valores escritos",
   "color.role.tui-highlight": "Elemento resaltado",
-  "color.role.tui-cursor": "Fondo del elemento resaltado",
+  "color.role.tui-cursor": "Texto del elemento resaltado",
   "appearance.customize": "Personalizar colores",
   "appearance.reset_all": "Restaurar todos los colores",
   "appearance.ignored": "Un color guardado no se pudo leer y se ignora: {roles}.",

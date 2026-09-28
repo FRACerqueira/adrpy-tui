@@ -3,8 +3,9 @@ below it once there is more than one (doc/forms.md, "Lists"). Every
 screen's OptionList sits in one; tests/test_ui.py checks it."""
 
 from rich.text import Text
+from textual.binding import Binding
 from textual.containers import Vertical
-from textual.widgets import OptionList, Static
+from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
 
 PAGE_SIZE = 8
@@ -23,6 +24,28 @@ def row(text, **options):
     as markup, and a name from a file ("use-[beta]-api") lose its brackets.
     Every option of the interface is made here."""
     return Option(Text(text), **options)
+
+
+class FilterInput(Input):
+    """A filter over a list, as a search box: typing filters, and the up,
+    down and page keys move the list below (`list_id`) while the cursor
+    stays in the filter. Home and End stay the text's."""
+
+    BINDINGS = [
+        Binding("up", "list('cursor_up')", show=False),
+        Binding("down", "list('cursor_down')", show=False),
+        Binding("pageup", "list('page_up')", show=False),
+        Binding("pagedown", "list('page_down')", show=False),
+    ]
+
+    def __init__(self, list_id, **options):
+        super().__init__(**options)
+        self._list_id = list_id
+
+    def action_list(self, action):
+        target = self.screen.query(f"#{self._list_id}")
+        if target:
+            getattr(target.first(), f"action_{action}")()
 
 
 class PagedList(Vertical):

@@ -36,6 +36,7 @@ class CheckScreen(AdrpyScreen):
         await body.remove_children()
         count = result.data.get("decisions", 0)
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))
+        self.focus_first()
 
     def action_preview(self):
         for errors in self.query(ErrorList).results(ErrorList):

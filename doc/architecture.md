@@ -1,3 +1,7 @@
+<img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
+
+[← README](../README.md) · **Architecture** · [Forms](forms.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+
 # Architecture
 
 This page explains how `adrpy-tui` is put together and why. For the

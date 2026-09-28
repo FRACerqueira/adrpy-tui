@@ -1,3 +1,7 @@
+<img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
+
+[← README](../README.md) · [Architecture](architecture.md) · **Forms** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+
 # Forms
 
 How every `adrpy` and `adrpy-skills` command is reached and filled in,
@@ -37,10 +41,13 @@ previews it; Enter keeps it, Back or `Esc` restores the saved one. The
 choice is stored with the language; an unknown stored name is the default.
 Every text role of every preset meets WCAG AA contrast (4.5:1) on its
 theme's background (`tests/test_themes.py`), and so does text drawn on a
-widget's own background -- the highlighted item on its cursor color
-(`tui-cursor`, shared by menus and tables), a typed value, the command to
+widget's own background -- the highlighted item, a typed value, the command to
 confirm and the buttons -- measured on the rendered screen
-(`tests/test_ui.py`); Default is the default
+(`tests/test_ui.py`). The highlighted item of menus and tables is the two
+cursor roles inverted: its whole row in `tui-highlight` with its text in
+`tui-cursor`, so it stands apart from the other rows at 3:1 or more, not by
+its text color alone; out of focus, the theme's text on `tui-cursor`; under
+the mouse, underlined. Default is the default
 because it already does while keeping each kind of text distinct, and High
 contrast is one choice away. Textual honors `NO_COLOR`. "Customize colors" sets any role's own color
 (`#RRGGBB` or a CSS name) on top of the chosen preset, shown at once and
@@ -74,6 +81,17 @@ page 2 of 3 · PgUp/PgDn"; a list that fits one page has no such line.
 `PgUp`/`PgDn` move a page, `Home`/`End` to either end, and a list opens
 on its first item or on the one remembered, whatever its page.
 `tests/test_ui.py` checks that every list a screen shows is paged. The one exception is a field's short, fixed list of choices (the providers and skills of the skills forms, four and three): never more than a page, it is a `SelectionList` capped at eight rows rather than a `PagedList`.
+
+## Focus
+
+A screen opens with the focus where the keys act: a list screen on its
+list (the arrows move it) or on the filter above it (typing filters, and
+the arrows, `PgUp` and `PgDn` still move the list), a form on its first
+field. Only a screen of text to read -- a command's help, a preview --
+gives it to the scrolling body, for the arrows to scroll. Content that
+arrives after the screen opened (an adrpy read) takes the focus once it
+is laid out (`AdrpyScreen.focus_first`). `tests/test_ui.py` opens every
+screen and checks it.
 
 ## Keys
 

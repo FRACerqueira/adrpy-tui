@@ -238,7 +238,7 @@
   "color.role.tui-result": "結果",
   "color.role.tui-value": "入力した値",
   "color.role.tui-highlight": "強調表示された項目",
-  "color.role.tui-cursor": "強調表示された項目の背景",
+  "color.role.tui-cursor": "強調表示された項目の文字",
   "appearance.customize": "色をカスタマイズ",
   "appearance.reset_all": "すべての色を元に戻す",
   "appearance.ignored": "保存された色を読み取れないため無視しました: {roles}。",

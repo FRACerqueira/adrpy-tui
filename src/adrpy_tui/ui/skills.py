@@ -39,6 +39,12 @@ class SkillsListScreen(AdrpyScreen):
     async def _show(self, result):
         if not self.is_attached:
             return
+        try:
+            await self._mount_rows(result)
+        finally:
+            self.focus_first()
+
+    async def _mount_rows(self, result):
         texts, body = self.app.texts, self.query_one("#body")
         await body.remove_children()
         if not result.success:

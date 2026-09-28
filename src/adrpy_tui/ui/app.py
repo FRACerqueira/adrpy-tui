@@ -81,12 +81,14 @@ class AdrpyTui(App):
         spec = themes.PRESETS[preset]
         base = self.get_theme(spec["base"])
         colors = {**spec["colors"], **self.custom_colors}
-        # The cursor of menus and tables draws the highlight role on the
-        # cursor role, never on the theme's own cursor color.
+        # The cursor of menus and tables is the two roles inverted: the
+        # whole row in the highlight role, its text in the cursor role, so it
+        # stands apart from the other rows by more than a text color. Out of
+        # focus, the theme's text on the cursor role: still shown, quieter.
         cursor = {
-            "block-cursor-foreground": colors["tui-highlight"],
-            "block-cursor-background": colors["tui-cursor"],
-            "block-cursor-blurred-foreground": colors["tui-highlight"],
+            "block-cursor-foreground": colors["tui-cursor"],
+            "block-cursor-background": colors["tui-highlight"],
+            "block-cursor-blurred-foreground": base.to_color_system().generate()["foreground"],
             "block-cursor-blurred-background": colors["tui-cursor"],
         }
         # A new name each time: setting the app's theme to the name it already

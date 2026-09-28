@@ -238,7 +238,7 @@
   "color.role.tui-result": "Résultats",
   "color.role.tui-value": "Valeurs saisies",
   "color.role.tui-highlight": "Élément en surbrillance",
-  "color.role.tui-cursor": "Fond de l'élément en surbrillance",
+  "color.role.tui-cursor": "Texte de l'élément en surbrillance",
   "appearance.customize": "Personnaliser les couleurs",
   "appearance.reset_all": "Restaurer toutes les couleurs",
   "appearance.ignored": "Une couleur enregistrée est illisible et ignorée : {roles}.",

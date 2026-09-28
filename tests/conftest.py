@@ -53,7 +53,7 @@ class FakeClient(Client):
 
     def _answer(self, argv):
         self.calls.append(argv)
-        verb = argv[4] if argv[2] == "adrpy.skills" else argv[3]
+        verb = argv[3]
         command = f"skills:{verb}" if argv[2] == "adrpy.skills" else verb
         return completed(self.answers.get(command, {"success": True, "data": {"warnings": []}}))
 
@@ -73,7 +73,13 @@ def run_app(app, scenario, size=(120, 60)):
 
 
 async def settle(pilot):
-    """Waits for the workers the last action started and what they did."""
+    """Waits for the workers the last action started and what they did --
+    all but a DirectoryTree's folder loader, which runs as long as the tree
+    does (it never completes)."""
+    from textual.widgets import DirectoryTree
+
     for _ in range(3):
-        await pilot.app.workers.wait_for_complete()
+        finishing = [worker for worker in pilot.app.workers if not isinstance(worker.node, DirectoryTree)]
+        if finishing:  # an empty list would mean every worker to Textual
+            await pilot.app.workers.wait_for_complete(finishing)
         await pilot.pause()

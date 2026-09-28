@@ -11,7 +11,7 @@ from textual.widgets import Input, Select, Static
 from adrpy_tui.core.text import printable
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
 from adrpy_tui.ui.explore import _cells
-from adrpy_tui.ui.paged import PagedList, row
+from adrpy_tui.ui.paged import FilterInput, PagedList, row
 from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 
 ALL = "*"
@@ -39,7 +39,7 @@ class LogScreen(AdrpyScreen):
     def compose_body(self):
         texts = self.app.texts
         yield Static(texts("logs.title"), classes="title")
-        yield Input(placeholder=texts("picker.filter"), id="logs-filter")
+        yield FilterInput("entries", placeholder=texts("picker.filter"), id="logs-filter")
         yield Select([(texts("logs.all_classifications"), ALL)], value=ALL, allow_blank=False, id="logs-classification")
         yield Static(_cells([texts(f"column.{name}") for name in ("date", "classification", "scope", "slug")],
                             _WIDTHS), classes="info", markup=False)
