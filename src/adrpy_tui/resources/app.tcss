@@ -1,0 +1,91 @@
+/* The palette of doc/forms.md, "Colors". */
+$tui-banner: #FF8C00;
+$tui-info: #808080;
+$tui-warning: #FFD700;
+$tui-summary: #FFDEAD;
+$tui-help: #87CEEB;
+$tui-error: #FF0000;
+$tui-result: #FFFFFF;
+$tui-value: #00FFFF;
+$tui-highlight: #00FF00;
+
+AppHeader {
+    height: auto;
+}
+
+AppHeader Rule {
+    color: $tui-banner;
+    margin: 0;
+}
+
+.banner {
+    color: $tui-banner;
+}
+
+.info {
+    color: $tui-info;
+}
+
+.warning {
+    color: $tui-warning;
+}
+
+.summary {
+    color: $tui-summary;
+}
+
+.error {
+    color: $tui-error;
+}
+
+.result {
+    color: $tui-result;
+}
+
+.title {
+    text-style: bold;
+    margin-top: 1;
+}
+
+#body {
+    height: 1fr;
+}
+
+#hints {
+    height: 1;
+    color: $tui-info;
+}
+
+Input {
+    color: $tui-value;
+}
+
+OptionList {
+    height: auto;
+    max-height: 20;
+}
+
+OptionList > .option-list--option-highlighted {
+    color: $tui-highlight;
+}
+
+HelpScreen Markdown {
+    color: $tui-help;
+}
+
+ConfirmScreen {
+    align: center middle;
+}
+
+#dialog {
+    width: 80%;
+    height: auto;
+    border: double $tui-banner;
+    padding: 1 2;
+    background: $surface;
+}
+
+#buttons {
+    height: auto;
+    margin-top: 1;
+}
