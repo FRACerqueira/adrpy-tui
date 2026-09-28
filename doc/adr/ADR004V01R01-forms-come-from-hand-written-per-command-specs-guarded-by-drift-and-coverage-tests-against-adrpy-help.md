@@ -42,8 +42,12 @@ Are forms generated from `adrpy help` at runtime, or defined by hand?
 
 Chosen option: "Hand-written specs, guarded by tests", because it is the only option that gives rich components without depending on prose, while still failing loudly when the CLI changes.
 
-1. One module per command under `forms/`, registered in `core/registry.py` (as adrpy-ai maps its verbs to `cli/` modules), holds that command's spec: the component for each flag, its choices or range, conditional visibility, and where suggestions and eligibility come from.
-2. A **drift test** compares every spec with `adrpy help --full` and `adrpy-skills help --full`: the same flag names, the same `required`, no flag missing or extra. It runs against the installed adrpy-ai in CI.
+1. One module per command under `forms/`, registered in `core/registry.py` (as adrpy-ai maps its verbs to `cli/` modules), holds that command's spec: the component for each flag, its choices or range, conditional visibility, and where suggestions and eligibility come from. The spec's vocabulary:
+   * a field shown only while another holds a value (`shown_when`), and required only while shown (`required_if_shown`) when adrpy itself takes the flag as optional -- `required` always stays adrpy's;
+   * a field of the screen only, never sent (`local`), such as the choice of which fields appear;
+   * a command whose interaction is not a form declares a screen of its own (`VIEW`: explore, check, config, installconfig, migrate, skills list); its flags are still listed, the screen building them;
+   * a flag a screen deliberately does not offer is named with the reason (`NOT_OFFERED`), rather than silently left out.
+2. A **drift test** compares every spec with `adrpy help --full` and `adrpy-skills help --full`: the flag names -- the fields but the `local` ones, the path flag and the `NOT_OFFERED` ones -- are exactly the command's, each field's `required` is adrpy's, and adrpy's commands require the path flag (adrpy-skills defaults it to the current folder). It runs against the installed adrpy-ai in CI.
 3. A **coverage test** checks that every command either `help` lists is reachable from the menu.
 4. Descriptions shown in the forms still come from `help` at runtime, so the text the person reads is adrpy's own.
 

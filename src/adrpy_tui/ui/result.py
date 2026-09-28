@@ -4,13 +4,37 @@ adrpy's own explanation, shown as adrpy sent it (ADR005V01)."""
 import json
 
 from textual.binding import Binding
-from textual.widgets import DataTable, Static
+from textual.widgets import Static
 
+from adrpy_tui.core.registry import FORMS
 from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.errors import ErrorList
 
 
 def _text(value):
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+
+
+def result_widgets(texts, result, success_text=None):
+    """The widgets showing a result; `success_text` replaces the listing of
+    a success's data (the check screen's own summary)."""
+    if result.success:
+        yield Static(success_text or texts("result.success"), classes="result title", markup=False)
+        if success_text is None:
+            for key, value in result.data.items():
+                if key != "warnings":
+                    yield Static(f"{key}: {_text(value)}", classes="result", markup=False)
+    else:
+        yield Static(texts("result.failure", code=result.code), classes="error title", markup=False)
+        if result.detail:
+            yield Static(result.detail, classes="error", markup=False)
+        errors = result.data.get("errors")
+        if isinstance(errors, list) and errors and all(isinstance(error, dict) for error in errors):
+            yield ErrorList(errors)
+    if result.warnings:
+        yield Static(texts("result.warnings"), classes="warning title")
+        for warning in result.warnings:
+            yield Static(_text(warning), classes="warning", markup=False)
 
 
 class ResultScreen(AdrpyScreen):
@@ -21,31 +45,12 @@ class ResultScreen(AdrpyScreen):
         self.result = result
 
     def compose_body(self):
-        texts, result = self.app.texts, self.result
-        if result.success:
-            yield Static(texts("result.success"), classes="result title")
-            for key, value in result.data.items():
-                if key != "warnings":
-                    yield Static(f"{key}: {_text(value)}", classes="result", markup=False)
-        else:
-            yield Static(texts("result.failure", code=result.code), classes="error title", markup=False)
-            if result.detail:
-                yield Static(result.detail, classes="error", markup=False)
-            errors = result.data.get("errors")
-            if isinstance(errors, list) and errors and all(isinstance(error, dict) for error in errors):
-                yield DataTable(id="errors")
-        if result.warnings:
-            yield Static(texts("result.warnings"), classes="warning title")
-            for warning in result.warnings:
-                yield Static(_text(warning), classes="warning", markup=False)
-
-    def on_mount(self):
-        for table in self.query("#errors").results(DataTable):
-            errors = self.result.data["errors"]
-            columns = list(dict.fromkeys(key for error in errors for key in error))
-            table.add_columns(*columns)
-            for error in errors:
-                table.add_row(*(_text(error.get(column, "")) for column in columns))
+        yield from result_widgets(self.app.texts, self.result)
 
     def action_back(self):
-        self.app.pop_screen()
+        form = FORMS.get(self.command)
+        if self.result.success and getattr(form, "RELOADS_REPOSITORY", False):
+            # The menus depend on the repository this command just changed.
+            self.app.call_later(self.app.reload_repository)
+        else:
+            self.app.pop_screen()

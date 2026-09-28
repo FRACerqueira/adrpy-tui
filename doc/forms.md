@@ -42,8 +42,12 @@ widget's own background -- the highlighted item on its cursor color
 confirm and the buttons -- measured on the rendered screen
 (`tests/test_ui.py`); Default is the default
 because it already does while keeping each kind of text distinct, and High
-contrast is one choice away. Textual honors `NO_COLOR`. Editing single roles on top of a preset is a
-later step, after the presets are validated.
+contrast is one choice away. Textual honors `NO_COLOR`. "Customize colors" sets any role's own color
+(`#RRGGBB` or a CSS name) on top of the chosen preset, shown at once and
+kept with the language; a color below 4.5:1 on its background is warned
+about, not refused; "Back to the preset" and "Restore every color" undo
+them. A saved color that can't be read is ignored and named on the main
+menu.
 
 The Default preset:
 
@@ -60,12 +64,23 @@ The Default preset:
 | Highlighted item | green `#00FF00` on `#303030` |
 | Buttons | white on `#00509E` |
 
+## Lists
+
+Every list of the interface -- menus, submenus, language, appearance, the
+decision picker, and the tables to come (explore, check) -- shows eight
+rows at a time (`ui/paged.py`, `PagedList`). Once a list holds more than
+eight, the line below it tells where the cursor is: "Items 9–16 of 20 ·
+page 2 of 3 · PgUp/PgDn"; a list that fits one page has no such line.
+`PgUp`/`PgDn` move a page, `Home`/`End` to either end, and a list opens
+on its first item or on the one remembered, whatever its page.
+`tests/test_ui.py` checks that every list a screen shows is paged. The one exception is a field's short, fixed list of choices (the providers and skills of the skills forms, four and three): never more than a page, it is a `SelectionList` capped at eight rows rather than a `PagedList`.
+
 ## Components
 
 | Input | Used for | Textual |
 |---|---|---|
 | Menu | menus | `OptionList` (disabled items), description panel below |
-| Decision choice | choosing a decision | `AdrPicker`: filter `Input` + `OptionList`, status column, ineligible items disabled |
+| Decision choice | choosing a decision | `AdrPicker`: a filter `Input` by name (`Enter` moves to the list) over an `OptionList` of the decisions with the repository's label for their state, paged like every list (see "Lists"); a `Switch`, on by default, lists only the ones the command can take, and off lists them all with the others disabled; the choice is shown below |
 | Enum | separator, casetransform, language, log enums | `Select` |
 | Validated text | titles, labels, prefix | `Input(max_length, restrict, validators)` |
 | Text with suggestions | scope, domain | `Input` whose inline suggestion continues what was typed (prefix match, `→` accepts it), plus a line below listing existing values that contain the text or look like it (`difflib`) |
@@ -73,7 +88,8 @@ The Default preset:
 | Date | refdate | `MaskedInput` `9999-99-99`, defaults to today |
 | On/off | `--empty`, booleans | `Switch` |
 | Several of a list | explore columns, migrate list | `SelectionList` |
-| Table | explore | `DataTable` + filter |
+| Rows with columns | explore | `PagedList` rows whose columns are padded by terminal cells (a CJK label takes two), the last never cut, under a header line; a filter `Input` |
+| Errors | check, a failed command | `ErrorList`: a `PagedList` row per error (file · code), the highlighted one's detail, hint and related files below, in adrpy's words -- a hint is too long for a table cell |
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
@@ -110,6 +126,9 @@ Main menu
 - The last selected item of each menu is remembered across sessions.
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
+- "Change repository" takes a folder's path, typed or chosen in a tree of
+  folders starting above the current repository; the folder must exist and
+  need not be initialized. The whole interface then works on it.
 
 ## Per-command forms
 
@@ -122,20 +141,20 @@ from `explore`.
 | Command | Fields → component |
 |---|---|
 | `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate |
-| `approve`, `reject` | `AdrPicker` (`Proposed`) · refdate |
+| `approve`, `reject` | `AdrPicker` (`Proposed`, or a migrated placeholder) · refdate, not before the decision's creation |
 | `undo` | `AdrPicker` (`Accepted`/`Rejected`) |
-| `version` | `AdrPicker` (`Accepted`/`Rejected`) · scope, domain prefilled from the header · refdate · `--empty` `Switch` |
-| `revise` | `AdrPicker` (`Accepted`/`Rejected`) · refdate |
-| `supersede` | `AdrPicker` (`Accepted`) · title, scope, domain prefilled · refdate |
-| `explore` | `DataTable`, File and Status fixed, other columns picked in a `SelectionList`, filter; `Enter` opens the detail (header fields + `MarkdownViewer`) with the actions the status allows |
-| `check` | table of file, code and repair hint, or "no inconsistencies" |
-| `init` | folder `DirectoryTree` · config source `RadioSet`: install-level/built-in, language pack (`Select`, preselected with the UI language), seed file. Language is disabled when `installconfig` reports `configured: true` |
-| `config` | field list with current value and description, plus "Save and exit"; each field opens its editor (enum → `Select`, integer → `Select`, boolean → `Switch`, template → `TextArea`, text → `Input`). Only changed fields become flags |
-| `installconfig` | the same field editor, plus seed and language |
-| `migrate` | (1) read-only list of every file's state; (2) without a `migrationpattern`, a guided builder from a sample file name, with position/length per part and a live preview through `explore --migrationpattern`; (3) confirm, then `config --migrationpattern` and `migrate` |
-| `log` | classification `Select` · scope, slug `Input` (kebab-case) · summary `Input` · body `TextArea` · refdate · front, severity, resolution, round only for `audit-finding`/`doc-drift` · reopenwhen only for `deferred` |
-| `skills list` | table of skill, provider, scope, installed, drifted |
-| `skills install`, `skills remove` | provider, skill `SelectionList` · target `RadioSet` (project/global; global only for claude) · `--force`, `--allow-external-links` `Switch` |
+| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` |
+| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` |
+| `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) |
+| `explore` | its own screen: File, Status (the repository's label), Scope, Domain for every decision, a filter by name, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
+| `check` | its own screen, run as it opens and again when it comes back to the top: "No inconsistencies in N decisions", or the `ErrorList` |
+| `init` | the current repository only (another folder goes through "Change repository") · the config's source, a `RadioSet`: adrpy's defaults in a language (a `Select`, preselected with the UI language), the default (the install-level config, or English when there is none), or a config file (a path, required and existing while chosen); only the chosen source's field is shown and sent. On an initialized repository a warning says a config file replaces it and the other sources are refused. Once it succeeds the repository is read again and the menus rebuilt |
+| `config` | a list of the fields in groups (folders, names, status labels, header labels, template, plugins), each with its current value; `Enter` edits one with the editor of its type (enum → `Select`, integer → `Select` over its range, boolean → `Switch`, template → `TextArea`, text → `Input`); changed fields are marked, and saving runs one `config` with only them. Fields adrpy guards once decisions exist say so in their description; adrpy's refusal stays the final word |
+| `installconfig` | the same editor, with no `--path`; while this machine has no install-level config, it offers to create one first, from a language pack or a config file. Its tests use a fake client only: the real adrpy would write the machine's own install-level config |
+| `migrate` | a guided builder: (1) the files to migrate; (2) on a sample file name, the position and length of each part (number, title, optional version, revision, prefix) chosen one by one, each showing what it reads from the sample; (3) a preview of what the pattern reads from every file, through `explore --migrationpattern`; (4) confirm the two commands, `config --migrationpattern` then `migrate` |
+| `log` | classification, severity and resolution `Select` (adrpy's own vocabulary, as is) · scope, slug `Input` that only take kebab-case · summary · body `TextArea` · refdate · front, severity, resolution, round (digits only, empty for the next one) shown only for `audit-finding`/`doc-drift`, reopenwhen only for `deferred`; front and reopenwhen are required while shown |
+| `skills list` | its own screen: skill, provider, scope, state (installed, not installed, changed by hand) and file of every row adrpy-skills reports, in the paged list |
+| `skills install`, `skills remove` | providers and skills, each a `SelectionList` sent comma-separated (nothing chosen: all, adrpy-skills' default) · where, a `RadioSet`: this repository or my user folder (claude only) · force, allow external links `Switch`. Tests only send `global` to a fake client: the real adrpy-skills would write to the user's own home |
 | `help` | description, arguments table and failure codes table, in the help color |
 
 ## Result screen

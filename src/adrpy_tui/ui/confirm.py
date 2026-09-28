@@ -9,14 +9,15 @@ from textual.widgets import Button, Static
 class ConfirmScreen(ModalScreen[bool]):
     BINDINGS = [Binding("escape", "cancel", show=False)]
 
-    def __init__(self, command_line):
+    def __init__(self, command_line, question=None):
         super().__init__()
         self._command_line = command_line
+        self._question = question
 
     def compose(self):
         texts = self.app.texts
         with Vertical(id="dialog"):
-            yield Static(texts("confirm.question"))
+            yield Static(self._question or texts("confirm.question"), markup=False)
             yield Static(self._command_line, id="command-line", classes="summary", markup=False)
             with Horizontal(id="buttons"):
                 yield Button(texts("confirm.yes"), id="yes", variant="primary")

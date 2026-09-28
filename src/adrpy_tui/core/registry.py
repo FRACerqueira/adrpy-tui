@@ -8,11 +8,51 @@ are named after the command itself.
 
 from dataclasses import dataclass
 
+from adrpy_tui.forms import approve as approve_form
+from adrpy_tui.forms import check as check_form
+from adrpy_tui.forms import config as config_form
+from adrpy_tui.forms import explore as explore_form
+from adrpy_tui.forms import init as init_form
+from adrpy_tui.forms import installconfig as installconfig_form
+from adrpy_tui.forms import log as log_form
+from adrpy_tui.forms import migrate as migrate_form
 from adrpy_tui.forms import new as new_form
+from adrpy_tui.forms import reject as reject_form
+from adrpy_tui.forms import revise as revise_form
+from adrpy_tui.forms import skills_install, skills_list, skills_remove
+from adrpy_tui.forms import supersede as supersede_form
+from adrpy_tui.forms import undo as undo_form
+from adrpy_tui.forms import version as version_form
 
 FORMS = {
     "new": new_form,
+    "approve": approve_form,
+    "reject": reject_form,
+    "undo": undo_form,
+    "version": version_form,
+    "revise": revise_form,
+    "supersede": supersede_form,
+    "explore": explore_form,
+    "check": check_form,
+    "init": init_form,
+    "config": config_form,
+    "installconfig": installconfig_form,
+    "migrate": migrate_form,
+    "log": log_form,
+    "skills:list": skills_list,
+    "skills:install": skills_install,
+    "skills:remove": skills_remove,
 }
+
+
+def commands_taking(decision_state):
+    """The commands whose decision field takes a decision in this state, in
+    menu order: the actions a decision's detail offers."""
+    return [
+        command
+        for command, form in FORMS.items()
+        if any(field.kind == "decision" and decision_state in field.eligible for field in form.FIELDS)
+    ]
 
 # Every command of both programs, as `adrpy help` and `adrpy-skills help`
 # list them; tests/test_registry.py checks these against the installed ones.

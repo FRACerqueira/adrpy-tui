@@ -41,7 +41,20 @@ A runtime dependency beyond `adrpy-ai` and `textual` is a significant decision (
 pytest
 ```
 
-The UI tests drive the app headless through Textual's `App.run_test()`; the integration tests run the real adrpy against repositories created in a temporary folder. Some tests compare the forms and language packs with the installed adrpy's own `help` ([ADR004V01](doc/adr/ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md)): a failure there after upgrading adrpy-ai means a form needs updating, not the test.
+The suite runs in parallel, one worker per CPU (pytest-xdist, set in `pyproject.toml`); `pytest -n 0` runs it serially, e.g. to debug one test with `print` or a breakpoint. The UI tests drive the app headless through Textual's `App.run_test()`; the integration tests run the real adrpy against repositories created in a temporary folder. Some tests compare the forms and language packs with the installed adrpy's own `help` ([ADR004V01](doc/adr/ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md)): a failure there after upgrading adrpy-ai means a form needs updating, not the test.
+
+### Trying it by hand
+
+`scripts/make_sample_repo.py` builds repositories to try the screens on, with adrpy's own commands:
+
+```bash
+python scripts/make_sample_repo.py <folder>            # an empty folder
+python scripts/make_sample_repo.py <folder> --reset    # back to the start, after a manual test
+python scripts/make_sample_repo.py <folder> --reset --extra 40   # 40 more decisions, for lists of several pages
+adrpy-tui --path <folder>/sample
+```
+
+`sample/` has a decision in every state (Proposed, Accepted, Rejected, Superseded with its successor, a revision, a new version) and decision-log entries, with pt-br labels (`--language` changes them); `legacy/` has hand-written files with no header, for `migrate`; `broken/` has two files with the same number, for `check`; `empty/` has no config, for `init`. `--reset` only deletes a folder the script built itself (it leaves a `.adrpy-tui-samples` marker there) and refuses any other. `tests/test_sample_repo.py` builds the same repositories. Before a release, walk through [`doc/manual-test-checklist.md`](doc/manual-test-checklist.md).
 
 ## The Project's Own Verification Discipline
 

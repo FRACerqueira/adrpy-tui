@@ -3,11 +3,11 @@ menu's "Language" item (ADR005V01)."""
 
 from textual.binding import Binding
 from textual.widgets import OptionList, Static
-from textual.widgets.option_list import Option
 
 from adrpy_tui.core import i18n
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.menu import BACK
+from adrpy_tui.ui.paged import PagedList, row
 
 
 class LanguageScreen(AdrpyScreen):
@@ -22,9 +22,9 @@ class LanguageScreen(AdrpyScreen):
         texts = self.app.texts
         yield Static(texts("language.title"), classes="title")
         # On the first run there is no menu yet to go back to.
-        back = [] if self._first_run else [Option(texts("menu.back"), id=BACK)]
-        yield OptionList(
-            *back, *(Option(i18n.load(code)("language.name"), id=code) for code in i18n.LANGUAGES), id="languages"
+        back = [] if self._first_run else [row(texts("menu.back"), id=BACK)]
+        yield PagedList(
+            *back, *(row(i18n.load(code)("language.name"), id=code) for code in i18n.LANGUAGES), list_id="languages"
         )
 
     def on_mount(self):

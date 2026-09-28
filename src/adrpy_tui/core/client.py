@@ -12,6 +12,8 @@ import sys
 import threading
 from dataclasses import dataclass, field
 
+from adrpy_tui.core.text import safe, safe_json
+
 SKILLS_PREFIX = "skills:"
 # The TUI's own code for a response that is not one adrpy JSON object --
 # never one of adrpy's codes, so it can't be mistaken for one.
@@ -77,7 +79,9 @@ class Client:
 
 def _parse(argv, completed):
     try:
-        payload = json.loads(completed.stdout)
+        # File names and header cells come back in it: nothing of them may
+        # act on the terminal (SECURITY.md).
+        payload = safe_json(json.loads(completed.stdout))
     except ValueError:
         payload = None
     if not isinstance(payload, dict) or not isinstance(payload.get("success"), bool):
@@ -87,7 +91,7 @@ def _parse(argv, completed):
             False,
             code=CONTRACT_VIOLATION,
             detail=f"adrpy did not answer with one JSON object (exit code {completed.returncode}): "
-            f"{(completed.stdout or completed.stderr).strip()[:300]}",
+            f"{safe((completed.stdout or completed.stderr).strip()[:300])}",
         )
     data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
     # A success carries its warnings inside data; a failure, next to code.

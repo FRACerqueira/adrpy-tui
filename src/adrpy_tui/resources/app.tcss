@@ -77,3 +77,25 @@ ConfirmScreen {
     height: auto;
     margin-top: 1;
 }
+
+/* A toggle's label is text: the theme's own foreground, on any preset. */
+RadioButton, Checkbox {
+    color: $foreground;
+}
+
+/* A switch's slider is a component, WCAG's 3:1: the info role off, the
+   highlighted-item role on, both on the cursor role. */
+Switch > .switch--slider {
+    color: $tui-info;
+    background: $tui-cursor;
+}
+
+Switch.-on > .switch--slider {
+    color: $tui-highlight;
+}
+
+/* A select's open list: at most a page of rows plus its border, like
+   every list (doc/forms.md, "Lists"). */
+SelectOverlay {
+    max-height: 10;
+}

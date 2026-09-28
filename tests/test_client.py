@@ -73,3 +73,18 @@ def test_display_command_is_what_a_person_would_type():
     assert line.startswith("adrpy new --path ")
     assert "my repo" in line and ("'C:/my repo'" in line or '"C:/my repo"' in line)
     assert display_command("skills:list", []) == "adrpy-skills list"
+
+
+def test_control_characters_in_adrpy_s_answer_never_reach_a_screen():
+    """A file name or a header cell is file content adrpy echoes back: an
+    escape sequence in it would reach the terminal (Textual does not drop
+    ESC). Tab and line breaks, CRLF included, are kept: a template's line
+    endings must survive a round trip through the config editor."""
+    payload = {"success": False, "code": "no-header", "detail": "bad \x1b]0;owned\x07 file",
+               "warnings": ["w\x1b[2J"],
+               "data": {"errors": [{"file": "ADR001V01-x\x1b[31m.md", "hint": "a\r\nb\tc\rd"}]}}
+    client, _ = _client(payload, returncode=1)
+    result = client.run("check")
+    assert result.detail == "bad ]0;owned file"
+    assert result.warnings == ["w[2J"]
+    assert result.data["errors"][0] == {"file": "ADR001V01-x[31m.md", "hint": "a\r\nb\tcd"}

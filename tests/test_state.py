@@ -6,11 +6,13 @@ def test_language_and_menu_items_survive_a_new_session(tmp_path):
     state = UserState(path)
     state.set_language("pt-br")
     state.set_appearance("light")
+    state.set_color("tui-banner", "#FFA500")
     state.remember("main", "decisions")
 
     again = UserState(path)
     assert again.language == "pt-br"
     assert again.appearance == "light"
+    assert again.colors == {"tui-banner": "#FFA500"}
     assert again.last("main") == "decisions"
 
 

@@ -5,16 +5,32 @@ from dataclasses import replace
 from pathlib import Path
 
 from textual.app import App
+from textual.color import Color, ColorParseError
 
-from adrpy_tui.core import i18n, themes
+from adrpy_tui.core import decisions, i18n, themes
 from adrpy_tui.core.client import Client
+from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
 from adrpy_tui.ui.appearance import AppearanceScreen
+from adrpy_tui.ui.check import CheckScreen
+from adrpy_tui.ui.config import ConfigScreen
+from adrpy_tui.ui.explore import ExploreScreen
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.help import HelpScreen
 from adrpy_tui.ui.language import LanguageScreen
 from adrpy_tui.ui.menu import MenuScreen
+from adrpy_tui.ui.migrate import MigrateScreen
+from adrpy_tui.ui.repository import RepositoryScreen
+from adrpy_tui.ui.skills import SkillsListScreen
 from adrpy_tui.ui.startup import StartupScreen
+
+
+def _is_color(value):
+    try:
+        Color.parse(value)
+    except ColorParseError:
+        return False
+    return True
 
 
 class AdrpyTui(App):
@@ -32,25 +48,57 @@ class AdrpyTui(App):
         # A failed read of the repository's config other than "there is
         # none", shown on the main menu.
         self.repo_problem = None
-        for preset, spec in themes.PRESETS.items():
-            base = self.get_theme(spec["base"])
-            colors = spec["colors"]
-            # The cursor of menus and tables draws the highlight role on the
-            # cursor role, never on the theme's own cursor color.
-            cursor = {
-                "block-cursor-foreground": colors["tui-highlight"],
-                "block-cursor-background": colors["tui-cursor"],
-                "block-cursor-blurred-foreground": colors["tui-highlight"],
-                "block-cursor-blurred-background": colors["tui-cursor"],
-            }
-            self.register_theme(replace(
-                base,
-                name=themes.theme_name(preset),
-                primary=spec.get("primary", base.primary),
-                variables={**base.variables, **colors, **cursor},
-            ))
+        # Each decision state's label in this repository, for display.
+        self.labels = decisions.labels({})
+        self._themes_built = 0
+        # The customized colors this app can read; the others are ignored
+        # and named on the main menu.
+        self.custom_colors, self.ignored_colors = {}, []
+        for role, value in self.user_state.colors.items():
+            if role in themes.ROLES and _is_color(value):
+                self.custom_colors[role] = value
+            else:
+                self.ignored_colors.append(role)
         self.preset = themes.preset_or_default(self.user_state.appearance)
         self.apply_preset(self.preset)
+
+    def _theme(self, preset):
+        """A theme of `preset` with the customized colors on top."""
+        spec = themes.PRESETS[preset]
+        base = self.get_theme(spec["base"])
+        colors = {**spec["colors"], **self.custom_colors}
+        # The cursor of menus and tables draws the highlight role on the
+        # cursor role, never on the theme's own cursor color.
+        cursor = {
+            "block-cursor-foreground": colors["tui-highlight"],
+            "block-cursor-background": colors["tui-cursor"],
+            "block-cursor-blurred-foreground": colors["tui-highlight"],
+            "block-cursor-blurred-background": colors["tui-cursor"],
+        }
+        # A new name each time: setting the app's theme to the name it already
+        # has would not repaint it.
+        self._themes_built += 1
+        name = f"{themes.theme_name(preset)}-{self._themes_built}"
+        self.register_theme(replace(base, name=name, primary=spec.get("primary", base.primary),
+                                    variables={**base.variables, **colors, **cursor}))
+        return name
+
+    def set_color(self, role, color):
+        """Keeps a role's own color (None: the preset's) and shows it."""
+        if color is None:
+            self.custom_colors.pop(role, None)
+        else:
+            self.custom_colors[role] = color
+        self.user_state.set_color(role, color)
+        self.apply_preset(self.preset)
+
+    def reset_colors(self):
+        self.custom_colors = {}
+        self.user_state.reset_colors()
+        self.apply_preset(self.preset)
+
+    def effective_colors(self):
+        return {**themes.PRESETS[self.preset]["colors"], **self.custom_colors}
 
     def get_theme_variable_defaults(self):
         # Read while the stylesheet is parsed, before any theme applies.
@@ -58,7 +106,7 @@ class AdrpyTui(App):
 
     def apply_preset(self, preset):
         """Shows a preset without saving it (a preview)."""
-        self.theme = themes.theme_name(preset)
+        self.theme = self._theme(preset)
 
     def choose_preset(self, preset):
         self.preset = preset
@@ -76,6 +124,17 @@ class AdrpyTui(App):
         self.texts = i18n.load(language)
         self.call_later(self._restart)
 
+    def use_repository(self, path):
+        """Works on another repository from now on: reads it and rebuilds
+        every screen."""
+        self.repo = Path(path).resolve()
+        self.call_later(self._restart)
+
+    async def reload_repository(self):
+        """Reads the repository again and rebuilds every screen from the
+        main menu (after init, config or migrate)."""
+        await self._restart()
+
     async def _restart(self):
         """Rebuilds every screen, so all of them speak the new language."""
         while len(self.screen_stack) > 1:
@@ -84,6 +143,7 @@ class AdrpyTui(App):
 
     def repository_read(self, result):
         self.configured = result.success
+        self.labels = decisions.labels(result.data.get("config") or {})
         self.repo_problem = None if result.success or result.code == "config-not-found" else result
         self.switch_screen(MenuScreen())
 
@@ -94,9 +154,21 @@ class AdrpyTui(App):
             self.push_screen(LanguageScreen(first_run=False))
         elif item.id == "appearance":
             self.push_screen(AppearanceScreen())
+        elif item.id == "change-repository":
+            self.push_screen(RepositoryScreen())
         elif item.submenu:
             self.push_screen(MenuScreen(item))
         elif item.shows_help:
             self.push_screen(HelpScreen(item.command))
+        elif getattr(FORMS[item.command], "VIEW", None) == "explore":
+            self.push_screen(ExploreScreen())
+        elif getattr(FORMS[item.command], "VIEW", None) == "check":
+            self.push_screen(CheckScreen())
+        elif getattr(FORMS[item.command], "VIEW", None) in ("config", "installconfig"):
+            self.push_screen(ConfigScreen(item.command))
+        elif getattr(FORMS[item.command], "VIEW", None) == "migrate":
+            self.push_screen(MigrateScreen())
+        elif getattr(FORMS[item.command], "VIEW", None) == "skills-list":
+            self.push_screen(SkillsListScreen())
         else:
             self.push_screen(FormScreen(item.command))

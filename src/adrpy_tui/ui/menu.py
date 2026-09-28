@@ -6,13 +6,14 @@ its title.
 
 from textual.binding import Binding
 from textual.widgets import OptionList, Static
-from textual.widgets.option_list import Option, OptionDoesNotExist
+from textual.widgets.option_list import OptionDoesNotExist
 
 from adrpy_tui.core.registry import FORMS, MAIN_MENU, command_name
 from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.paged import PagedList, row
 
 # Items that open no form but are available.
-_ACTIONS = ("language", "appearance", "exit")
+_ACTIONS = ("change-repository", "language", "appearance", "exit")
 # The first option of every submenu: back to the menu it was opened from.
 BACK = "back"
 
@@ -31,8 +32,11 @@ class MenuScreen(AdrpyScreen):
         problem = self.app.repo_problem
         if self.menu is MAIN_MENU and problem is not None:
             yield Static(texts("menu.repo_problem", detail=problem.detail or problem.code), classes="error", markup=False)
-        back = [] if self.menu is MAIN_MENU else [Option(texts("menu.back"), id=BACK)]
-        yield OptionList(*back, *(self._option(item) for item in self.menu.submenu), id="options")
+        back = [] if self.menu is MAIN_MENU else [row(texts("menu.back"), id=BACK)]
+        if self.menu is MAIN_MENU and self.app.ignored_colors:
+            yield Static(texts("appearance.ignored", roles=", ".join(self.app.ignored_colors)), id="ignored-colors",
+                         classes="warning", markup=False)
+        yield PagedList(*back, *(self._option(item) for item in self.menu.submenu), list_id="options")
         yield Static("", id="description", classes="info", markup=False)
 
     def _option(self, item):
@@ -40,7 +44,7 @@ class MenuScreen(AdrpyScreen):
         title = self._title(item)
         if reason:
             title = f"{title}  ({self.app.texts(reason)})"
-        return Option(title, id=item.id, disabled=reason is not None)
+        return row(title, id=item.id, disabled=reason is not None)
 
     def _title(self, item):
         return command_name(item.command) if item.shows_help else self.app.texts(f"menu.{item.id}")

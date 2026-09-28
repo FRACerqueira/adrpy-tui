@@ -5,16 +5,20 @@ import re
 from datetime import date
 
 from textual.binding import Binding
+from textual.containers import Vertical
 from textual.suggester import Suggester
-from textual.widgets import Button, Input, Label, MaskedInput, Static, Switch
+from textual.widgets import (
+    Button, Input, Label, MaskedInput, RadioButton, RadioSet, Select, SelectionList, Static, Switch, TextArea,
+)
 
-from adrpy_tui.core.client import display_command
-from adrpy_tui.core.fields import build_flags, problem
+from adrpy_tui.core import i18n
+from adrpy_tui.core.fields import build_flags, problem, shown
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
 from adrpy_tui.ui.base import AdrpyScreen
-from adrpy_tui.ui.confirm import ConfirmScreen
-from adrpy_tui.ui.result import ResultScreen
+from adrpy_tui.ui.paged import PAGE_SIZE
+from adrpy_tui.ui.picker import AdrPicker
+from adrpy_tui.ui.running import CommandRunner
 
 _SIMILAR_SHOWN = 8
 
@@ -30,28 +34,30 @@ class RepositorySuggester(Suggester):
         return prefix_suggestion(value, self.candidates)
 
 
-class FormScreen(AdrpyScreen):
+class FormScreen(CommandRunner, AdrpyScreen):
     HINTS = "hints.form"
     BINDINGS = [Binding("escape", "back", show=False), Binding("ctrl+r", "run", show=False)]
 
-    def __init__(self, command):
+    def __init__(self, command, decision=None):
         super().__init__(command)
         self.form = FORMS[command]
+        # The path of a decision to choose once the decisions are read.
+        self._preselected = decision
         self._candidates = {}
-        # Set once the command starts: the result replaces this screen when
-        # it ends, so nothing may leave it or start the command again
-        # meanwhile (`loading` does not stop key bindings).
-        self._command_running = False
 
     def compose_body(self):
         texts = self.app.texts
         yield Static(texts(f"form.{self.command}"), classes="title")
+        if self.command == "init" and self.app.configured:
+            yield Static(texts("form.init_configured"), id="form-warning", classes="warning", markup=False)
         for field in self.form.FIELDS:
-            yield Label(texts(f"field.{field.flag}") + (" *" if field.required else ""))
-            yield self._editor(field)
-            if field.suggest_from:
-                yield Static("", id=f"similar-{field.flag}", classes="info", markup=False)
-            yield Static("", id=f"problem-{field.flag}", classes="error", markup=False)
+            with Vertical(id=f"row-{field.flag}", classes="field-row"):
+                required = field.required or field.required_if_shown
+                yield Label(texts(f"field.{field.flag}") + (" *" if required else ""))
+                yield self._editor(field)
+                if field.suggest_from:
+                    yield Static("", id=f"similar-{field.flag}", classes="info", markup=False)
+                yield Static("", id=f"problem-{field.flag}", classes="error", markup=False)
         yield Button(texts("form.run"), id="run", variant="primary")
 
     def _editor(self, field):
@@ -60,34 +66,109 @@ class FormScreen(AdrpyScreen):
             return MaskedInput(template="9999-99-99", value=date.today().isoformat(), id=widget_id)
         if field.kind == "switch":
             return Switch(id=widget_id)
-        restrict = f"[^{re.escape(field.forbidden)}]*" if field.forbidden else None
+        if field.kind == "decision":
+            return AdrPicker(field, id=widget_id)
+        if field.kind == "choice":
+            texts = self.app.texts
+            return RadioSet(
+                *(RadioButton(texts(f"choice.{field.flag}.{choice}"), value=index == 0, id=f"{field.flag}-{choice}")
+                  for index, choice in enumerate(field.choices)),
+                id=widget_id,
+            )
+        if field.kind == "language":
+            return Select([(i18n.load(code)("language.name"), code) for code in i18n.LANGUAGES],
+                          value=self.app.texts.language, allow_blank=False, id=widget_id)
+        if field.kind == "select":
+            # adrpy's own vocabulary, shown as is (ADR005V01).
+            return Select([(choice, choice) for choice in field.choices], value=field.choices[0],
+                          allow_blank=False, id=widget_id)
+        if field.kind == "multiline":
+            return TextArea(id=widget_id)
+        if field.kind == "multi":
+            # A short, fixed list of choices: never more than a page
+            # (doc/forms.md, "Lists").
+            choices = SelectionList(*((choice, choice) for choice in field.choices), id=widget_id)
+            choices.styles.max_height = PAGE_SIZE + 2
+            return choices
+        restrict = field.restrict or (f"[^{re.escape(field.forbidden)}]*" if field.forbidden else None)
         suggester = RepositorySuggester() if field.suggest_from else None
         return Input(id=widget_id, restrict=restrict, suggester=suggester)
 
-    def on_mount(self):
-        if any(field.suggest_from for field in self.form.FIELDS):
-            self.run_worker(self._read_existing_values, thread=True)
+    def _value(self, field):
+        editor = self.query_one(f"#field-{field.flag}")
+        if field.kind == "choice":
+            pressed = editor.pressed_button
+            return pressed.id.removeprefix(f"{field.flag}-") if pressed else field.choices[0]
+        if field.kind == "multiline":
+            return editor.text
+        if field.kind == "multi":
+            return ",".join(choice for choice in field.choices if choice in editor.selected)
+        return editor.value
 
-    def _read_existing_values(self):
+    def _values(self):
+        return {field.flag: self._value(field) for field in self.form.FIELDS}
+
+    def _show_rows(self):
+        """Shows each field only while its condition holds."""
+        values = self._values()
+        for field in self.form.FIELDS:
+            self.query_one(f"#row-{field.flag}").display = shown(field, values)
+
+    def on_radio_set_changed(self, event):
+        self._show_rows()
+
+    def on_select_changed(self, event):
+        self._show_rows()
+
+    def on_mount(self):
+        self._show_rows()
+        if any(field.suggest_from or field.kind == "decision" for field in self.form.FIELDS):
+            self.run_worker(self._read_decisions, thread=True)
+
+    def _read_decisions(self):
         result = self.app.client.run("explore", ("--path", str(self.app.repo)))
-        if not result.success:
+        if result.success:
+            self.app.call_from_thread(self._set_decisions, result.data.get("decisions", []))
+        else:
+            self.app.call_from_thread(self._explore_failed, result)
+
+    def _explore_failed(self, result):
+        if not self.is_attached:
             return
-        headers = [decision.get("header") or {} for decision in result.data.get("decisions", [])]
-        values = {
+        for picker in self.query(AdrPicker).results(AdrPicker):
+            picker.show_failure(result.detail or result.code)
+
+    def _set_decisions(self, decisions):
+        if not self.is_attached:  # the person left the form meanwhile
+            return
+        headers = [decision.get("header") or {} for decision in decisions]
+        self._candidates = {
             field.flag: sorted({header[field.suggest_from] for header in headers if header.get(field.suggest_from)})
             for field in self.form.FIELDS
             if field.suggest_from
         }
-        self.app.call_from_thread(self._set_candidates, values)
-
-    def _set_candidates(self, values):
-        if not self.is_attached:  # the person left the form meanwhile
-            return
-        self._candidates = values
-        for flag, candidates in values.items():
+        for field in self.form.FIELDS:
+            if field.kind == "decision":
+                picker = self.query_one(f"#field-{field.flag}", AdrPicker)
+                picker.set_decisions(decisions, self.app.labels)
+                if self._preselected:
+                    picker.choose(self._preselected)
+        for flag, candidates in self._candidates.items():
             editor = self.query_one(f"#field-{flag}", Input)
             editor.suggester.candidates = candidates
             self._show_similar(flag, editor.value)
+
+    def on_adr_picker_chosen(self, event):
+        """Shows adrpy's defaults for the chosen decision: copies its
+        scope/domain into fields still empty, and its title as a
+        placeholder."""
+        header = event.decision.get("header") or {}
+        for field in self.form.FIELDS:
+            editor = self.query_one(f"#field-{field.flag}")
+            if field.prefill_from and not editor.value and header.get(field.prefill_from):
+                editor.value = header[field.prefill_from]
+            if field.default_from:
+                editor.placeholder = self.app.texts("form.default", value=event.decision.get(field.default_from) or "")
 
     def on_input_changed(self, event):
         flag = event.input.id.removeprefix("field-")
@@ -105,12 +186,16 @@ class FormScreen(AdrpyScreen):
             self.action_run()
 
     def action_run(self):
-        if self._command_running:
+        if self.command_running:
             return
-        values = {field.flag: self.query_one(f"#field-{field.flag}").value for field in self.form.FIELDS}
+        values = self._values()
+        pickers = [self.query_one(f"#field-{field.flag}", AdrPicker) for field in self.form.FIELDS if field.kind == "decision"]
+        decision = pickers[0].selected if pickers else None
         first_problem = None
         for field in self.form.FIELDS:
-            found = problem(field, values[field.flag])
+            if not shown(field, values):
+                continue
+            found = problem(field, values[field.flag], decision)
             if found:
                 key, params = found
                 self.query_one(f"#problem-{field.flag}", Static).update(self.app.texts(key, **params))
@@ -118,21 +203,8 @@ class FormScreen(AdrpyScreen):
         if first_problem:
             self.query_one(f"#field-{first_problem.flag}").focus()
             return
-        flags = build_flags(self.form, self.app.repo, values)
-        self.app.push_screen(ConfirmScreen(display_command(self.command, flags)), lambda yes: self._confirmed(yes, flags))
-
-    def _confirmed(self, yes, flags):
-        if yes and not self._command_running:
-            self._command_running = True
-            self.query_one("#body").loading = True
-            # The app's worker, not this screen's: switching to the result
-            # removes this screen, which would cancel a worker it owns.
-            self.app.run_worker(lambda: self._execute(flags), thread=True)
-
-    def _execute(self, flags):
-        result = self.app.client.run(self.command, flags)
-        self.app.call_from_thread(self.app.switch_screen, ResultScreen(self.command, result))
+        self.confirm_and_run([(self.command, build_flags(self.form, self.app.repo, values))])
 
     def action_back(self):
-        if not self._command_running:
+        if not self.command_running:
             self.app.pop_screen()

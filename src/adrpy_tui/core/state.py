@@ -1,5 +1,5 @@
-"""Per-user state: the interface language, the appearance preset and the
-last item selected in each menu.
+"""Per-user state: the interface language, the appearance preset, the
+colors customized on top of it, and the last item selected in each menu.
 
 A file that can't be read starts empty, and one that can't be written is
 skipped, without interrupting the person: losing it only means choosing the
@@ -27,6 +27,10 @@ class UserState:
         self.language = language if isinstance(language, str) else None
         appearance = data.get("appearance")
         self.appearance = appearance if isinstance(appearance, str) else None
+        colors = data.get("colors")
+        # role -> color as typed; checked by the app, which ignores (and
+        # reports) one it cannot read.
+        self.colors = {k: v for k, v in colors.items() if isinstance(v, str)} if isinstance(colors, dict) else {}
         items = data.get("last_menu_item")
         self._items = {k: v for k, v in items.items() if isinstance(v, str)} if isinstance(items, dict) else {}
 
@@ -52,8 +56,21 @@ class UserState:
         self.appearance = preset
         self._save()
 
+    def set_color(self, role, color):
+        """A role's own color, or None for the preset's."""
+        if color is None:
+            self.colors.pop(role, None)
+        else:
+            self.colors[role] = color
+        self._save()
+
+    def reset_colors(self):
+        self.colors = {}
+        self._save()
+
     def _save(self):
-        data = {"language": self.language, "appearance": self.appearance, "last_menu_item": self._items}
+        data = {"language": self.language, "appearance": self.appearance, "colors": self.colors,
+                "last_menu_item": self._items}
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")

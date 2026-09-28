@@ -1,0 +1,82 @@
+# Manual test checklist
+
+What the automated tests cannot check -- a real terminal's rendering, keys
+and colors, and how the screens feel -- walked through before a release,
+screen by screen. Build the repositories first:
+
+```bash
+python scripts/make_sample_repo.py <folder> --reset --extra 40
+```
+
+`<folder>/sample` has decisions in every state (and 40 more, for several
+pages), `legacy` hand-written files for migrate, `broken` two files with the
+same number for check, and `empty` no config. After a round, `--reset` puts
+everything back.
+
+Run it in each terminal the release supports (Windows Terminal, conhost,
+macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
+
+## Every screen
+
+- [ ] The banner's double rules and letters are whole, in the banner color.
+- [ ] The key line at the bottom matches the keys that work.
+- [ ] `Esc` goes back one level; on the main menu it leaves.
+- [ ] A list longer than eight rows shows "Items … · page … · PgUp/PgDn";
+      `PgUp`, `PgDn`, `Home` and `End` move as it says.
+
+## First run and appearance (`empty`)
+
+- [ ] With no state file (`%APPDATA%\adrpy-tui\state.json` removed on
+      Windows, `~/.local/state/adrpy-tui/state.json` elsewhere), the first
+      screen is the language choice, the system's language highlighted.
+- [ ] The main menu disables Decisions, Explore and validate and Decision
+      log, each saying it needs an initialized repository.
+- [ ] Language: another language rebuilds every screen in it.
+- [ ] Appearance: each preset previews as the cursor moves; `Esc` restores
+      the saved one; Light and High contrast are readable, the highlighted
+      menu item included.
+- [ ] Customize colors: a color shows at once; a hard-to-read one is warned
+      about; "Back to the preset" and "Restore every color" undo it.
+
+## Repository (`empty`, then `legacy`)
+
+- [ ] Initialize `empty` in another language: the menus come alive, the
+      labels are that language's.
+- [ ] Configuration: every group lists its fields; editing marks them;
+      `Ctrl+R` confirms one `config` with only the changed fields.
+- [ ] Migrate `legacy`: the proposed pattern reads the number and title of
+      the sample; Preview lists every file; Migrate confirms the two
+      commands and migrates.
+
+## Decisions (`sample`)
+
+- [ ] New decision: scope and domain suggest the repository's values
+      (`→` accepts); a forbidden character can't be typed.
+- [ ] Approve, Reject, Undo, New version, New revision, Supersede: the
+      picker lists only what each takes, by default; switching "Only the
+      available ones" off shows the rest disabled.
+- [ ] The confirmation shows the exact command; the result shows adrpy's
+      answer.
+
+## Explore and validate (`sample`, `broken`)
+
+- [ ] Explore: the columns line up, in every language; a decision's detail
+      shows its content and the actions its state allows, each opening its
+      form with the decision chosen.
+- [ ] After an action, the detail and the list show the change.
+- [ ] Check on `broken`: the errors list, each hint below it; on `sample`,
+      "No inconsistencies".
+
+## Decision log and AI skills (`sample`)
+
+- [ ] New entry: the fields each classification takes appear with it.
+- [ ] AI skills: install for this repository, list shows it installed,
+      remove takes it away. (Installing in the user folder writes to your
+      real home.)
+
+## Help and change repository
+
+- [ ] Command help: every command's contract, adrpy's descriptions in
+      English.
+- [ ] Change repository: the tree lists folders only; choosing one, then
+      `Ctrl+R`, works on it from then on.
