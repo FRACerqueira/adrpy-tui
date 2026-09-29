@@ -3806,3 +3806,15 @@ def test_an_error_s_empty_related_files_are_not_listed(tmp_path, user_state):
         assert _text(app.screen, "#errors-hint") == app.texts("errors.related", files="b.md")
 
     run_app(app, scenario)
+
+
+
+def test_the_config_editor_marks_as_guarded_the_fields_adrpy_guards():
+    """The editor notes, on a field adrpy refuses to change while decisions
+    exist, that it is guarded: the two lists had drifted (headertablefields).
+    adrpy's own list, since `adrpy help config` does not report it."""
+    from adrpy.core.lifecycle import GUARDED_CONFIG_FIELDS
+
+    from adrpy_tui.core.config_fields import CONFIG_FIELDS
+
+    assert {field.flag for field in CONFIG_FIELDS if field.guarded} == set(GUARDED_CONFIG_FIELDS)

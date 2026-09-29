@@ -41,7 +41,7 @@ CONFIG_FIELDS = (
     _text("headertitlestatuscreated", "header", 40),
     _text("headertitlestatuschanged", "header", 40),
     _text("headertitlestatussuperseded", "header", 40),
-    _text("headertablefields", "header", 40),
+    _text("headertablefields", "header", 40, guarded=True),
     _text("headertablevalues", "header", 40),
     _text("headermigrated", "header", 40),
     Field("template", "multiline", group="template", max_length=10000),
