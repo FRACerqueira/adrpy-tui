@@ -1,0 +1,5 @@
+# A field dropped every invisible character, changing text the person never typed
+
+**Front:** Command fidelity and untrusted input (Opus) | **Severity:** Medium | **Resolution:** Retraction | **Round:** 4
+
+Retracts the round-3 choice recorded in 2026-09-29--audit-finding--text--invisible-characters-filled-into-fields.md and 2026-09-29--audit-finding--text--pasted-controls-hidden-from-the-confirmation.md (see the retraction entry). Dropping every Cf removed a Persian word's ZWNJ, an emoji's ZWJ and a template's BOM just by opening a field, and turned a repository path holding one into another folder. Owner's choice (option d): field_text drops only the bidirectional controls and, asked separately, the tag characters (U+E0000-E007F); the other Cf stay and the confirmation writes them out. A value left as it opened is no change (config editor), and Change repository keeps its own path. Newly admitted, enumerated: ZWJ, ZWNJ, BOM, soft hyphen, zero-width space, word joiner, invisible math operators. Covered by tests/test_text.py and tests/test_ui.py (Persian scope, template, repository).
