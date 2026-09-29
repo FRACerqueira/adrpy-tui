@@ -2373,7 +2373,7 @@ def test_a_web_link_is_never_opened(repo, user_state, client, monkeypatch):
 
 
 def test_a_link_opens_only_a_file_inside_the_repository(tmp_path, user_state, monkeypatch):
-    """ADR006V01: a link in a file the person may not have written opens
+    """ADR006V02: a link in a file the person may not have written opens
     only a .md inside the repository. A network path made the machine
     connect to another host on one click (Path.is_file on //host/share)."""
     repo = tmp_path / "repo"

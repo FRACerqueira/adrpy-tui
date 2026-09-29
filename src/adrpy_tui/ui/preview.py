@@ -42,7 +42,7 @@ def excerpt(app, path):
 def inside_repository(root, path):
     """Whether `path` lies inside the repository `root` with no folder link
     on the way -- a symlink or a Windows junction inside the repository may
-    lead anywhere (ADR006V01). Lexical first, so nothing outside the
+    lead anywhere (ADR006V02). Lexical first, so nothing outside the
     repository (a network path) is ever touched; then each component below
     the root is looked at with lstat, never resolved: resolving opens the
     target, and a link may point at another machine."""
@@ -82,7 +82,7 @@ def follow_link(app, source, href):
     file) is only named -- never opened in a browser from a file the TUI did
     not write. An absolute or network path, or one leading outside the
     repository, is refused before the file system is touched: a network path
-    would make the machine connect to another host (ADR006V01)."""
+    would make the machine connect to another host (ADR006V02)."""
     relative = href.split("#", 1)[0]
     if not relative or "://" in relative or Path(relative).suffix.lower() != ".md":
         app.notify(visible(href), markup=False)

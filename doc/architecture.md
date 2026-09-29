@@ -52,7 +52,7 @@ adrpy. For the same reason an empty or relative `PYTHONPATH` entry, which
 names the current folder again, is dropped from adrpy's environment. Every call returns a `Result`, never raises: a read is stopped
 after `READ_TIMEOUT`, a write never is -- the person may leave it and adrpy
 goes on to its end, and no other write starts while it runs -- and an adrpy
-that cannot be started is a failure like any other (ADR006V01). Waiting for
+that cannot be started is a failure like any other (ADR006V02). Waiting for
 the one-call lock ends as well when the person leaves, and `shutdown()`,
 called when the TUI quits, stops a read in flight and leaves a write.
 
@@ -84,7 +84,7 @@ graph TD
 
 | Module | Concern |
 |---|---|
-| `core/client.py` | The only module that runs a subprocess (read timeout, a write that can be left: ADR006V01); returns `Result(success, data, code, detail, warnings, exit_code)`, every string of it without control characters. A stdout that is not one JSON object is a contract violation, reported as such. |
+| `core/client.py` | The only module that runs a subprocess (read timeout, a write that can be left: ADR006V02); returns `Result(success, data, code, detail, warnings, exit_code)`, every string of it without control characters. A stdout that is not one JSON object is a contract violation, reported as such. |
 | `core/registry.py` | Maps each command to its form module (as adrpy-ai's `core/registry.py` maps verbs to `cli/` modules), lays out the menus, and gives the commands a decision's state allows. |
 | `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources (ADR004V01). A command with a screen of its own says so (`VIEW`: explore, check, config, installconfig, migrate, skills list); flags a screen deliberately does not offer are listed with the reason (`NOT_OFFERED`). |
 | `core/fields.py` | The field kinds, their checks before running, which are shown (`shown_when`) and which are the screen's own (`local`), and the translation of values into flags. |

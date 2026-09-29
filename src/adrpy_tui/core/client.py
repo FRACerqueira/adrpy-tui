@@ -21,7 +21,7 @@ SKILLS_PREFIX = "skills:"
 # never one of adrpy's codes, so it can't be mistaken for one.
 CONTRACT_VIOLATION = "tui-contract-violation"
 # The TUI's own codes for a call that did not end with an answer
-# (ADR006V01): a read stopped at its timeout, a write the person left while
+# (ADR006V02): a read stopped at its timeout, a write the person left while
 # adrpy still ran, an adrpy that could not be started.
 TIMED_OUT = "tui-timeout"
 ABANDONED = "tui-left-running"
@@ -122,7 +122,7 @@ def _run(argv, timeout=None, leave=None):
     """Runs adrpy. A read (a timeout) is stopped after `timeout` seconds, or
     once `leave` is set; a write (no timeout) is never stopped -- when
     `leave` is set, the waiting ends and adrpy goes on to its own end
-    (ADR006V01)."""
+    (ADR006V02)."""
     if leave is not None and leave.is_set():
         raise _Left()
     # stdin is the TUI's terminal; adrpy never prompts, so give it nothing.

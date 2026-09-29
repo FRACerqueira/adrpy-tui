@@ -2,7 +2,7 @@
 what adrpy returns -- is shown as it is: never read as markup, no control
 character reaching the terminal, and a character that changes how the
 rest of a line reads (bidirectional, invisible) shown as <U+XXXX>
-(ADR006V01's audit, SECURITY.md). Every screen that shows such text is
+(ADR006V02's audit, SECURITY.md). Every screen that shows such text is
 driven here with hostile names, and everything it draws is read back."""
 
 import asyncio

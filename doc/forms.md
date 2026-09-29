@@ -131,7 +131,7 @@ goes back, as a browser does. A link to anything else is only named, never
 opened in a browser: the file may not be the person's own. A link opens only
 a `.md` inside the repository: an absolute or network path (`//host/share`),
 or one leading outside it, is named and refused before the file system is
-touched ([ADR006V01](adr/ADR006V01R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). The same holds for every preview,
+touched ([ADR006V02](adr/ADR006V02R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). The same holds for every preview,
 whoever names the file -- a link, adrpy, a command's result -- and for the
 decisions and log folders the configuration names: nothing outside the
 repository opens, and no folder link (a symlink, a Windows junction) inside
@@ -253,7 +253,7 @@ and its result replaces that screen. A write is never stopped: past the time
 a read may take (60 s, `READ_TIMEOUT` in `core/client.py`), the screen says
 adrpy is still running and its result unknown, and offers to leave; the
 result then says so, with Check at hand. A read that does not answer in that
-time is stopped and shown as `tui-timeout` ([ADR006V01](adr/ADR006V01R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). While a
+time is stopped and shown as `tui-timeout` ([ADR006V02](adr/ADR006V02R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). While a
 write that was left still runs, another write is refused
 (`tui-write-still-running`) -- two adrpy writes on one working copy are a
 usage error for adrpy-ai -- and reads, Check first, still run. A write still

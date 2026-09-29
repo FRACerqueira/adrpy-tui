@@ -55,7 +55,7 @@ class CommandRunner:
 
         app.run_worker(work, thread=True)
         # A write is never stopped; past the time a read may take, the person
-        # is told and may leave it (ADR006V01).
+        # is told and may leave it (ADR006V02).
         self._still_running = self.set_timer(client_module.READ_TIMEOUT, self._say_still_running)
 
     async def _finish(self, command, result):

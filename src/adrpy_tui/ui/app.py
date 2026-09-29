@@ -56,7 +56,7 @@ class AdrpyTui(App):
         # none", shown on the main menu.
         self.repo_problem = None
         # The "leave" of every write still running: quitting leaves them all,
-        # so the TUI never waits for one (ADR006V01).
+        # so the TUI never waits for one (ADR006V02).
         self.running_leaves = set()
         # An adrpy-ai outside the range this adrpy-tui was validated with,
         # (found, range), shown on the main menu (ADR003V01).
@@ -201,7 +201,7 @@ class AdrpyTui(App):
 
     def exit(self, *args, **kwargs):
         # Quitting never waits for adrpy: a read in flight is stopped, a write
-        # left to its own end (ADR006V01).
+        # left to its own end (ADR006V02).
         for leave in list(self.running_leaves):
             leave.set()
         self.client.shutdown()
