@@ -7,7 +7,7 @@ from textual.binding import Binding
 from textual.widgets import Button, Static
 
 from adrpy_tui.core import keys
-from adrpy_tui.core.client import ABANDONED
+from adrpy_tui.core.client import ABANDONED, WRITE_STILL_RUNNING
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import AdrpyScreen
@@ -52,7 +52,7 @@ class ResultScreen(AdrpyScreen):
 
     def compose_body(self):
         yield from result_widgets(self.app.texts, self.result)
-        if self.result.code == ABANDONED:  # the repository's state is unknown: Check says it
+        if self.result.code in (ABANDONED, WRITE_STILL_RUNNING):  # the repository's state is unknown: Check says it
             yield Button(self.app.texts("result.run_check"), id="run-check", variant="primary",
                          action="screen.run_check")
 

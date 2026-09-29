@@ -9,11 +9,12 @@ from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, Select, Static
 
+from adrpy_tui.core.files import inside_repository, markdown_files
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
 from adrpy_tui.ui.explore import _cells
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
-from adrpy_tui.ui.preview import PREVIEW_BINDING, inside_repository, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 
 ALL = "*"
 _WIDTHS = (12, 22, 18, 0)
@@ -55,8 +56,7 @@ class LogScreen(AdrpyScreen):
         # A configuration naming a folder outside the repository (adrpy reads
         # one back from a hand-edited file) lists nothing there.
         inside = inside_repository(self.app.repo, folder)
-        self._entries = sorted(path for path in folder.rglob("*.md") if path.name != "INDEX.md") \
-            if inside and folder.is_dir() else []
+        self._entries = [path for path in markdown_files(folder) if path.name != "INDEX.md"] if inside else []
         classifications = sorted({entry_parts(path.name)[1] for path in self._entries} - {""})
         self.query_one("#logs-classification", Select).set_options(
             [(self.app.texts("logs.all_classifications"), ALL), *((Text(visible(c)), c) for c in classifications)])

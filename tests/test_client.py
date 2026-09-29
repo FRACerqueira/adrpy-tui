@@ -3,6 +3,8 @@ import sys
 import threading
 import time
 
+import pytest
+
 from adrpy_tui.core import client as client_module
 from adrpy_tui.core.client import ABANDONED, CONTRACT_VIOLATION, RUN_FAILED, TIMED_OUT, Client, display_command
 
@@ -335,3 +337,64 @@ def test_an_empty_or_relative_pythonpath_entry_does_not_let_the_current_folder_i
         result = Client().run("config", ("--path", "."))
         assert not (tmp_path / "RAN").exists(), repr(value)
         assert result.code == "config-not-found"
+
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows' own command-line parser")
+def test_the_confirmation_reads_back_as_the_argv_on_windows():
+    """A value with a quote and a line break was quoted twice (list2cmdline's
+    escape, then ours): Windows read "a\\"b..." back. Every value the forms can
+    send is shown so that CommandLineToArgvW returns it exactly."""
+    import ctypes
+    import itertools
+    from ctypes import wintypes
+
+    parse = ctypes.windll.shell32.CommandLineToArgvW
+    parse.restype = ctypes.POINTER(wintypes.LPWSTR)
+    wrong = []
+    for size in range(1, 5):
+        for chars in itertools.product('a "\\' + chr(10) + chr(9), repeat=size):
+            value = "".join(chars)
+            count = ctypes.c_int()
+            argv = parse(display_command("log", ["--body", value]), ctypes.byref(count))
+            if argv[count.value - 1] != value:
+                wrong.append(value)
+    assert wrong == []
+
+
+
+def test_a_write_already_left_is_never_started(tmp_path, monkeypatch):
+    """_run checks leave before starting adrpy; that half of the fix had no
+    test. And a call that never started was reported "still running"."""
+    marker = tmp_path / "started"
+    _hanging(monkeypatch, 0, f"open({str(marker)!r}, 'w').write('x')")
+    leave = threading.Event()
+    leave.set()
+    result = Client().run("new", write=True, leave=leave)
+    time.sleep(1.5)
+    assert not marker.exists()
+    assert result.code == client_module.NOT_STARTED
+
+
+def test_a_read_stopped_because_the_tui_quits_says_so(monkeypatch):
+    _hanging(monkeypatch, 20)
+    client = Client()
+    threading.Timer(0.3, client.shutdown).start()
+    assert client.run("explore").code == client_module.STOPPED
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows drains the pipes in communicate's own threads")
+def test_a_left_write_printing_more_than_a_pipe_holds_still_ends(tmp_path, monkeypatch):
+    """On POSIX nobody read a left write's pipes: one printing more than about
+    64 KB blocked on the full pipe, never ended, and every later write was
+    refused (reproduced on Linux). Its output is drained, and dropped. Red is
+    not achievable on Windows, where communicate's threads drain the pipes
+    anyway; this runs on the Linux and macOS CI legs."""
+    _hanging(monkeypatch, 1, "import sys; sys.stdout.write('x' * 200000)")
+    client = Client()
+    leave = threading.Event()
+    threading.Timer(0.3, leave.set).start()
+    assert client.run("new", write=True, leave=leave).code == ABANDONED
+    time.sleep(4)
+    _answering(monkeypatch)
+    assert client.run("approve", write=True).success

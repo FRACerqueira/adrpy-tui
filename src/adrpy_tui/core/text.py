@@ -35,6 +35,20 @@ def visible(text):
                    for c in _without_controls(text))
 
 
+def field_text(text, multiline=False):
+    """What a text field keeps (ui/inputs.py): printable text only -- no
+    control character, no lone surrogate, nothing that hides itself (Cf, Zl,
+    Zp). A multi-line field also keeps its tabs and line breaks, a CR only as
+    part of a CRLF (a template keeps its line endings)."""
+    kept = []
+    for index, char in enumerate(text):
+        if multiline and (char in "\t\n" or char == "\r" and text[index + 1:index + 2] == "\n"):
+            kept.append(char)
+        elif unicodedata.category(char) not in ("Cc", "Cs", "Cf", "Zl", "Zp"):
+            kept.append(char)
+    return "".join(kept)
+
+
 def safe(text):
     """Text as adrpy returned it, without what could act on the terminal;
     tabs and line breaks, CRLF included, are kept."""

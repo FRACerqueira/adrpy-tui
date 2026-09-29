@@ -5,6 +5,7 @@ import sys
 from importlib.metadata import PackageNotFoundError, metadata
 from pathlib import Path
 
+from adrpy_tui.core.files import is_dir
 from adrpy_tui.core.versions import installed_version
 
 _DOCS_URL = "https://github.com/FRACerqueira/adrpy-tui#readme"
@@ -12,8 +13,8 @@ _DOCS_URL = "https://github.com/FRACerqueira/adrpy-tui#readme"
 
 def _print_version():
     try:
-        summary = metadata("adrpy-tui")["Summary"]
-    except PackageNotFoundError:
+        summary = metadata("adrpy-tui")["Summary"] or ""
+    except (PackageNotFoundError, ValueError, OSError):  # damaged metadata, as installed_version
         summary = ""
     print(f"adrpy-tui {installed_version('adrpy-tui')}")
     print(f"adrpy-ai {installed_version('adrpy-ai')}")
@@ -33,7 +34,7 @@ def main(argv=None):
         _print_version()
         return 0
     repo = Path(args.path)
-    if not repo.is_dir():
+    if not is_dir(repo):
         parser.error(f"--path is not a directory: {args.path}")
 
     from adrpy_tui.ui.app import AdrpyTui

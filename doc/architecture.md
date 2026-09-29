@@ -54,7 +54,10 @@ after `READ_TIMEOUT`, a write never is -- the person may leave it and adrpy
 goes on to its end, and no other write starts while it runs -- and an adrpy
 that cannot be started is a failure like any other (ADR006V02). Waiting for
 the one-call lock ends as well when the person leaves, and `shutdown()`,
-called when the TUI quits, stops a read in flight and leaves a write.
+called whenever the app closes -- a crash included (`on_unmount`) -- stops a
+read in flight and leaves a write, whose output is then read to its end and
+dropped (on POSIX a full pipe would block it). A call that never started
+ends `NOT_STARTED`, a read stopped because the TUI quits `STOPPED`.
 
 It is required as `adrpy-ai>=0.1.dev0,<0.2`, the series adrpy-tui was
 validated against, development builds included. An adrpy-ai installed
@@ -89,9 +92,10 @@ graph TD
 | `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources (ADR004V01). A command with a screen of its own says so (`VIEW`: explore, check, config, installconfig, migrate, skills list); flags a screen deliberately does not offer are listed with the reason (`NOT_OFFERED`). |
 | `core/fields.py` | The field kinds, their checks before running, which are shown (`shown_when`) and which are the screen's own (`local`), and the translation of values into flags. |
 | `core/config_fields.py` | The 27 fields of adr-config.adrplus, their group, editor and limits, shared by the config and install-level config editors. |
-| `core/decisions.py` | A decision's canonical state as `explore` reports it, and the repository's label for each state. |
+| `core/decisions.py` | A decision's canonical state as `explore` reports it, the repository's label for each state, and a text setting of `adrpy config` read with its default when it is of another type. |
 | `core/migration.py` | The legacy naming pattern: built part by part, parsed, what a part reads from a name, and a first proposal. |
-| `core/text.py` | Text from files made safe to show: no control character reaches the terminal. |
+| `core/text.py` | Text from files made safe to show: no control character reaches the terminal; `field_text`, what a text field keeps. |
+| `core/files.py` | The repository's files as the screens read them: whether a path is inside the repository (folder links included), listings that never follow a folder link nor fail on one they cannot read, and the start of a file, bounded. |
 | `core/contrast.py` | WCAG contrast between two colors. |
 | `core/keys.py` | The actions whose key can be changed, their defaults, the keys that never change, and how a key is named on screen. |
 | `core/i18n.py` | The language packs, the language list and the operating system's language (ADR005V01). |
@@ -100,7 +104,8 @@ graph TD
 | `core/suggest.py` | Suggestions from the values a repository already uses. |
 | `core/versions.py` | The installed versions of adrpy-tui and adrpy-ai, for the header and `--version`, and the check of adrpy-ai against the declared range. |
 | `ui/app.py`, `ui/base.py`, `ui/header.py` | The Textual app (navigation, repository, language, theme), the screen every other one extends -- with `read`, the one way a screen reads through adrpy: in a thread, its answer applied only to that screen while it is open and only if it is the latest, any failure shown there -- and the header they share. |
-| `ui/paged.py`, `ui/picker.py`, `ui/errors.py` | The interface's paged list (`row` makes every option, as plain text), the decision picker and the list of a repository's inconsistencies. |
+| `ui/paged.py`, `ui/picker.py`, `ui/errors.py` | The interface's paged list (`row` makes every option, as plain text), the decision picker and the list of a repository's inconsistencies (each error's fields read as text, whatever type they came in). |
+| `ui/inputs.py` | The text field and text area every screen uses: whatever is typed, pasted or filled in passes through `field_text`. |
 | `ui/running.py` | Confirming and running a screen's commands, then the result; nothing leaves the screen or runs again meanwhile. Forms, the config editors and migrate go through it. |
 | `ui/form.py`, `ui/config.py`, `ui/migrate.py` | A command's form; the config and install-level config editor; the guided migrate builder. |
 | `ui/explore.py`, `ui/check.py`, `ui/skills.py`, `ui/help.py` | The screens that read: explore and a decision's detail, check, the skills list, a command's help. |

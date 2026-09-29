@@ -9,14 +9,16 @@ from textual.binding import Binding
 from textual.widgets import DirectoryTree, Input, Static
 
 from adrpy_tui.core import keys
+from adrpy_tui.core.files import is_dir
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import AdrpyScreen, on_top
+from adrpy_tui.ui.inputs import SafeInput
 from adrpy_tui.ui.paged import PAGE_SIZE
 
 
 class FoldersTree(DirectoryTree):
     def filter_paths(self, paths):
-        return [path for path in paths if path.is_dir() and not path.name.startswith(".")]
+        return [path for path in paths if is_dir(path) and not path.name.startswith(".")]
 
     def process_label(self, label):
         # A folder's name as plain text: Textual would read it as markup
@@ -31,7 +33,7 @@ class RepositoryScreen(AdrpyScreen):
     def compose_body(self):
         texts = self.app.texts
         yield Static(texts("repository.title"), classes="title")
-        yield Input(str(self.app.repo), id="repository-path")
+        yield SafeInput(str(self.app.repo), id="repository-path")
         yield Static("", id="problem-path", classes="error", markup=False)
         tree = FoldersTree(self.app.repo.parent, id="folders")
         tree.styles.max_height = PAGE_SIZE + 2
@@ -54,7 +56,7 @@ class RepositoryScreen(AdrpyScreen):
             path = Path(value).expanduser() if value else None
         except RuntimeError:  # "~name" of a user this machine does not know
             path = None
-        if path is None or not path.is_dir():
+        if path is None or not is_dir(path):
             self.query_one("#problem-path", Static).update(self.app.texts("repository.not_a_folder", path=value))
             return
         self.app.use_repository(path)

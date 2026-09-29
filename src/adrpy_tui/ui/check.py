@@ -3,7 +3,7 @@ top; shows that the repository is consistent, or every inconsistency with
 adrpy's repair hint."""
 
 from textual.binding import Binding
-from textual.widgets import LoadingIndicator
+from textual.widgets import LoadingIndicator, Static
 
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
 from adrpy_tui.ui.errors import ErrorList
@@ -31,6 +31,9 @@ class CheckScreen(AdrpyScreen):
         body = self.query_one("#body")
         await body.remove_children()
         count = result.data.get("decisions", 0)
+        if self.app.client.still_writing():  # ADR006V02R02: what it shows may be half-written
+            await body.mount(Static(self.app.texts("check.write_still_running"), id="write-still-running",
+                                    classes="warning", markup=False))
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))
         self.focus_first()
 

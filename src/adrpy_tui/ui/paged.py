@@ -5,8 +5,10 @@ screen's OptionList sits in one; tests/test_ui.py checks it."""
 from rich.text import Text
 from textual.binding import Binding
 from textual.containers import Vertical
-from textual.widgets import Input, OptionList, Static
+from textual.widgets import OptionList, Static
 from textual.widgets.option_list import Option
+
+from adrpy_tui.ui.inputs import SafeInput
 
 PAGE_SIZE = 8
 
@@ -26,7 +28,7 @@ def row(text, **options):
     return Option(Text(text), **options)
 
 
-class FilterInput(Input):
+class FilterInput(SafeInput):
     """A filter over a list, as a search box: typing filters, and the up,
     down and page keys move the list below (`list_id`) while the cursor
     stays in the filter. Home and End stay the text's."""

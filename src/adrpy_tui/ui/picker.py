@@ -121,7 +121,7 @@ class AdrPicker(Vertical):
         self._show()
 
     def on_input_submitted(self, event):
-        if not on_top(self.screen):
+        if not on_top(self):
             return
         event.stop()
         self.focus()
@@ -142,7 +142,7 @@ class AdrPicker(Vertical):
                 return
 
     def on_option_list_option_selected(self, event):
-        if not on_top(self.screen):
+        if not on_top(self):
             return
         event.stop()
         self._chose(self._decisions[int(event.option.id)])

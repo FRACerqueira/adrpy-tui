@@ -15,8 +15,9 @@ from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.fields import build_flags, problem, shown
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
-from adrpy_tui.core.text import visible
+from adrpy_tui.core.text import field_text, visible
 from adrpy_tui.ui.base import HINTS_FORM, HINTS_PICKER_FORM, AdrpyScreen, on_top
+from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PAGE_SIZE
 from adrpy_tui.ui.picker import AdrPicker
 from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
@@ -93,7 +94,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
             return Select([(choice, choice) for choice in field.choices], value=field.choices[0],
                           allow_blank=False, id=widget_id)
         if field.kind == "multiline":
-            return TextArea(id=widget_id)
+            return SafeTextArea(id=widget_id)
         if field.kind == "multi":
             # A short, fixed list of choices: never more than a page
             # (doc/forms.md, "Lists").
@@ -102,7 +103,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
             return choices
         restrict = field.restrict or (f"[^{re.escape(field.forbidden)}]*" if field.forbidden else None)
         suggester = RepositorySuggester() if field.suggest_from else None
-        return Input(id=widget_id, restrict=restrict, suggester=suggester)
+        return SafeInput(id=widget_id, restrict=restrict, suggester=suggester)
 
     def _value(self, field):
         editor = self.query_one(f"#field-{field.flag}")
@@ -152,7 +153,9 @@ class FormScreen(CommandRunner, AdrpyScreen):
             return
         headers = [decision.get("header") or {} for decision in decisions]
         self._candidates = {
-            field.flag: sorted({header[field.suggest_from] for header in headers if header.get(field.suggest_from)})
+            # As a field keeps them (ui/inputs.py): a suggestion is drawn in the field.
+            field.flag: sorted({field_text(str(header[field.suggest_from])) for header in headers
+                                if header.get(field.suggest_from)} - {""})
             for field in self.form.FIELDS
             if field.suggest_from
         }

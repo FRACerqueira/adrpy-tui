@@ -25,8 +25,9 @@ adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: 
 Concerns that are in scope:
 
 - The TUI running a command other than the one its confirmation screen showed, or with different flags.
+- A value in a text field -- typed, pasted or filled in from a suggestion or the repository -- holding a control, invisible or bidirectional character that makes the confirmation read differently from what runs (every field drops them).
 - The TUI running an executable other than the adrpy installed next to it.
-- A decision file's content, shown in the TUI, being able to act on the terminal (escape sequences) or on the UI (markup), or a link in it making the TUI open a file outside the repository or reach another machine ([ADR006V02](doc/adr/ADR006V02R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)).
+- A decision file's content, shown in the TUI, being able to act on the terminal (escape sequences) or on the UI (markup), or a link in it making the TUI open a file outside the repository or reach another machine ([ADR006V02](doc/adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)).
 - A repository's own files running as adrpy (the TUI runs adrpy with `python -P`, and drops empty or relative `PYTHONPATH` entries).
 - A folder link (symlink, junction) inside a repository, or a configuration naming a folder outside it, making the TUI read files outside the repository.
 - Supply-chain issues in its runtime dependencies (`textual` and what it pulls in) or its build/dev toolchain.

@@ -31,6 +31,7 @@ RUN_FAILED = "tui-run-failed"
 # a usage error for adrpy-ai, its own ADR001V01).
 NOT_STARTED = "tui-not-started"
 WRITE_STILL_RUNNING = "tui-write-still-running"
+STOPPED = "tui-stopped"  # a read stopped because the TUI is quitting
 READ_TIMEOUT = 60  # seconds a read may take before it is stopped
 
 # -P: `python -m` would put the current folder first on the module path, so
@@ -68,9 +69,10 @@ def display_command(command, flags):
     if sys.platform != "win32":
         return shlex.join(argv)
     # list2cmdline quotes a value only for a space or a tab: a line break
-    # alone would read as the start of another command line.
-    parts = (subprocess.list2cmdline([arg]) for arg in argv)
-    return " ".join(_quoted(part) if "\n" in part and not part.startswith('"') else part for part in parts)
+    # alone would read as the start of another command line. Such a value is
+    # quoted from itself, never from list2cmdline's output, whose own escape
+    # of a quote would be doubled.
+    return " ".join(_quoted(arg) if "\n" in arg else subprocess.list2cmdline([arg]) for arg in argv)
 
 
 def _quoted(arg):
@@ -91,9 +93,12 @@ class _TimedOut(Exception):
 
 
 class _Left(Exception):
-    def __init__(self, process=None):
+    """The waiting ended because the person left or the TUI quits."""
+
+    def __init__(self, process=None, started=False):
         super().__init__()
-        self.process = process  # a write's, still running; None when nothing was started
+        self.process = process  # a write's, still running
+        self.started = started  # adrpy was started (a read stopped, or a write left)
 
 
 def _environment():
@@ -115,6 +120,15 @@ def _stop(process):
         # Bounded: a process adrpy started may hold the output open past the kill.
         process.communicate(timeout=2)
     except subprocess.TimeoutExpired:
+        pass
+
+
+def _drain(process):
+    """Reads a left write's output to its end, and drops it: nobody else
+    reads it, and on POSIX a full pipe would block adrpy forever."""
+    try:
+        process.communicate()
+    except (OSError, ValueError):
         pass
 
 
@@ -140,8 +154,9 @@ def _run(argv, timeout=None, leave=None):
             if leave is not None and leave.is_set():
                 if timeout is not None:  # a read changes nothing: stop it
                     _stop(process)
-                    raise _Left() from None
-                raise _Left(process) from None
+                    raise _Left(started=True) from None
+                threading.Thread(target=_drain, args=(process,), daemon=True).start()
+                raise _Left(process, started=True) from None
 
 
 class _Either:
@@ -167,7 +182,8 @@ class Client:
         write left to its own end."""
         self._closing.set()
 
-    def _still_writing(self):
+    def still_writing(self):
+        """Whether a write the person left still runs."""
         self._left = [process for process in self._left if process.poll() is None]
         return bool(self._left)
 
@@ -184,7 +200,7 @@ class Client:
                 return Result(argv, -1, False, code=NOT_STARTED,
                               detail="adrpy was not run: another call still held it when you left.")
         try:
-            if write and self._still_writing():
+            if write and self.still_writing():
                 return Result(argv, -1, False, code=WRITE_STILL_RUNNING,
                               detail="A command you left is still running: wait for it to end, then run check "
                               "to see the repository's state.")
@@ -195,8 +211,12 @@ class Client:
                               detail=f"adrpy did not answer within {READ_TIMEOUT} s and was stopped "
                               "(a read changes nothing).")
             except _Left as left:
-                if left.process is not None:
-                    self._left.append(left.process)
+                if not left.started:
+                    return Result(argv, -1, False, code=NOT_STARTED, detail="adrpy was not run: you left first.")
+                if left.process is None:
+                    return Result(argv, -1, False, code=STOPPED,
+                                  detail="adrpy was stopped: the TUI is quitting (a read changes nothing).")
+                self._left.append(left.process)
                 return Result(argv, -1, False, code=ABANDONED,
                               detail="adrpy is still running: its result is unknown. Run check to see the "
                               "repository's state.")

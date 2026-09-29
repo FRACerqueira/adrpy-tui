@@ -23,6 +23,13 @@ from conftest import FakeClient, command_of, run_app, settle
 from test_ui import _focus_client, _walk
 
 
+class _Ended:
+    """A left write's process that has already ended."""
+
+    def poll(self):
+        return 0
+
+
 class Holding(FakeClient):
     """Holds `command` (after its first `skip` calls) until `release` is
     set, as a slow adrpy would; a write held here ends as the real runner
@@ -44,7 +51,7 @@ class Holding(FakeClient):
                     if self.release.wait(0.02):
                         break
                     if leave is not None and leave.is_set():
-                        raise client_module._Left()
+                        raise client_module._Left(_Ended(), started=True)  # as _run leaves a write
         return super()._answer(argv)
 
 
@@ -497,3 +504,122 @@ def test_esc_on_the_start_up_screen_quits(tmp_path, user_state):
 
     asyncio.run(main())
     assert quits == [True]
+
+
+def test_a_crash_never_waits_for_adrpy(tmp_path, user_state):
+    """An unhandled exception closes the app through Textual's own path,
+    never AdrpyTui.exit: a read in flight kept the process up to READ_TIMEOUT,
+    a write for as long as it ran."""
+    import asyncio
+    import time
+
+    client = _holding(tmp_path, "check")
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+    started = []
+
+    def boom():
+        started.append(time.monotonic())
+        raise RuntimeError("a screen failed")
+
+    async def main():
+        async with app.run_test() as pilot:
+            await settle(pilot)
+            await _walk(app, pilot, ["explore"])
+            options = app.screen.query_one("#options")
+            options.highlighted = options.get_option_index("explore.check")
+            await pilot.press("enter")
+            assert await _held(pilot, client)
+            app.set_timer(0.05, boom)
+            await pilot.pause(0.3)
+
+    try:
+        asyncio.run(main())
+    except Exception:  # noqa: BLE001 -- the crash itself is expected
+        pass
+    assert started and time.monotonic() - started[0] < 5
+
+
+def test_a_refused_write_offers_check_and_check_says_a_left_write_still_runs(tmp_path, user_state):
+    """WRITE_STILL_RUNNING told the person to run Check without offering it,
+    and Check showed the repository as it was mid-write without saying so
+    (ADR006V02R02's visibility plan)."""
+    class StillRunning:
+        def poll(self):
+            return None
+
+    client = _focus_client(tmp_path)
+    client._left.append(StillRunning())
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _approve_and_run(app, pilot)
+        await settle(pilot)
+        assert isinstance(app.screen, ResultScreen)
+        assert app.screen.result.code == client_module.WRITE_STILL_RUNNING
+        app.screen.query_one("#run-check", Button).press()
+        await settle(pilot)
+        assert isinstance(app.screen, CheckScreen)
+        assert app.texts("check.write_still_running") in str(app.screen.query_one("#write-still-running").render())
+
+    run_app(app, scenario)
+
+
+
+def test_a_failure_note_says_when_its_details_could_not_be_written(tmp_path, user_state):
+    """The note named error.log as holding the details even when writing it
+    failed (a folder in its place)."""
+    user_state.error_log.mkdir(parents=True)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        note = app.internal_error_text(RuntimeError("x"))
+        assert note == app.texts("app.internal_error_unlogged", error="RuntimeError: x",
+                                 path=str(user_state.error_log))
+
+    run_app(app, scenario)
+
+
+def test_a_failure_while_showing_a_failure_is_not_fatal(tmp_path, user_state, monkeypatch):
+    """_deliver showed a read's failure with show_internal_error; if that
+    failed too, the exception reached the worker and ended the app."""
+    client = _focus_client(tmp_path)
+    client.answers["explore"] = {"success": True, "data": {"decisions": [{"x": 1}], "warnings": []}}
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    def fails(error):
+        raise KeyError("the note itself")
+
+    async def scenario(pilot):
+        monkeypatch.setattr(app, "internal_error_text", fails)
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        assert app.is_running
+
+    run_app(app, scenario)
+
+
+def test_a_detail_offers_no_action_while_it_reads_its_decision_again(tmp_path, user_state):
+    """Back on a decision's detail -- after a command run from it -- the
+    actions of the state read before stayed on offer while the detail read
+    it again: Approve could be chosen again on a decision just approved."""
+    from textual.screen import Screen
+
+    client = _holding(tmp_path, "explore", skip=10**6)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        decision = client.answers["explore"]["data"]["decisions"][3]  # Proposed: approve is on offer
+        app.push_screen(DetailScreen(decision))
+        await settle(pilot)
+        assert app.screen.query_one("#actions").option_count
+        app.push_screen(Screen())  # as a command run from the detail would
+        await settle(pilot)
+        client.skip = 0
+        app.pop_screen()
+        assert await _held(pilot, client)
+        await pilot.pause()
+        assert not [actions for actions in app.screen.query("#actions") if not actions.disabled]
+        client.release.set()
+        await settle(pilot)
+        assert not app.screen.query_one("#actions").disabled  # offered again once read
+
+    run_app(app, scenario)

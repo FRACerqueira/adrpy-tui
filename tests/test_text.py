@@ -57,3 +57,17 @@ def test_a_lone_surrogate_never_reaches_the_terminal():
     shown = printable("0001-le\ud800gacy")
     assert shown == "0001-le\ufffdgacy"
     shown.encode("utf-8")
+
+
+
+def test_a_field_keeps_only_printable_text():
+    """Free text in a field -- typed, pasted, or filled from a file -- never
+    carries a control, a lone surrogate or a character that hides itself
+    (Cf, Zl, Zp): what is confirmed is then what runs, and what is drawn can
+    be encoded. A multi-line field keeps its line breaks (CRLF too) and tabs."""
+    from adrpy_tui.core.text import field_text
+
+    dirty = "a\x1bb\x7fc\td\ne\r\nf\rg\ud800h\u202ei\u200bj\u2028k"
+    assert field_text(dirty) == "abcdefghijk"
+    assert field_text(dirty, multiline=True) == "abc\td\ne\r\nfghijk"
+    assert field_text("Decisão · 決定 🙂") == "Decisão · 決定 🙂"

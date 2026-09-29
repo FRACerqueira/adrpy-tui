@@ -12,10 +12,12 @@ from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Swi
 
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
+from adrpy_tui.core.decisions import setting
+from adrpy_tui.core.files import inside_repository, markdown_files
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
-from adrpy_tui.ui.preview import PREVIEW_BINDING, inside_repository, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 from adrpy_tui.ui.running import CommandRunner
 
 
@@ -66,14 +68,14 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
             await body.mount(Static(visible(failed.detail or failed.code or ""), classes="error", markup=False))
             return
         settings = config.data.get("config") or {}
-        self._current = settings.get("migrationpattern") or ""
-        folder = self.app.repo / settings.get("folderadr", "doc/adr")
+        self._current = setting(settings, "migrationpattern", "")
+        folder = self.app.repo / setting(settings, "folderadr", "doc/adr")
         if not inside_repository(self.app.repo, folder):
-            await body.mount(Static(texts("preview.outside", path=visible(str(settings.get("folderadr")))),
+            await body.mount(Static(texts("preview.outside", path=visible(setting(settings, "folderadr", ""))),
                                     classes="error", markup=False))
             return
         with_header = {d["path"] for d in explore.data.get("decisions", []) if (d.get("header") or {}).get("is_valid")}
-        self._files = sorted(p for p in folder.glob("*.md") if str(p) not in with_header)
+        self._files = [p for p in markdown_files(folder, recursive=False) if str(p) not in with_header]
         if not self._files:
             await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))
             return

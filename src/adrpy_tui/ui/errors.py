@@ -17,6 +17,20 @@ def _name(path):
     return PureWindowsPath(path).name if path else ""
 
 
+def _text(value):
+    return value if isinstance(value, str) else "" if value is None else str(value)
+
+
+def _normalised(error):
+    """An error with every field of the type the list reads: adrpy's JSON
+    may hold a number, a list or null where a string is expected, and this
+    list is built in a widget's compose, where no screen contains a failure."""
+    related = error.get("related_files")
+    return {"file": _text(error.get("file")) or None, "code": _text(error.get("code")),
+            "detail": _text(error.get("detail")), "hint": _text(error.get("hint")),
+            "related_files": [_text(path) for path in related] if isinstance(related, list) else []}
+
+
 def error_row(error):
     return "  ·  ".join(visible(part) for part in (_name(error.get("file")), error.get("code")) if part)
 
@@ -26,7 +40,7 @@ class ErrorList(Vertical):
 
     def __init__(self, errors, id="errors"):
         super().__init__(id=id)
-        self._errors = errors
+        self._errors = [_normalised(error) for error in errors]
 
     def compose(self):
         yield PagedList(*(row(error_row(error), id=str(i)) for i, error in enumerate(self._errors)),
@@ -47,8 +61,8 @@ class ErrorList(Vertical):
     def on_option_list_option_highlighted(self, event):
         event.stop()
         error = self._errors[int(event.option.id)]
-        lines = [visible(str(text)) for text in (error.get("detail"), error.get("hint")) if text]
-        related = [visible(_name(path)) for path in error.get("related_files") or []]
+        lines = [visible(text) for text in (error["detail"], error["hint"]) if text]
+        related = [visible(_name(path)) for path in error["related_files"] if path]
         if related:
             lines.append(self.app.texts("errors.related", files=", ".join(related)))
         self.query_one(f"#{self.id}-hint", Static).update("\n".join(lines))

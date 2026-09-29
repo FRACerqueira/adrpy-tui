@@ -3314,3 +3314,255 @@ def test_the_log_browser_does_not_list_a_folder_outside_the_repository(tmp_path,
         assert "outside the repository" in _text(app.screen, "#entries-page")
 
     run_app(app, scenario)
+
+
+
+def test_every_screen_field_is_a_safe_one():
+    """Every text field of the interface is SafeInput or SafeTextArea
+    (ui/inputs.py), so none takes a control or an invisible character; the
+    date's MaskedInput takes only what its template allows."""
+    import ast
+
+    bare = []
+    for path in sorted((pathlib.Path(__file__).parent.parent / "src" / "adrpy_tui" / "ui").glob("*.py")):
+        if path.name == "inputs.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            name = None
+            if isinstance(node, ast.Call):
+                name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+            elif isinstance(node, ast.ClassDef):
+                name = next((getattr(base, "id", None) for base in node.bases), None)
+            if name in ("Input", "TextArea"):
+                bare.append(f"{path.name}:{node.lineno}")
+    assert bare == []
+
+
+def test_a_field_filters_what_is_typed_pasted_or_filled_in(tmp_path, user_state):
+    from textual import events
+
+    from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_new_form(pilot)
+        title = app.screen.query_one("#field-title")
+        assert isinstance(title, SafeInput)
+        title.value = "Use\x1b it\u202e"  # filled in
+        assert title.value == "Use it"
+        title.focus()
+        title.post_message(events.Paste("\x7fnow\ud800"))  # pasted
+        await settle(pilot)
+        assert title.value == "Use itnow"
+        area = SafeTextArea("line\x1b one\r\nline\u200b two\r\n")  # a document keeps one line ending
+        await app.screen.mount(area)
+        assert area.text == "line one\r\nline two\r\n"
+        area.insert("\x07more\ttab")
+        assert "\x07" not in area.text and "more\ttab" in area.text
+
+    run_app(app, scenario)
+
+
+def test_the_configuration_editor_opens_a_hostile_value_printable(tmp_path, user_state):
+    """A cloned config holding a lone surrogate reached the field raw: the
+    screen could not be encoded and stopped drawing."""
+    from adrpy_tui.ui.config import FieldEditScreen
+    from adrpy_tui.core.config_fields import CONFIG_FIELDS
+
+    field = next(field for field in CONFIG_FIELDS if field.flag == "headerscope")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FieldEditScreen(field, "Sc\ud800o\x1bpe", ""))
+        await settle(pilot)
+        assert app.screen.query_one("#editor").value == "Scope"
+        "".join(text for text, _, _ in _drawn_segments(app)).encode("utf-8")
+
+    run_app(app, scenario)
+
+
+
+def test_the_log_browser_lists_nothing_behind_a_folder_link_and_survives_a_denied_folder(tmp_path, user_state,
+                                                                                         monkeypatch):
+    """rglob went through a junction below the log folder (entries outside the
+    repository listed; a junction to a parent never ended), and a folder the
+    person may not read raised PermissionError and ended the app."""
+    import os
+
+    from adrpy_tui.core import files
+
+    log, outside = tmp_path / "doc" / "decision-log", tmp_path.parent / f"{tmp_path.name}-outside"
+    log.mkdir(parents=True)
+    outside.mkdir()
+    (log / "2026-01-01--scope-note--a--inside.md").write_text("# x\n", encoding="utf-8")
+    (outside / "2026-01-01--scope-note--a--outside.md").write_text("# x\n", encoding="utf-8")
+    _link_folder(log / "out", outside)
+    _link_folder(log / "loop", log)
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        names = [str(o.prompt) for o in app.screen.query_one("#entries")._options]
+        assert len(names) == 1 and "inside" in names[0]
+
+    run_app(app, scenario)
+
+    real = os.lstat
+
+    def lstat(path, *args, **kwargs):
+        if os.path.normpath(str(path)) == os.path.normpath(str(log)):
+            raise PermissionError(13, "Access is denied", str(path))
+        return real(path, *args, **kwargs)
+
+    monkeypatch.setattr(files.os, "lstat", lstat)
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def denied(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert app.screen.query_one("#entries").option_count == 0
+
+    run_app(app, denied)
+
+
+def test_a_decision_s_detail_does_not_show_a_file_reached_through_a_folder_link(tmp_path, user_state):
+    """The detail read its file with no repository check: a folder turned into
+    a junction after the listing showed a file outside the repository."""
+    repo, outside = tmp_path / "repo", tmp_path / "outside"
+    adr = repo / "doc" / "adr"
+    adr.mkdir(parents=True)
+    outside.mkdir()
+    (outside / "ADR001V01-a.md").write_text("OUTSIDE-SECRET", encoding="utf-8")
+    _link_folder(adr / "sub", outside)
+    decision = _decision("ADR001V01-a.md", update="Accepted", updated="2026-02-01")
+    decision["path"] = str(adr / "sub" / "ADR001V01-a.md")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [decision], "warnings": []}}})
+    app = AdrpyTui(repo, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore", ":detail"])
+        assert "OUTSIDE-SECRET" not in app.screen.query_one(Markdown).source
+        assert "outside the repository" in _text(app.screen, "#excerpt")
+
+    run_app(app, scenario)
+
+
+def test_a_decision_no_longer_listed_is_said_gone(tmp_path, user_state):
+    """A re-read that no longer listed the decision kept the old one -- its
+    path, its content, its actions."""
+    client = _focus_client(tmp_path)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore", ":detail"])
+        client.answers["explore"] = {"success": True, "data": {"decisions": [], "warnings": []}}
+        app.screen.on_screen_resume()
+        await settle(pilot)
+        assert app.texts("detail.gone") in _text(app.screen, "#read-failed")
+        assert not app.screen.query("#actions")
+
+    run_app(app, scenario)
+
+
+def test_a_preview_opens_the_path_it_checked(tmp_path, user_state):
+    """The check used the normalized path and the preview opened the path as
+    given: on Linux, "sub/../x.md" with sub a link reads through the link."""
+    from adrpy_tui.ui.preview import open_preview
+
+    (tmp_path / "doc").mkdir()
+    (tmp_path / "x.md").write_text("# x\n", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        open_preview(app, tmp_path / "doc" / ".." / "x.md")
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen) and ".." not in app.screen.path.parts
+
+    run_app(app, scenario)
+
+
+def test_migrate_refuses_a_configured_folder_outside_the_repository(tmp_path, user_state):
+    """Its half of the fix had no test (a mutation dropping it passed)."""
+    repo, outside = tmp_path / "repo", tmp_path / "outside" / "adr"
+    repo.mkdir()
+    outside.mkdir(parents=True)
+    (outside / "0001-legacy.md").write_text("# x\n", encoding="utf-8")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": {**REPO_CONFIG, "folderadr": "../outside/adr"},
+                                             "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [], "warnings": []}}})
+    app = AdrpyTui(repo, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert app.screen._files == [] and not app.screen.query("#files")
+        assert any("outside the repository" in str(s.render()) for s in app.screen.query(".error"))
+
+    run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("error", [
+    {"file": "a.md", "code": 12}, {"file": 5, "code": "x"}, {"file": "a.md", "code": "x", "related_files": 5},
+    {"file": "a.md", "code": "x", "hint": ["a", "b"]}, "not a dict",
+])
+def test_an_error_of_an_unexpected_shape_is_shown_not_fatal(tmp_path, user_state, error):
+    """The error list is built inside a widget's own compose, out of reach of
+    the screens' failure display: a code of 12 (not a string) or a file of 5
+    ended the app -- on a write's result screen too, after the write ran."""
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=_config_client(check={
+        "success": False, "code": "repository-inconsistent", "detail": "x", "warnings": [],
+        "data": {"errors": [error]}}), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.check"])
+        assert app.screen.query("#errors-options") or app.screen.query(".error")
+        app.push_screen(ResultScreen("approve", Result((), 1, False, code="x", data={"errors": [error]})))
+        await settle(pilot)
+        assert isinstance(app.screen, ResultScreen)
+
+    run_app(app, scenario)
+
+
+def test_a_configured_folder_of_the_wrong_type_falls_back_to_the_default(tmp_path, user_state):
+    """folderlog as a number made `repo / 5` raise in the log browser; a
+    state label as a number reached visible() in every list of decisions."""
+    client = FakeClient(answers={"config": {"success": True, "data": {"config": {
+        **REPO_CONFIG, "folderlog": 5, "folderadr": ["x"], "statusacc": 3}, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        assert (app.folderlog, app.folderadr) == ("doc/decision-log", "doc/adr")
+        assert all(isinstance(label, str) for label in app.labels.values())  # statusacc: 3
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert app.screen.query_one("#entries").option_count == 0
+
+    run_app(app, scenario)
+
+
+def test_a_picker_event_arriving_after_its_screen_closed_does_nothing(tmp_path, user_state):
+    """The picker's guards asked `on_top(self.screen)`: once the form was
+    closed and the picker removed, `self.screen` itself raised NoScreen -- the
+    guard meant to drop a late event ended the app instead."""
+    from types import SimpleNamespace
+
+    from adrpy_tui.ui.picker import AdrPicker
+
+    app = AdrpyTui(tmp_path, client=_client_with(DECISIONS), user_state=user_state)
+
+    async def scenario(pilot):
+        await _open(pilot, "approve")
+        picker = app.screen.query_one(AdrPicker)
+        app.pop_screen()
+        await settle(pilot)
+        event = SimpleNamespace(stop=lambda: None, option=SimpleNamespace(id="0"))
+        picker.on_input_submitted(event)
+        picker.on_option_list_option_selected(event)
+        assert app.is_running
+
+    run_app(app, scenario)

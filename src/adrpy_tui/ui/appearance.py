@@ -10,6 +10,7 @@ from textual.widgets import Button, Input, OptionList, Static
 
 from adrpy_tui.core import contrast, themes
 from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
+from adrpy_tui.ui.inputs import SafeInput
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -137,7 +138,7 @@ class ColorEditScreen(ModalScreen):
         texts = self.app.texts
         with Vertical(id="dialog"):
             yield Static(texts(f"color.role.{self._role}"), classes="title")
-            yield Input(self.app.effective_colors()[self._role], id="color")
+            yield SafeInput(self.app.effective_colors()[self._role], id="color")
             yield Static("", id="color-note", classes="warning", markup=False)
             with Horizontal(id="buttons"):
                 yield Button(texts("edit.ok"), id="ok", variant="primary")

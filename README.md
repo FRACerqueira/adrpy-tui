@@ -151,7 +151,7 @@ The decisions:
 - [ADR003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- adrpy-ai is a declared dependency run through the TUI's own interpreter, and adrpy-tui is not published until adrpy-ai is on PyPI
 - [ADR004V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md) -- Forms come from hand-written per-command specs guarded by drift and coverage tests against adrpy help
 - [ADR005V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md) -- The UI is localized in adrpy's languages through JSON language packs, chosen on first run, while adrpy's own responses stay in English
-- [ADR006V02](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR006V02R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md) -- A read from adrpy that hangs is stopped, a write never is, and a link in a file opens only a file inside the repository
+- [ADR006V02](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md) -- A read from adrpy that hangs is stopped, a write never is, and a link in a file opens only a file inside the repository
 
 ## Contributing, security and license
 

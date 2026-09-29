@@ -52,6 +52,13 @@ def folder_of(path, decisions_folder):
     return relative.as_posix() if relative.parts else TOP
 
 
+def setting(config, field, default):
+    """A text setting of `adrpy config`'s data; `default` when it is empty or
+    of another type (a number, a list): adrpy's JSON is read, not trusted."""
+    value = config.get(field)
+    return value if isinstance(value, str) and value else default
+
+
 def labels(config):
     """Each state's label in this repository, from `adrpy config`'s data."""
-    return {state: config.get(field) or state for state, field in _LABEL_FIELDS.items()}
+    return {state: setting(config, field, state) for state, field in _LABEL_FIELDS.items()}

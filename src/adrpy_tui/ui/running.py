@@ -7,6 +7,7 @@ bindings) and `command_running` tells its own key actions to do nothing.
 The screens that run commands -- forms, the config editors, migrate -- all
 go through here."""
 
+import asyncio
 import threading
 
 from textual.containers import Vertical
@@ -43,7 +44,6 @@ class CommandRunner:
         body.disabled = True
         app = self.app  # the worker reaches the app directly, never through this screen
         leave = self._leave = threading.Event()
-        app.running_leaves.add(leave)
 
         def work():
             # Client.run returns a Result whatever happens (core/client.py).
@@ -55,20 +55,22 @@ class CommandRunner:
 
         app.run_worker(work, thread=True)
         # A write is never stopped; past the time a read may take, the person
-        # is told and may leave it (ADR006V02).
-        self._still_running = self.set_timer(client_module.READ_TIMEOUT, self._say_still_running)
+        # is told and may leave it (ADR006V02). The loop's own timer: a
+        # Textual timer sleeps in a thread on Windows, and one still sleeping
+        # at quit held the app about READ_TIMEOUT (seen once in 77 runs).
+        self._still_running = asyncio.get_running_loop().call_later(client_module.READ_TIMEOUT,
+                                                                    self._say_still_running)
 
     async def _finish(self, command, result):
         """The result replaces this screen -- whatever was opened over it."""
         app = self.app
-        app.running_leaves.discard(self._leave)
-        self._still_running.stop()
+        self._still_running.cancel()
         while app.screen is not self and self in app.screen_stack:
             await app.pop_screen()
         await app.switch_screen(ResultScreen(command, result))
 
     def _say_still_running(self):
-        if not self._command_running or self.query("#still-running"):
+        if not self.is_attached or not self._command_running or self.query("#still-running"):
             return
         texts = self.app.texts
         self.mount(Vertical(

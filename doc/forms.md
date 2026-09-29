@@ -131,16 +131,19 @@ goes back, as a browser does. A link to anything else is only named, never
 opened in a browser: the file may not be the person's own. A link opens only
 a `.md` inside the repository: an absolute or network path (`//host/share`),
 or one leading outside it, is named and refused before the file system is
-touched ([ADR006V02](adr/ADR006V02R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). The same holds for every preview,
+touched ([ADR006V02](adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). The same holds for every preview,
 whoever names the file -- a link, adrpy, a command's result -- and for the
 decisions and log folders the configuration names: nothing outside the
 repository opens, and no folder link (a symlink, a Windows junction) inside
 it is followed; each folder on the way is looked at, never resolved, since
-resolving opens the target. A command's help names its links too. A file
+resolving opens the target. The decisions and log listings skip a folder
+link, and a folder they cannot read, instead of looping or failing; a
+decision's detail reads its file through the same checks. A command's help names its links too. A file
 longer than `PREVIEW_LINES` (500, `ui/preview.py`) shows its first 500
 lines, and one past `PREVIEW_CHARACTERS` (100 000) its first characters,
 with a line saying so and naming the whole file: rendering costs about 5.5
-ms a line (500 lines: 2 to 3 s) and 2 s a megabyte.
+ms a line (500 lines: 2 to 3 s) and 2 s a megabyte. Only that start is read,
+whatever the file's size.
 
 ## Text from files and adrpy
 
@@ -154,6 +157,17 @@ override, a zero-width one -- as `<U+202E>` and the like, so
 them. A lone surrogate -- a name that is not valid UTF-8 -- is shown as
 `<U+D800>` in a name and as U+FFFD in a decision's text: written to the
 terminal as it is, it cannot be encoded and would stop the screen drawing. `tests/test_untrusted_text.py` drives every screen with such names.
+
+Every text field keeps only what can be read as it is (`field_text`,
+`ui/inputs.py`): whatever is typed, pasted, or filled in -- a suggestion, a
+decision's scope, a value of the configuration -- drops control characters,
+the invisible ones (Cf: a bidirectional override, a zero-width space), the
+line and paragraph separators and lone surrogates; a multi-line field keeps
+its line breaks and tabs. No field needs them, and what the confirmation
+shows is then what runs. The date field is left out: its mask takes digits
+only. A field of adrpy's answer of another type than expected -- an error's
+code as a number, a folder as a list -- is read as text or as its default,
+never the end of the screen.
 
 ## Components
 
@@ -253,20 +267,27 @@ and its result replaces that screen. A write is never stopped: past the time
 a read may take (60 s, `READ_TIMEOUT` in `core/client.py`), the screen says
 adrpy is still running and its result unknown, and offers to leave; the
 result then says so, with Check at hand. A read that does not answer in that
-time is stopped and shown as `tui-timeout` ([ADR006V02](adr/ADR006V02R01-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). While a
+time is stopped and shown as `tui-timeout` ([ADR006V02](adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). While a
 write that was left still runs, another write is refused
 (`tui-write-still-running`) -- two adrpy writes on one working copy are a
-usage error for adrpy-ai -- and reads, Check first, still run. A write still
-waiting for adrpy (a hung read ahead of it) can be left before it starts
-(`tui-not-started`). Quitting never waits: a read in flight is stopped, a
-write left. A failure of the TUI itself is shown on the screen where it
-happened, never the end of the app, and its traceback goes to `error.log`,
-next to the state file.
+usage error for adrpy-ai -- and reads, Check first, still run; the refusal
+offers Check, and Check, while that write runs, says above its result that
+what it shows may be the repository half-way through it, and to run it again
+once it has ended. A write still waiting for adrpy (a hung read ahead of it)
+can be left before it starts (`tui-not-started`). Quitting never waits, a
+crash included: a read in flight is stopped (`tui-stopped`), a write left. A
+failure of the TUI itself is shown on the screen where it happened, never
+the end of the app, and its traceback goes to `error.log`, next to the state
+file -- the note says so when it could not be written.
 
 Every key, choice, button or link acts only from the screen in front
 (`on_top`, `ui/base.py`): keys typed while the app was busy reach it all at
 once, and one meant for a screen that closed meanwhile must not close or
 open another. `tests/test_textual_names.py` checks every such handler.
+
+Back on a decision's detail, it reads the decision again -- a command run
+from there may have changed it -- and offers no action until it answers; a
+decision renamed or deleted meanwhile is said to be gone.
 
 ## Result screen
 

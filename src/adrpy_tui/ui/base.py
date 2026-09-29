@@ -22,12 +22,15 @@ HINTS_PICKER_FORM = (("tab", "next_field"), ("@preview", "preview"), ("@toggle",
                      ("escape", "back"))
 
 
-def on_top(screen):
-    """Whether `screen` is the one in front. Keys that reach the app before
-    the first is handled are all queued on the screen in front then: a later
-    one must not act from a screen already closed -- it would close or open
-    whatever is in front by then."""
-    return screen.is_attached and screen.app.screen is screen
+def on_top(node):
+    """Whether `node` -- a screen, or a widget on one -- is in front. Keys
+    that reach the app before the first is handled are all queued on the
+    screen in front then: a later one must not act from a screen already
+    closed -- it would close or open whatever is in front by then. A widget
+    is asked whether it is attached first: once removed, it has no screen."""
+    if not node.is_attached:
+        return False
+    return node.app.screen is (node if isinstance(node, Screen) else node.screen)
 
 
 def key_line(app, hints):
@@ -99,7 +102,10 @@ class AdrpyScreen(Screen):
                 await shown
         except Exception as error:  # noqa: BLE001
             if self.is_open():  # a screen left half-way through is not a failure
-                await self.show_internal_error(error)
+                try:
+                    await self.show_internal_error(error)
+                except Exception:  # noqa: BLE001 -- showing it failed too: said the simplest way
+                    self.notify(type(error).__name__, severity="error", markup=False)
 
     async def show_internal_error(self, error):
         note = self.app.internal_error_text(error)

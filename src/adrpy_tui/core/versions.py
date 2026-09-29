@@ -21,7 +21,7 @@ def adrpy_range():
     as installed ("<0.2,>=0.1.dev0"); "" when there is none."""
     try:
         declared = requires("adrpy-tui") or []
-    except PackageNotFoundError:
+    except (PackageNotFoundError, ValueError, OSError):  # damaged metadata, as installed_version
         return ""
     for requirement in declared:
         name = re.match(r"[A-Za-z0-9._-]+", requirement)

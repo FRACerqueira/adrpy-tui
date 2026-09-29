@@ -175,18 +175,26 @@ class DetailScreen(AdrpyScreen):
 
     def on_screen_resume(self):
         # Also sent when the screen first opens: read again, since a command
-        # run from here may have changed this decision.
+        # run from here may have changed this decision. Meanwhile its actions
+        # are those of the state read before: none is offered until it answers.
+        for actions in self.query("#actions"):
+            actions.disabled = True
         self.read(_read_explore, self._show)
 
     async def _show(self, result):
         if not self.is_attached:
             return
+        gone = False
         if result.success:
             again = [d for d in result.data.get("decisions", []) if d["path"] == self.decision["path"]]
             if again:
                 self.decision = again[0]
+            gone = not again  # renamed, deleted, or moved behind a link: nothing of it to offer
         body = self.query_one("#body")
         await body.remove_children()
+        if gone:
+            await body.mount(Static(self.app.texts("detail.gone"), id="read-failed", classes="error", markup=False))
+            return
         if not result.success:
             # What is on screen may no longer be so: say it, and offer no action on it.
             await body.mount(Static(self.app.texts("detail.read_failed", detail=visible(result.detail or result.code or "")),

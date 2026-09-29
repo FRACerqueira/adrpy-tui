@@ -14,6 +14,7 @@ from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.confirm import ConfirmScreen
+from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PagedList, row
 from adrpy_tui.ui.running import CommandRunner
 
@@ -60,9 +61,9 @@ class FieldEditScreen(ModalScreen):
             elif field.kind == "bool":
                 yield Switch(value=value in (True, "true"), id="editor")
             elif field.kind == "multiline":
-                yield TextArea(str(value or ""), id="editor")
+                yield SafeTextArea(str(value or ""), id="editor")
             else:
-                yield Input(str(value or ""), max_length=field.max_length or 0, id="editor")
+                yield SafeInput(str(value or ""), max_length=field.max_length or 0, id="editor")
             with Horizontal(id="buttons"):
                 yield Button(texts("edit.ok"), id="ok", variant="primary")
                 yield Button(texts("edit.cancel"), id="cancel")
@@ -229,7 +230,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
                        RadioButton(texts("choice.source.seed"), id="create-seed"), id="create-source")
         yield Select([(i18n.load(code)("language.name"), code) for code in i18n.LANGUAGES],
                      value=self.app.texts.language, allow_blank=False, id="create-language-value")
-        yield Input(placeholder=texts("field.seed"), id="create-seed-value")
+        yield SafeInput(placeholder=texts("field.seed"), id="create-seed-value")
         yield Button(texts("config.create"), id="create", variant="primary")
 
     def on_button_pressed(self, event):

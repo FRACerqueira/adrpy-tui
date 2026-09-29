@@ -3,13 +3,13 @@ default, core/keys.py) opens it from any list of them. A link to another
 .md opens that file's preview; Esc goes back, as a browser does."""
 
 import os
-import stat
-from pathlib import Path, PurePath
+from pathlib import Path
 
 from textual.binding import Binding
 from textual.widgets import Markdown, Static
 
 from adrpy_tui.core import keys
+from adrpy_tui.core.files import inside_repository, is_file, read_start
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 
@@ -23,76 +23,50 @@ PREVIEW_CHARACTERS = 100_000
 
 
 def excerpt(app, path):
-    """(content to render, the note saying it was cut, or None)."""
+    """(content to render, the note saying it was cut or refused, or None).
+    Every reader of a decision's or entry's file comes here: the preview and
+    a decision's detail alike."""
+    if not inside_repository(app.repo, path):
+        return "", app.texts("preview.outside", path=visible(str(path)))
     try:
-        content = printable(Path(path).read_text(encoding="utf-8", errors="replace"))
+        content, total_lines, total_characters = read_start(path, PREVIEW_LINES, PREVIEW_CHARACTERS)
     except OSError as error:
-        return f"`{error}`", None
-    lines, note = content.splitlines(), None
-    if len(lines) > PREVIEW_LINES:
-        note = app.texts("preview.excerpt", shown=PREVIEW_LINES, total=len(lines), path=visible(str(path)))
-        content = "\n".join(lines[:PREVIEW_LINES])
-    if len(content) > PREVIEW_CHARACTERS:
-        note = app.texts("preview.excerpt_characters", shown=PREVIEW_CHARACTERS, total=len(content),
+        return f"`{visible(str(error))}`", None
+    note = None
+    if total_lines > PREVIEW_LINES:
+        note = app.texts("preview.excerpt", shown=PREVIEW_LINES, total=total_lines, path=visible(str(path)))
+    if len(content) == PREVIEW_CHARACTERS < total_characters:
+        note = app.texts("preview.excerpt_characters", shown=PREVIEW_CHARACTERS, total=total_characters,
                          path=visible(str(path)))
-        content = content[:PREVIEW_CHARACTERS]
-    return content, note
-
-
-def inside_repository(root, path):
-    """Whether `path` lies inside the repository `root` with no folder link
-    on the way -- a symlink or a Windows junction inside the repository may
-    lead anywhere (ADR006V02). Lexical first, so nothing outside the
-    repository (a network path) is ever touched; then each component below
-    the root is looked at with lstat, never resolved: resolving opens the
-    target, and a link may point at another machine."""
-    root = os.path.normpath(os.path.abspath(root))
-    target = os.path.normpath(os.path.abspath(path))
-    try:
-        if os.path.commonpath([root, target]) != root:
-            return False
-    except ValueError:  # another drive
-        return False
-    current = root
-    for part in PurePath(os.path.relpath(target, root)).parts:
-        current = os.path.join(current, part)
-        try:
-            status = os.lstat(current)
-        except OSError:
-            return True  # not there: nothing to follow, and nothing to open
-        if stat.S_ISLNK(status.st_mode) or getattr(status, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
-            return False
-    return True
+    return printable(content), note
 
 
 def open_preview(app, path):
     """Opens the preview of `path` when it is a file inside the repository;
-    says so otherwise. Whoever names it -- a link, adrpy, a result."""
-    if path and not inside_repository(app.repo, path):
+    says so otherwise. Whoever names it -- a link, adrpy, a result. The path
+    checked is the path opened: normalized once."""
+    if not path:
+        return
+    path = Path(os.path.normpath(os.path.abspath(path)))
+    if not inside_repository(app.repo, path):
         app.notify(app.texts("preview.outside", path=visible(str(path))), severity="warning", markup=False)
-    elif path and Path(path).is_file():
-        app.push_screen(PreviewScreen(Path(path)))
-    elif path:
+    elif is_file(path):
+        app.push_screen(PreviewScreen(path))
+    else:
         app.notify(app.texts("preview.missing", path=visible(str(path))), severity="warning", markup=False)
 
 
 def follow_link(app, source, href):
-    """A link in `source`'s content: another .md inside the repository,
-    relative to it, opens its preview; anything else (a web page, a missing
-    file) is only named -- never opened in a browser from a file the TUI did
-    not write. An absolute or network path, or one leading outside the
-    repository, is refused before the file system is touched: a network path
-    would make the machine connect to another host (ADR006V02)."""
+    """A link in `source`'s content: another .md, relative to it, opens its
+    preview if it lies inside the repository (open_preview checks it, before
+    the file system is touched); anything else (a web page) is only named --
+    never opened in a browser from a file the TUI did not write
+    (ADR006V02)."""
     relative = href.split("#", 1)[0]
     if not relative or "://" in relative or Path(relative).suffix.lower() != ".md":
         app.notify(visible(href), markup=False)
         return
-    target = os.path.normpath(os.path.join(os.path.abspath(Path(source).parent), relative))
-    if Path(relative).is_absolute() or Path(relative).drive or relative[0] in "/\\" \
-            or not inside_repository(app.repo, target):
-        app.notify(app.texts("preview.outside", path=visible(relative)), severity="warning", markup=False)
-        return
-    open_preview(app, Path(target))
+    open_preview(app, Path(os.path.join(os.path.abspath(Path(source).parent), relative)))
 
 
 class PreviewScreen(AdrpyScreen):

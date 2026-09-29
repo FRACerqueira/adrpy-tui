@@ -70,3 +70,27 @@ def test_damaged_metadata_reads_as_not_installed(monkeypatch, failure):
 
     monkeypatch.setattr(versions, "version", version)
     assert versions.installed_version("adrpy-ai") == versions.NOT_INSTALLED
+
+
+
+def test_damaged_metadata_of_adrpy_tui_itself_is_no_range(monkeypatch):
+    """adrpy_range read adrpy-tui's own requirements: metadata that is not
+    UTF-8 raised in the app's constructor, like installed_version did."""
+    def requires(name):
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
+    monkeypatch.setattr(versions, "requires", requires)
+    assert versions.adrpy_range() == ""
+
+
+def test_version_with_damaged_metadata_still_prints(monkeypatch, capsys):
+    """--version read adrpy-tui's Summary catching only a missing package:
+    metadata that is not UTF-8 ended it with a traceback."""
+    from adrpy_tui import __main__
+
+    def metadata(name):
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
+    monkeypatch.setattr(__main__, "metadata", metadata)
+    assert __main__.main(["--version"]) == 0
+    assert capsys.readouterr().out.startswith("adrpy-tui ")

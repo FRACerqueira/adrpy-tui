@@ -55,9 +55,6 @@ class AdrpyTui(App):
         # A failed read of the repository's config other than "there is
         # none", shown on the main menu.
         self.repo_problem = None
-        # The "leave" of every write still running: quitting leaves them all,
-        # so the TUI never waits for one (ADR006V02).
-        self.running_leaves = set()
         # An adrpy-ai outside the range this adrpy-tui was validated with,
         # (found, range), shown on the main menu (ADR003V01).
         self.adrpy_outside_range = versions.adrpy_outside_range()
@@ -199,13 +196,11 @@ class AdrpyTui(App):
             await self.pop_screen()
         await self.push_screen(StartupScreen())
 
-    def exit(self, *args, **kwargs):
-        # Quitting never waits for adrpy: a read in flight is stopped, a write
-        # left to its own end (ADR006V02).
-        for leave in list(self.running_leaves):
-            leave.set()
+    def on_unmount(self):
+        # Quitting never waits for adrpy -- a read in flight is stopped, a
+        # write left to its own end (ADR006V02) -- on every way out: exit,
+        # and a crash, which closes the app without it.
         self.client.shutdown()
-        super().exit(*args, **kwargs)
 
     def internal_error_text(self, error):
         """A failure of the TUI itself, said on the screen; its traceback goes
@@ -215,20 +210,22 @@ class AdrpyTui(App):
             log.parent.mkdir(parents=True, exist_ok=True)
             # errors="replace": a message may hold what UTF-8 cannot encode.
             log.write_text("".join(traceback.format_exception(error)), encoding="utf-8", errors="replace")
+            logged = True
         except OSError:
-            pass
+            logged = False
         try:
             said = f"{type(error).__name__}: {error}"
         except Exception:  # noqa: BLE001 -- an error whose own text fails is still said
             said = type(error).__name__
-        return self.texts("app.internal_error", error=visible(said), path=visible(str(log)))
+        key = "app.internal_error" if logged else "app.internal_error_unlogged"
+        return self.texts(key, error=visible(said), path=visible(str(log)))
 
     def repository_read(self, result):
         self.configured = result.success
         config = result.data.get("config") or {}
         self.labels = decisions.labels(config)
-        self.folderadr = config.get("folderadr") or "doc/adr"
-        self.folderlog = config.get("folderlog") or "doc/decision-log"
+        self.folderadr = decisions.setting(config, "folderadr", "doc/adr")
+        self.folderlog = decisions.setting(config, "folderlog", "doc/decision-log")
         self.repo_problem = None if result.success or result.code == "config-not-found" else result
         self.switch_screen(MenuScreen())
 
