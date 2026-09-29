@@ -26,7 +26,7 @@ classifiers = [
     "Topic :: Software Development :: Documentation",
 ]
 # adrpy-ai with the series adrpy-tui was validated against, no URL; the
-# start-up check reads this same range from the installed metadata (ADR003V01).
+# start-up check reads this same range from the installed metadata (ADR0003V01).
 dependencies = ["adrpy-ai>=0.1.dev0,<0.2", "textual>=8.2"]
 
 [project.urls]

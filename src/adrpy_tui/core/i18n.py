@@ -1,4 +1,4 @@
-"""The interface's language packs (ADR005V01): one JSON file per language
+"""The interface's language packs (ADR0005V01): one JSON file per language
 adrpy supports, `en-us` being the reference."""
 
 import json

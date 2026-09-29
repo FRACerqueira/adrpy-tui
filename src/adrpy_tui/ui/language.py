@@ -1,5 +1,5 @@
 """The language choice: the first screen of the first run, and the main
-menu's "Language" item (ADR005V01)."""
+menu's "Language" item (ADR0005V01)."""
 
 from textual.binding import Binding
 from textual.widgets import OptionList, Static

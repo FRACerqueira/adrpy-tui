@@ -2,7 +2,7 @@
 and how the values become adrpy flags.
 
 The checks only spare a round trip for an obvious mistake; adrpy's own
-failure code stays the final word (ADR001V01). A field's label is the
+failure code stays the final word (ADR0001V01). A field's label is the
 language-pack key `field.<flag>`.
 """
 

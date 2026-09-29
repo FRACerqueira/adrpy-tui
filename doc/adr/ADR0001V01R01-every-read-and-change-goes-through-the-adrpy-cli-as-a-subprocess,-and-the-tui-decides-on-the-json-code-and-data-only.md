@@ -1,5 +1,5 @@
 <!-- Do not remove this comment, lines and table (1-12) -->
-|Adr-Plus Fields|Values|
+|Fields|Values|
 |--|--|
 |File title md|Every read and change goes through the adrpy CLI as a subprocess, and the TUI decides on the JSON code and data only|
 |Version|01|
@@ -21,7 +21,7 @@ Technical Story: adrpy-tui is the human-friendly layer over adrpy-ai, whose READ
 
 ## Context and Problem Statement
 
-adrpy-ai is a JSON-only CLI with no wizard: every command takes flags and returns one JSON object on stdout (`{"success": ..., "data"/"code": ...}`), with a documented, closed set of failure codes per command and a human-readable `detail` that callers must not decide on (adrpy-ai ADR010V01). It is also a Python package, so its internals (`adrpy.core.*`) could be imported directly.
+adrpy-ai is a JSON-only CLI with no wizard: every command takes flags and returns one JSON object on stdout (`{"success": ..., "data"/"code": ...}`), with a documented, closed set of failure codes per command and a human-readable `detail` that callers must not decide on (adrpy-ai ADR0010V01). It is also a Python package, so its internals (`adrpy.core.*`) could be imported directly.
 
 How does the TUI talk to adrpy: through the CLI's public JSON contract, or through adrpy-ai's internal Python API?
 
@@ -44,8 +44,8 @@ Chosen option: "Run the CLI as a subprocess and parse its JSON", because it is t
 1. Every read and every change is an `adrpy` or `adrpy-skills` invocation. The TUI never writes a decision file, a config file or a decision-log entry itself. Reading a decision's `.md` to display it is allowed.
 2. One module (`client.py`) runs the subprocess and returns `success`, `data`, `code`, `detail`, `warnings` and the exit code. A stdout that is not a single JSON object is reported as a contract violation.
 3. The TUI decides on `code` and `data` only. `detail` is shown to the person and never parsed. Where the TUI pre-validates a field for convenience, the CLI's failure code remains the final word.
-4. Calls run one at a time in a background worker, so the UI stays responsive without ever running two adrpy commands at once (adrpy-ai ADR001V01's single-owner model).
-5. Decisions are made on the canonical status `explore` reports (`Proposed`, `Accepted`, `Rejected`, `Superseded`), which does not change with the labels a repository configures (adrpy-ai ADR004V02's hidden marker). The configured labels (`statusnew`, `statusacc`, ...) are read through `adrpy config` for display only.
+4. Calls run one at a time in a background worker, so the UI stays responsive without ever running two adrpy commands at once (adrpy-ai ADR0001V01's single-owner model).
+5. Decisions are made on the canonical status `explore` reports (`Proposed`, `Accepted`, `Rejected`, `Superseded`), which does not change with the labels a repository configures (adrpy-ai ADR0004V02's hidden marker). The configured labels (`statusnew`, `statusacc`, ...) are read through `adrpy config` for display only.
 
 ### Positive Consequences
 
@@ -74,7 +74,7 @@ Chosen option: "Run the CLI as a subprocess and parse its JSON", because it is t
 
 ## Links
 
-* Relates to adrpy-ai [ADR010V01](https://github.com/FRACerqueira/adrpy-ai/blob/main/doc/adr/ADR010V01-failure-responses-carry-a-human-readable-detail-in-the-stdout-json,-with-stderr-kept-as-a-copy-outside-the-contract.md) -- decide on `code`/`data`, never on `detail`.
-* Relates to adrpy-ai [ADR001V01](https://github.com/FRACerqueira/adrpy-ai/blob/main/doc/adr/ADR001V01-single-owner-working-copy-without-concurrency-control,-validating-the-whole-repository-before-every-lifecycle-action.md) -- single owner per working copy.
-* Relates to adrpy-ai [ADR004V02](https://github.com/FRACerqueira/adrpy-ai/blob/main/doc/adr/ADR004V02-decision-status-recognition-uses-a-hidden-canonical-marker%3B-status-labels-and-the-filename-separator-both-gain-an-existing-decisions-guard.md) -- status recognized by a canonical marker, not by its label.
-* Refined by [ADR003V01](ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui's-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- how the CLI is obtained and invoked.
+* Relates to adrpy-ai [ADR0010V01](https://github.com/FRACerqueira/adrpy-ai/blob/main/doc/adr/ADR0010V01R00-failure-responses-carry-a-human-readable-detail-in-the-stdout-json,-with-stderr-kept-as-a-copy-outside-the-contract.md) -- decide on `code`/`data`, never on `detail`.
+* Relates to adrpy-ai [ADR0001V01](https://github.com/FRACerqueira/adrpy-ai/blob/main/doc/adr/ADR0001V01R00-single-owner-working-copy-without-concurrency-control,-validating-the-whole-repository-before-every-lifecycle-action.md) -- single owner per working copy.
+* Relates to adrpy-ai [ADR0004V02](https://github.com/FRACerqueira/adrpy-ai/blob/main/doc/adr/ADR0004V02R00-decision-status-recognition-uses-a-hidden-canonical-marker%3B-status-labels-and-the-filename-separator-both-gain-an-existing-decisions-guard.md) -- status recognized by a canonical marker, not by its label.
+* Refined by [ADR0003V01](ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui's-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- how the CLI is obtained and invoked.

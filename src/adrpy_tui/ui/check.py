@@ -34,7 +34,7 @@ class CheckScreen(AdrpyScreen):
         body = self.query_one("#body")
         await body.remove_children()
         count = result.data.get("decisions", 0)
-        if self._writing or self.app.client.still_writing():  # ADR006V02R02: may be half-written
+        if self._writing or self.app.client.still_writing():  # ADR0006V02R02: may be half-written
             await body.mount(Static(self.app.texts("check.write_still_running"), id="write-still-running",
                                     classes="warning", markup=False))
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))

@@ -1,5 +1,5 @@
 """Maps each command to its form module (one module per command,
-ADR004V01), and lays out the menus that reach them.
+ADR0004V01), and lays out the menus that reach them.
 
 An item's title and description are language-pack keys derived from its id
 (`menu.<id>`, `menu.<id>.description`), except for the help items, which

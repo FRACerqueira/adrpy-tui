@@ -1,8 +1,8 @@
-"""The only module that runs adrpy (ADR001V01): one command in, one Result out.
+"""The only module that runs adrpy (ADR0001V01): one command in, one Result out.
 
 A command is an adrpy verb ("new") or an adrpy-skills one ("skills:list").
 Both run from this interpreter, so the adrpy used is the one installed next
-to the TUI (ADR003V01).
+to the TUI (ADR0003V01).
 """
 
 import json
@@ -21,14 +21,14 @@ SKILLS_PREFIX = "skills:"
 # never one of adrpy's codes, so it can't be mistaken for one.
 CONTRACT_VIOLATION = "tui-contract-violation"
 # The TUI's own codes for a call that did not end with an answer
-# (ADR006V02): a read stopped at its timeout, a write the person left while
+# (ADR0006V02): a read stopped at its timeout, a write the person left while
 # adrpy still ran, an adrpy that could not be started.
 TIMED_OUT = "tui-timeout"
 ABANDONED = "tui-left-running"
 RUN_FAILED = "tui-run-failed"
 # A write the TUI did not start: the person left while it waited for adrpy,
 # or one left running still runs (two adrpy writes on one working copy are
-# a usage error for adrpy-ai, its own ADR001V01).
+# a usage error for adrpy-ai, its own ADR0001V01).
 NOT_STARTED = "tui-not-started"
 WRITE_STILL_RUNNING = "tui-write-still-running"
 STOPPED = "tui-stopped"  # a read stopped because the TUI is quitting
@@ -136,7 +136,7 @@ def _run(argv, timeout=None, leave=None):
     """Runs adrpy. A read (a timeout) is stopped after `timeout` seconds, or
     once `leave` is set; a write (no timeout) is never stopped -- when
     `leave` is set, the waiting ends and adrpy goes on to its own end
-    (ADR006V02)."""
+    (ADR0006V02)."""
     if leave is not None and leave.is_set():
         raise _Left()
     # stdin is the TUI's terminal; adrpy never prompts, so give it nothing.
@@ -172,7 +172,7 @@ class _Either:
 class Client:
     def __init__(self, runner=_run):
         self._runner = runner
-        # One adrpy call at a time, whichever worker asks (adrpy-ai ADR001V01).
+        # One adrpy call at a time, whichever worker asks (adrpy-ai ADR0001V01).
         self._lock = threading.Lock()
         self._closing = threading.Event()  # the TUI is quitting: stop reads, leave writes
         self._left = []  # the processes of writes left running

@@ -1,5 +1,5 @@
 <!-- Do not remove this comment, lines and table (1-12) -->
-|Adr-Plus Fields|Values|
+|Fields|Values|
 |--|--|
 |File title md|Forms come from hand-written per-command specs guarded by drift and coverage tests against adrpy help|
 |Version|01|
@@ -82,4 +82,4 @@ Chosen option: "Hand-written specs, guarded by tests", because it is the only op
 ## Links
 
 * Modeled on adrpy-ai's `tests/test_command_docs.py`, which fails when the generated command docs fall behind `describe()`.
-* Relates to [ADR003V01](ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui's-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- the drift test stands in for a version floor.
+* Relates to [ADR0003V01](ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui's-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- the drift test stands in for a version floor.

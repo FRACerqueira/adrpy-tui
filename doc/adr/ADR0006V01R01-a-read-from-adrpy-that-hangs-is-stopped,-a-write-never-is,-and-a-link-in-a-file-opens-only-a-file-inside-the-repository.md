@@ -1,5 +1,5 @@
 <!-- Do not remove this comment, lines and table (1-12) -->
-|Adr-Plus Fields|Values|
+|Fields|Values|
 |--|--|
 |File title md|A read from adrpy that hangs is stopped, a write never is, and a link in a file opens only a file inside the repository|
 |Version|01|
@@ -21,7 +21,7 @@ Technical Story: the audit's resilience pass found that the client runs adrpy wi
 
 ## Context and Problem Statement
 
-Every read and change is an adrpy subprocess (ADR001V01). A read (`explore`, `config` with no field flags, `check`, `help`, `skills list`) can be stopped at any time without harm; a write (`new`, `approve`, `migrate`, ...) may be half-way through writing files when it is stopped. Separately, the preview follows links between `.md` files, and the file holding the link is not always the person's own.
+Every read and change is an adrpy subprocess (ADR0001V01). A read (`explore`, `config` with no field flags, `check`, `help`, `skills list`) can be stopped at any time without harm; a write (`new`, `approve`, `migrate`, ...) may be half-way through writing files when it is stopped. Separately, the preview follows links between `.md` files, and the file holding the link is not always the person's own.
 
 When adrpy does not answer, what does the TUI do with a read, and with a write? And which files may a link in a file open?
 
@@ -45,7 +45,7 @@ Chosen option: "A timeout on reads only", because it keeps every read bounded wi
 
 1. **A read that does not answer within its timeout is stopped** (its process ended) and becomes a failed result with the TUI's own code `tui-timeout`, shown as any failure is. Reads change nothing, so stopping one is safe.
 2. **A write is never stopped by the TUI.** When it has not answered within the same time, the screen says so -- adrpy is still running, its result is unknown -- and offers to leave. Leaving stops the TUI's waiting only; adrpy's process goes on to its own end. Quitting the TUI does not wait for it either.
-3. **A link opens only a `.md` file inside the repository**, after resolving it. An absolute path, a network path, or one that leads outside the repository is not opened: the preview names it, as it names a web link. Web links are still never opened (ADR001V01's boundaries).
+3. **A link opens only a `.md` file inside the repository**, after resolving it. An absolute path, a network path, or one that leads outside the repository is not opened: the preview names it, as it names a web link. Web links are still never opened (ADR0001V01's boundaries).
 
 ### Visibility plan
 
@@ -91,5 +91,5 @@ This is a decision not to act automatically on a failure (a hung write is not ki
 
 ## Links
 
-* Refines [ADR001V01](ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- the subprocess boundary and the never-opened web links.
-* Relates to [ADR003V01](ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- the adrpy the TUI runs.
+* Refines [ADR0001V01](ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- the subprocess boundary and the never-opened web links.
+* Relates to [ADR0003V01](ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- the adrpy the TUI runs.

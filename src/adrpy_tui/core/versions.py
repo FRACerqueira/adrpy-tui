@@ -1,5 +1,5 @@
 """Installed versions, for the header and `adrpy-tui --version`, and the
-start-up check of adrpy-ai against the range adrpy-tui declares (ADR003V01)."""
+start-up check of adrpy-ai against the range adrpy-tui declares (ADR0003V01)."""
 
 import re
 from importlib.metadata import PackageNotFoundError, requires, version
@@ -77,6 +77,6 @@ def adrpy_outside_range():
         if within(found, specifier):
             return None
     except ValueError:
-        pass  # a version that cannot be compared is named, never a refusal (ADR003V01)
+        pass  # a version that cannot be compared is named, never a refusal (ADR0003V01)
     clauses = sorted((clause.strip() for clause in specifier.split(",")), key=lambda clause: not clause.startswith(">"))
     return found, ", ".join(clauses)

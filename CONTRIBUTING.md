@@ -22,7 +22,7 @@ This project follows the [Code of Conduct](CODE_OF_CONDUCT.md). Participation im
 
 ## Development Setup
 
-Requires Python 3.11+. adrpy-ai is not on PyPI yet, so install it from git first ([ADR003V01](doc/adr/ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)):
+Requires Python 3.11+. adrpy-ai is not on PyPI yet, so install it from git first ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)):
 
 ```bash
 git clone https://github.com/FRACerqueira/adrpy-tui.git
@@ -33,11 +33,11 @@ python -m venv .venv
 .venv/bin/adrpy-tui
 ```
 
-To work against your own copy of adrpy-ai instead, install it editable first (`pip install -e <path to adrpy-ai>`). Its version comes from git too (`0.1.devN`), which the declared range `adrpy-ai>=0.1.dev0,<0.2` takes ([ADR003V01](doc/adr/ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)); an editable install keeps the version it had when installed.
+To work against your own copy of adrpy-ai instead, install it editable first (`pip install -e <path to adrpy-ai>`). Its version comes from git too (`0.1.devN`), which the declared range `adrpy-ai>=0.1.dev0,<0.2` takes ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)); an editable install keeps the version it had when installed.
 
 The version comes from git (hatch-vcs), so build from a git checkout. After changing `dependencies` in `pyproject.toml`, reinstall (`pip install -e ".[dev]"`): the start-up check reads the range from the installed metadata, and a test fails while the two disagree.
 
-A runtime dependency beyond `adrpy-ai` and `textual` is a significant decision ([ADR002V01](doc/adr/ADR002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md)) — discuss it in an issue first.
+A runtime dependency beyond `adrpy-ai` and `textual` is a significant decision ([ADR0002V01](doc/adr/ADR0002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md)) — discuss it in an issue first.
 
 ## Running Tests
 
@@ -45,7 +45,7 @@ A runtime dependency beyond `adrpy-ai` and `textual` is a significant decision (
 pytest
 ```
 
-The suite runs in parallel, one worker per CPU (pytest-xdist, set in `pyproject.toml`); `pytest -n 0` runs it serially, e.g. to debug one test with `print` or a breakpoint. The UI tests drive the app headless through Textual's `App.run_test()`; the integration tests run the real adrpy against repositories created in a temporary folder. Some tests compare the forms and language packs with the installed adrpy's own `help` ([ADR004V01](doc/adr/ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md)): a failure there after upgrading adrpy-ai means a form needs updating, not the test.
+The suite runs in parallel, one worker per CPU (pytest-xdist, set in `pyproject.toml`); `pytest -n 0` runs it serially, e.g. to debug one test with `print` or a breakpoint. The UI tests drive the app headless through Textual's `App.run_test()`; the integration tests run the real adrpy against repositories created in a temporary folder. Some tests compare the forms and language packs with the installed adrpy's own `help` ([ADR0004V01](doc/adr/ADR0004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md)): a failure there after upgrading adrpy-ai means a form needs updating, not the test.
 
 ### Trying it by hand
 
@@ -68,13 +68,13 @@ adrpy-tui --path <folder>/sample
 
 ## Coding Guidelines
 
-- **The CLI is the only way in.** The TUI never writes a decision, config or decision-log file itself, and decides on a response's `code` and `data`, never on `detail` ([ADR001V01](doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)).
+- **The CLI is the only way in.** The TUI never writes a decision, config or decision-log file itself, and decides on a response's `code` and `data`, never on `detail` ([ADR0001V01](doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)).
 - **Layers go one way**: `__main__.py` → `ui/` → `forms/` → `core/`; `core/` never imports Textual. See [`doc/architecture.md`](doc/architecture.md).
 - **Simplicity first**, **surgical changes**, **match existing style**; every changed line should trace back to the request that caused it.
 
 ## Translations
 
-Every text the TUI shows lives in `src/adrpy_tui/resources/language_packs/<language>.json` ([ADR005V01](doc/adr/ADR005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md)). A new text is added to `en-us.json` and to every other pack in the same change; a test fails otherwise. Reviews of the existing translations by native speakers are very welcome.
+Every text the TUI shows lives in `src/adrpy_tui/resources/language_packs/<language>.json` ([ADR0005V01](doc/adr/ADR0005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md)). A new text is added to `en-us.json` and to every other pack in the same change; a test fails otherwise. Reviews of the existing translations by native speakers are very welcome.
 
 ## Architecture Decisions
 

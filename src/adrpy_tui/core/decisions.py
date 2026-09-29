@@ -1,9 +1,9 @@
 """Reading `explore`'s decisions: which state each one is in, and how the
 repository labels it.
 
-States are canonical (adrpy-ai ADR004V02's hidden marker makes `explore`
+States are canonical (adrpy-ai ADR0004V02's hidden marker makes `explore`
 report `Proposed`, `Accepted`, ... whatever labels a repository
-configures); the labels are for display only (ADR001V01).
+configures); the labels are for display only (ADR0001V01).
 """
 
 from pathlib import Path

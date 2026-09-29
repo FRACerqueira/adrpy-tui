@@ -1,5 +1,5 @@
 """What the TUI reads or lists from a repository, and the paths a person
-gives it (ADR006V02). Nothing here follows a folder link, resolves a path
+gives it (ADR0006V02). Nothing here follows a folder link, resolves a path
 (resolving opens the target, which may be on another machine), reads more
 of a file than is shown, or raises on a path that cannot be looked at: such
 a path is simply not available."""

@@ -31,10 +31,10 @@ They are two packages by the same author, with one clear split:
 | What it is | The ADR lifecycle CLI: `adrpy` and `adrpy-skills` | A terminal UI built with [Textual](https://textual.textualize.io/) |
 | Who it is for | Scripts, CI and AI coding agents -- flags in, JSON out, no prompts | People who would rather choose from a list than type flags |
 | The rules (numbering, statuses, headers, supersede chains) | Defines and enforces them | Never reimplements one; it asks adrpy |
-| Writes decision, config and decision-log files | Yes | Never -- it runs an `adrpy` command, shown to you first ([ADR001V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)) |
+| Writes decision, config and decision-log files | Yes | Never -- it runs an `adrpy` command, shown to you first ([ADR0001V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)) |
 | Runtime dependencies | None | adrpy-ai and Textual |
 
-adrpy-tui runs the adrpy installed next to it, through its own Python interpreter (`python -m adrpy`), never whichever `adrpy` comes first on `PATH` ([ADR003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)). A repository managed with adrpy-tui is an ordinary adrpy repository: you can switch between the two, or use both, at any time.
+adrpy-tui runs the adrpy installed next to it, through its own Python interpreter (`python -m adrpy`), never whichever `adrpy` comes first on `PATH` ([ADR0003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)). A repository managed with adrpy-tui is an ordinary adrpy repository: you can switch between the two, or use both, at any time.
 
 ## Versions and compatibility
 
@@ -48,13 +48,13 @@ Each adrpy-tui is validated against one series of adrpy-ai, and requires it:
 - **If adrpy-ai is upgraded or downgraded later, on its own** (`pip install -U adrpy-ai`), pip installs it anyway: it prints a dependency conflict ("ERROR: pip's dependency resolver ... adrpy-tui requires adrpy-ai<0.2,>=0.1.dev0, but you have adrpy-ai 0.2.0") and still finishes successfully. adrpy-tui notices at start-up: the main menu names the adrpy-ai found and the range expected. It keeps working, but a command whose flags changed may be refused by adrpy, and that refusal is shown as adrpy gives it. Install an adrpy-ai in the range again (`pip install "adrpy-ai>=0.1.dev0,<0.2"`), or an adrpy-tui validated with the newer series.
 - **The header** shows both versions, and `adrpy-tui --version` prints them.
 
-The range moves one series at a time, when adrpy-tui is validated against the next adrpy-ai: its forms are checked against adrpy's own `help` by the tests ([ADR004V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md)).
+The range moves one series at a time, when adrpy-tui is validated against the next adrpy-ai: its forms are checked against adrpy's own `help` by the tests ([ADR0004V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md)).
 
 ## Installation
 
 Requires Python 3.11 or later, on Windows, macOS or Linux.
 
-**Not on PyPI yet.** adrpy-ai is not on PyPI either, and adrpy-tui is not published until it is (ADR003V01). Until then, install adrpy-ai from git, then adrpy-tui from a clone of this repository:
+**Not on PyPI yet.** adrpy-ai is not on PyPI either, and adrpy-tui is not published until it is (ADR0003V01). Until then, install adrpy-ai from git, then adrpy-tui from a clone of this repository:
 
 ```bash
 pip install git+https://github.com/FRACerqueira/adrpy-ai.git@develop
@@ -72,7 +72,7 @@ adrpy-tui --path <repo>   # another repository
 adrpy-tui --version       # the installed adrpy-tui and adrpy-ai
 ```
 
-1. **The first run asks for the interface language** -- one of the eleven adrpy supports, your system's preselected. The main menu's **Language** changes it later. Messages that come from adrpy itself (why a command failed, a command's help) are shown as adrpy sends them, in English ([ADR005V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md)).
+1. **The first run asks for the interface language** -- one of the eleven adrpy supports, your system's preselected. The main menu's **Language** changes it later. Messages that come from adrpy itself (why a command failed, a command's help) are shown as adrpy sends them, in English ([ADR0005V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md)).
 2. **The main menu** lists everything by use. In a folder that is not an ADR repository yet, choose **Repository → Initialize**; the other groups come alive once it is.
 3. **A form** asks only for what its command needs, suggests values the repository already uses, and checks what it can before running. **Ctrl+R** runs it: a confirmation shows the exact `adrpy` command line; nothing runs until you confirm.
 4. **The result** shows what adrpy did, its warnings, or why it refused -- with a hint to repair it when adrpy gives one.
@@ -146,12 +146,12 @@ Deleting it starts again from the language choice.
 
 The decisions:
 
-- [ADR001V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- Every read and change goes through the adrpy CLI as a subprocess, and the TUI decides on the JSON code and data only
-- [ADR002V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md) -- Textual is the TUI framework, a deliberate runtime dependency unlike adrpy-ai
-- [ADR003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- adrpy-ai is a declared dependency run through the TUI's own interpreter, and adrpy-tui is not published until adrpy-ai is on PyPI
-- [ADR004V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md) -- Forms come from hand-written per-command specs guarded by drift and coverage tests against adrpy help
-- [ADR005V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md) -- The UI is localized in adrpy's languages through JSON language packs, chosen on first run, while adrpy's own responses stay in English
-- [ADR006V02](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md) -- A read from adrpy that hangs is stopped, a write never is, and a link in a file opens only a file inside the repository
+- [ADR0001V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- Every read and change goes through the adrpy CLI as a subprocess, and the TUI decides on the JSON code and data only
+- [ADR0002V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md) -- Textual is the TUI framework, a deliberate runtime dependency unlike adrpy-ai
+- [ADR0003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- adrpy-ai is a declared dependency run through the TUI's own interpreter, and adrpy-tui is not published until adrpy-ai is on PyPI
+- [ADR0004V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md) -- Forms come from hand-written per-command specs guarded by drift and coverage tests against adrpy help
+- [ADR0005V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md) -- The UI is localized in adrpy's languages through JSON language packs, chosen on first run, while adrpy's own responses stay in English
+- [ADR0006V02](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md) -- A read from adrpy that hangs is stopped, a write never is, and a link in a file opens only a file inside the repository
 
 ## Contributing, security and license
 

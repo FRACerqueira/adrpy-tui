@@ -1,5 +1,5 @@
 <!-- Do not remove this comment, lines and table (1-12) -->
-|Adr-Plus Fields|Values|
+|Fields|Values|
 |--|--|
 |File title md|Textual is the TUI framework, a deliberate runtime dependency unlike adrpy-ai|
 |Version|01|

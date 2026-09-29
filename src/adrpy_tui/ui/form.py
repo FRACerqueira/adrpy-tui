@@ -91,7 +91,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
             return Select([(i18n.load(code)("language.name"), code) for code in i18n.LANGUAGES],
                           value=self.app.texts.language, allow_blank=False, id=widget_id)
         if field.kind == "select":
-            # adrpy's own vocabulary, shown as is (ADR005V01).
+            # adrpy's own vocabulary, shown as is (ADR0005V01).
             return Select([(choice, choice) for choice in field.choices], value=field.choices[0],
                           allow_blank=False, id=widget_id)
         if field.kind == "multiline":

@@ -1,5 +1,5 @@
 """A command's full contract, as `help <command>` returns it; the
-descriptions are adrpy's own, in English (ADR005V01)."""
+descriptions are adrpy's own, in English (ADR0005V01)."""
 
 from textual.binding import Binding
 from textual.widgets import LoadingIndicator, Markdown, Static

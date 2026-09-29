@@ -1,5 +1,5 @@
 <!-- Do not remove this comment, lines and table (1-12) -->
-|Adr-Plus Fields|Values|
+|Fields|Values|
 |--|--|
 |File title md|adrpy-ai is a declared dependency run through the TUI's own interpreter, and adrpy-tui is not published until adrpy-ai is on PyPI|
 |Version|01|
@@ -17,7 +17,7 @@
 
 * Deciders: Fernando Cerqueira (repo owner), decided while designing adrpy-tui's architecture.
 
-Technical Story: ADR001V01 makes the adrpy CLI the TUI's only way in; this decides how that CLI is obtained and invoked. At the time of the decision, adrpy-ai has no git tag and no PyPI release: installed from git, it reports `0.1.devN`.
+Technical Story: ADR0001V01 makes the adrpy CLI the TUI's only way in; this decides how that CLI is obtained and invoked. At the time of the decision, adrpy-ai has no git tag and no PyPI release: installed from git, it reports `0.1.devN`.
 
 ## Context and Problem Statement
 
@@ -47,7 +47,7 @@ Chosen option: "Declared dependency", because it guarantees the TUI and its adrp
 3. Until `adrpy-ai` is available from PyPI, `pip install adrpy-tui` cannot resolve, so CI and local development install adrpy-ai from git (or an editable checkout) before `pip install -e ".[dev]"`.
 4. **The TUI checks the installed adrpy-ai against the same range at start-up** and, outside it, says so on the main menu, with the other start-up warnings (the version found and the range expected). It is a warning, not a refusal: the TUI keeps working, and a command adrpy refuses shows adrpy's own error. This covers what the install-time range cannot -- an adrpy-ai upgraded or downgraded later, apart from the TUI. The range is written once in `pyproject.toml`; a test fails if the start-up check reads another.
 5. **A development build gets no exception.** Accepting any `.dev` version whatever its series was considered, to ease local testing, and declined: the range already takes the `0.1.devN` builds; the exception would only silence the warning for a `0.2.devN` build -- the case the check exists for -- and for anyone installing from git as the README says, and it would be one more thing to undo at release.
-6. **adrpy-tui is not published to PyPI until adrpy-ai is.** This is a decision not to act, and it is kept visible: the repository has no `publish.yml` workflow, and the README's installation section says why. Reopen this decision when adrpy-ai's first release is on PyPI: add the publish workflow, remove the README note. The range needs no change then; it moves when the TUI is validated against a new adrpy-ai series (the drift test of ADR004V01 shows what changed), raising the ceiling one series at a time.
+6. **adrpy-tui is not published to PyPI until adrpy-ai is.** This is a decision not to act, and it is kept visible: the repository has no `publish.yml` workflow, and the README's installation section says why. Reopen this decision when adrpy-ai's first release is on PyPI: add the publish workflow, remove the README note. The range needs no change then; it moves when the TUI is validated against a new adrpy-ai series (the drift test of ADR0004V01 shows what changed), raising the ceiling one series at a time.
 
 ### Positive Consequences
 
@@ -60,7 +60,7 @@ Chosen option: "Declared dependency", because it guarantees the TUI and its adrp
 * adrpy-tui cannot be released until adrpy-ai is.
 * In the meantime, every environment needs the extra git install step.
 * Each new adrpy-ai series needs a TUI change (the ceiling) before it installs with the TUI, even when its contract did not change.
-* The start-up check warns, it does not verify the contract: within the range, a contract change the drift test of ADR004V01 did not see in CI still surfaces only as adrpy's error on a command.
+* The start-up check warns, it does not verify the contract: within the range, a contract change the drift test of ADR0004V01 did not see in CI still surfaces only as adrpy's error on a command.
 
 ## Pros and Cons of the Options
 
@@ -81,5 +81,5 @@ Chosen option: "Declared dependency", because it guarantees the TUI and its adrp
 
 ## Links
 
-* Refines [ADR001V01](ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md).
-* Relates to [ADR004V01](ADR004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md) -- the drift test that validates a series before the range admits it.
+* Refines [ADR0001V01](ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md).
+* Relates to [ADR0004V01](ADR0004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md) -- the drift test that validates a series before the range admits it.

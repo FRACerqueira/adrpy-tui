@@ -1,5 +1,5 @@
 <!-- Do not remove this comment, lines and table (1-12) -->
-|Adr-Plus Fields|Values|
+|Fields|Values|
 |--|--|
 |File title md|The UI is localized in adrpy's languages through JSON language packs, chosen on first run, while adrpy's own responses stay in English|
 |Version|01|
@@ -28,9 +28,9 @@ How is the TUI's own text localized, how is the language chosen, and what happen
 ## Decision Drivers
 
 * The same eleven languages as adrpy, and no drift between the two lists.
-* No further runtime dependency (ADR002V01 allows Textual only) and no build step.
+* No further runtime dependency (ADR0002V01 allows Textual only) and no build step.
 * Follow adrpy-ai's own model where possible.
-* Never alter what adrpy returns (ADR001V01).
+* Never alter what adrpy returns (ADR0001V01).
 
 ## Considered Options
 
@@ -80,5 +80,5 @@ Chosen option: "JSON language packs", because it is adrpy-ai's own mechanism, ne
 ## Links
 
 * Follows adrpy-ai's language packs (`adrpy/resources/language_packs/`).
-* Relates to [ADR001V01](ADR001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- adrpy's responses are shown, never rewritten.
-* Relates to [ADR002V01](ADR002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md) -- no dependency beyond Textual.
+* Relates to [ADR0001V01](ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- adrpy's responses are shown, never rewritten.
+* Relates to [ADR0002V01](ADR0002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md) -- no dependency beyond Textual.

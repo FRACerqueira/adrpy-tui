@@ -11,7 +11,7 @@ used for each kind of input. How it is built is in
 [Architecture](architecture.md). Where Textual has no
 ready-made component, the closest core widget is used rather than a custom
 one or a new dependency, so the experience can be validated first
-([ADR002V01](adr/ADR002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md)).
+([ADR0002V01](adr/ADR0002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md)).
 
 ## Header
 
@@ -131,7 +131,7 @@ goes back, as a browser does. A link to anything else is only named, never
 opened in a browser: the file may not be the person's own. A link opens only
 a `.md` inside the repository: an absolute or network path (`//host/share`),
 or one leading outside it, is named and refused before the file system is
-touched ([ADR006V02](adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). The same holds for every preview,
+touched ([ADR0006V02](adr/ADR0006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). The same holds for every preview,
 whoever names the file -- a link, adrpy, a command's result -- and for the
 decisions and log folders the configuration names: nothing outside the
 repository opens, and no folder link (a symlink, a Windows junction) inside
@@ -219,7 +219,7 @@ Main menu
 └─ Exit
 ```
 
-- The first run starts with the language choice (ADR005V01): the eleven
+- The first run starts with the language choice (ADR0005V01): the eleven
   languages adrpy supports, each by its own name, the operating system's
   language preselected when it is one of them. "Language" changes it later,
   from the same list with "← Back" on top and the current language
@@ -232,7 +232,7 @@ Main menu
   keys.
 - The last selected item of each menu is remembered across sessions.
 - The main menu names what it found at start-up and set aside: an adrpy-ai
-  outside the range this adrpy-tui was validated with (ADR003V01), a
+  outside the range this adrpy-tui was validated with (ADR0003V01), a
   repository configuration that could not be read, a saved key or color
   that could not be used.
 - The repository is chosen once, shown in the header and changed from the
@@ -279,7 +279,7 @@ and its result replaces that screen. A write is never stopped: past the time
 a read may take (60 s, `READ_TIMEOUT` in `core/client.py`), the screen says
 adrpy is still running and its result unknown, and offers to leave; the
 result then says so, with Check at hand. A read that does not answer in that
-time is stopped and shown as `tui-timeout` ([ADR006V02](adr/ADR006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). While a
+time is stopped and shown as `tui-timeout` ([ADR0006V02](adr/ADR0006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md)). While a
 write that was left still runs, another write is refused
 (`tui-write-still-running`) -- two adrpy writes on one working copy are a
 usage error for adrpy-ai -- and reads, Check first, still run; the refusal

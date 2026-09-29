@@ -61,7 +61,7 @@ def follow_link(app, source, href):
     preview if it lies inside the repository (open_preview checks it, before
     the file system is touched); anything else (a web page) is only named --
     never opened in a browser from a file the TUI did not write
-    (ADR006V02)."""
+    (ADR0006V02)."""
     relative = href.split("#", 1)[0]
     if not relative or "://" in relative or Path(relative).suffix.lower() != ".md":
         app.notify(visible(href), markup=False)

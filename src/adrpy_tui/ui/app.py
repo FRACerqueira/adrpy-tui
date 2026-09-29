@@ -56,7 +56,7 @@ class AdrpyTui(App):
         # none", shown on the main menu.
         self.repo_problem = None
         # An adrpy-ai outside the range this adrpy-tui was validated with,
-        # (found, range), shown on the main menu (ADR003V01).
+        # (found, range), shown on the main menu (ADR0003V01).
         self.adrpy_outside_range = versions.adrpy_outside_range()
         # Each decision state's label in this repository, for display, and
         # the decisions folder the explore screen's folders are relative to.
@@ -198,7 +198,7 @@ class AdrpyTui(App):
 
     def on_unmount(self):
         # Quitting never waits for adrpy -- a read in flight is stopped, a
-        # write left to its own end (ADR006V02) -- on every way out: exit,
+        # write left to its own end (ADR0006V02) -- on every way out: exit,
         # and a crash, which closes the app without it.
         self.client.shutdown()
 

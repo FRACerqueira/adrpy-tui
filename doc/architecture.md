@@ -28,11 +28,11 @@ the missing human-friendly layer on top of it: a guided terminal UI that
    final word, even where the TUI pre-validates a field for convenience.
 3. **One call at a time.** Calls run in a Textual worker so the UI stays
    responsive, but never two at once -- adrpy's own single-owner model
-   (adrpy-ai ADR001V01) applies to the TUI as well.
+   (adrpy-ai ADR0001V01) applies to the TUI as well.
 4. **Decide on canonical status, display the repository's labels.**
    `explore` reports status canonically (`Proposed`, `Accepted`,
    `Rejected`, `Superseded`) whatever labels the repository configures
-   (adrpy-ai ADR004V02's hidden marker); eligibility compares against those
+   (adrpy-ai ADR0004V02's hidden marker); eligibility compares against those
    canonical values, and the labels read from `adrpy config` (`statusnew`,
    `statusacc`, ...) are used for display only.
 
@@ -52,7 +52,7 @@ adrpy. For the same reason an empty or relative `PYTHONPATH` entry, which
 names the current folder again, is dropped from adrpy's environment. Every call returns a `Result`, never raises: a read is stopped
 after `READ_TIMEOUT`, a write never is -- the person may leave it and adrpy
 goes on to its end, and no other write starts while it runs -- and an adrpy
-that cannot be started is a failure like any other (ADR006V02). Waiting for
+that cannot be started is a failure like any other (ADR0006V02). Waiting for
 the one-call lock ends as well when the person leaves, and `shutdown()`,
 called whenever the app closes -- a crash included (`on_unmount`) -- stops a
 read in flight and leaves a write, whose output is then read to its end and
@@ -64,7 +64,7 @@ validated against, development builds included. An adrpy-ai installed
 apart from the TUI later can be outside it; `core/versions.py` compares the
 installed version with the same range, read from adrpy-tui's installed
 metadata, and the main menu names both when they disagree -- a warning,
-not a refusal (ADR003V01).
+not a refusal (ADR0003V01).
 
 `adrpy-ai` is not on PyPI yet, so `adrpy-tui` cannot be published either
 until it is; CI installs `adrpy-ai` from git first.
@@ -87,9 +87,9 @@ graph TD
 
 | Module | Concern |
 |---|---|
-| `core/client.py` | The only module that runs a subprocess (read timeout, a write that can be left: ADR006V02); returns `Result(success, data, code, detail, warnings, exit_code)`, every string of it without control characters. A stdout that is not one JSON object is a contract violation, reported as such. |
+| `core/client.py` | The only module that runs a subprocess (read timeout, a write that can be left: ADR0006V02); returns `Result(success, data, code, detail, warnings, exit_code)`, every string of it without control characters. A stdout that is not one JSON object is a contract violation, reported as such. |
 | `core/registry.py` | Maps each command to its form module (as adrpy-ai's `core/registry.py` maps verbs to `cli/` modules), lays out the menus, and gives the commands a decision's state allows. |
-| `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources (ADR004V01). A command with a screen of its own says so (`VIEW`: explore, check, config, installconfig, migrate, skills list); flags a screen deliberately does not offer are listed with the reason (`NOT_OFFERED`). |
+| `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources (ADR0004V01). A command with a screen of its own says so (`VIEW`: explore, check, config, installconfig, migrate, skills list); flags a screen deliberately does not offer are listed with the reason (`NOT_OFFERED`). |
 | `core/fields.py` | The field kinds, their checks before running, which are shown (`shown_when`) and which are the screen's own (`local`), and the translation of values into flags. |
 | `core/config_fields.py` | The 26 fields of .adrpy.json, their group, editor and limits, shared by the config and install-level config editors. |
 | `core/decisions.py` | `explore`'s decisions read into the one shape every screen reads (`listed`), a decision's canonical state, the repository's label for each state, and `adrpy config`'s data and text settings read with their default when they are of another type. |
@@ -98,7 +98,7 @@ graph TD
 | `core/files.py` | The repository's files as the screens read them: whether a path is inside the repository (folder links included), listings that never follow a folder link nor fail on one they cannot read, and the start of a file, bounded. |
 | `core/contrast.py` | WCAG contrast between two colors. |
 | `core/keys.py` | The actions whose key can be changed, their defaults, the keys that never change, and how a key is named on screen. |
-| `core/i18n.py` | The language packs, the language list and the operating system's language (ADR005V01). |
+| `core/i18n.py` | The language packs, the language list and the operating system's language (ADR0005V01). |
 | `core/themes.py` | The appearance presets: the color of each screen role on top of a Textual base theme. |
 | `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
 | `core/suggest.py` | Suggestions from the values a repository already uses. |
@@ -120,7 +120,7 @@ Every text the TUI itself shows comes from
 supports, `en-us` being the reference. The first run starts with the
 language choice; the main menu's "Language" item changes it later. adrpy's
 own responses (`detail`, `help` descriptions, codes) are shown as adrpy
-sends them, in English (ADR005V01).
+sends them, in English (ADR0005V01).
 
 ## Keeping specs honest
 

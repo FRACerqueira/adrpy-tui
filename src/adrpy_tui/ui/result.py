@@ -1,5 +1,5 @@
 """What a command returned: its data and warnings, or its failure with
-adrpy's own explanation, shown as adrpy sent it (ADR005V01)."""
+adrpy's own explanation, shown as adrpy sent it (ADR0005V01)."""
 
 import json
 
