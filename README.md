@@ -145,19 +145,10 @@ Deleting it starts again from the language choice.
 | [Screens and forms](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/forms.md) | Everyone | The header, menus, lists, focus, keys, previews, colors, and every command's form |
 | [Architecture](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/architecture.md) | Contributors | Why it exists, its boundaries, how adrpy is run and version-checked, the module map, testing |
 | [Manual test checklist](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/manual-test-checklist.md) | Maintainers | What to walk through in a real terminal before a release |
-| [Architecture decisions](https://github.com/FRACerqueira/adrpy-tui/tree/main/doc/adr/) | Contributors | The recorded decisions, written with adrpy itself (list below) |
+| [Architecture decisions](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/INDEX.md) | Contributors | Every recorded decision with its state, scope and dates, in the index adrpy regenerates at each write |
 | [Decision log](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/decision-log/INDEX.md) | Contributors | Audit findings and other non-architectural decisions, one entry each, written with `adrpy log` |
 | [Contributing](https://github.com/FRACerqueira/adrpy-tui/blob/main/CONTRIBUTING.md) | Contributors | Development setup, tests, translations, pull requests |
 | [Changelog](https://github.com/FRACerqueira/adrpy-tui/blob/main/CHANGELOG.md) | Everyone | What changed |
-
-The decisions:
-
-- [ADR0001V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md) -- Every read and change goes through the adrpy CLI as a subprocess, and the TUI decides on the JSON code and data only
-- [ADR0002V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0002V01R01-textual-is-the-tui-framework,-a-deliberate-runtime-dependency-unlike-adrpy-ai.md) -- Textual is the TUI framework, a deliberate runtime dependency unlike adrpy-ai
-- [ADR0003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) -- adrpy-ai is a declared dependency run through the TUI's own interpreter, and adrpy-tui is not published until adrpy-ai is on PyPI
-- [ADR0004V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0004V01R01-forms-come-from-hand-written-per-command-specs-guarded-by-drift-and-coverage-tests-against-adrpy-help.md) -- Forms come from hand-written per-command specs guarded by drift and coverage tests against adrpy help
-- [ADR0005V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md) -- The UI is localized in adrpy's languages through JSON language packs, chosen on first run, while adrpy's own responses stay in English
-- [ADR0006V02](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0006V02R02-a-read-from-adrpy-that-hangs-is-stopped,-a-write-never-is,-and-a-link-in-a-file-opens-only-a-file-inside-the-repository.md) -- A read from adrpy that hangs is stopped, a write never is, and a link in a file opens only a file inside the repository
 
 ## Contributing, security and license
 
