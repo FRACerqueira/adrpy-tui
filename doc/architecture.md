@@ -66,8 +66,8 @@ installed version with the same range, read from adrpy-tui's installed
 metadata, and the main menu names both when they disagree -- a warning,
 not a refusal (ADR0003V01).
 
-`adrpy-ai` is not on PyPI yet, so `adrpy-tui` cannot be published either
-until it is; CI installs `adrpy-ai` from git first.
+`adrpy-tui` is published after the `adrpy-ai` it requires; CI installs
+`adrpy-ai` from git first, to test against its `develop` branch.
 
 ## Module map
 

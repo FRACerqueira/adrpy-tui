@@ -4,7 +4,7 @@
 
 ## Supported Versions
 
-adrpy-tui is pre-release: nothing is published yet ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)). Once it is, only the latest released version is supported with security fixes until a stable `1.x` line exists.
+Only the latest released version is supported with security fixes, until a stable `1.x` line exists ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md) says which adrpy-ai each one requires).
 
 ## Reporting a Vulnerability
 

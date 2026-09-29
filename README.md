@@ -11,16 +11,25 @@ adrpy-tui puts menus, forms, lists and previews on top of adrpy-ai, the JSON-onl
 
 ## Table of Contents
 
+- [Motivation and Benefits](#motivation-and-benefits)
 - [adrpy-ai and adrpy-tui](#adrpy-ai-and-adrpy-tui)
 - [Versions and compatibility](#versions-and-compatibility)
 - [Installation](#installation)
 - [Quick start](#quick-start)
-- [What you can do](#what-you-can-do)
+- [Features](#features)
 - [Keys](#keys)
 - [Appearance and accessibility](#appearance-and-accessibility)
 - [Where adrpy-tui keeps its settings](#where-adrpy-tui-keeps-its-settings)
 - [Documentation](#documentation)
 - [Contributing, security and license](#contributing-security-and-license)
+
+## Motivation and Benefits
+
+- **The whole ADR lifecycle without memorizing a flag.** Every adrpy and adrpy-skills command has its screen: menus by use, forms that ask only for what the command needs, and a decision picked from a list.
+- **Nothing runs behind your back.** The confirmation shows the exact `adrpy` command line before it runs, and adrpy's own rules are the only ones that apply -- the interface never writes a file itself.
+- **Mistakes caught before running.** A form checks what it can, suggests the values the repository already uses, and offers a decision only to the commands its state allows.
+- **Read before you decide.** Any decision or log entry opens rendered, from every list of them, following its links to the others.
+- **Accessible and in your language.** Every screen meets WCAG contrast in the Default, Light and High contrast presets, keys can be changed, and the interface speaks the eleven languages adrpy supports.
 
 ## adrpy-ai and adrpy-tui
 
@@ -42,7 +51,7 @@ Each adrpy-tui is validated against one series of adrpy-ai, and requires it:
 
 | adrpy-tui | adrpy-ai it requires |
 |---|---|
-| current (`develop`, not released yet) | `>=0.1.dev0,<0.2` -- the 0.1 series, development builds included |
+| 0.1.x | `>=0.1.dev0,<0.2` -- the 0.1 series, development builds included |
 
 - **At install time**, pip installs an adrpy-ai in that range, or refuses one outside it.
 - **If adrpy-ai is upgraded or downgraded later, on its own** (`pip install -U adrpy-ai`), pip installs it anyway: it prints a dependency conflict ("ERROR: pip's dependency resolver ... adrpy-tui requires adrpy-ai<0.2,>=0.1.dev0, but you have adrpy-ai 0.2.0") and still finishes successfully. adrpy-tui notices at start-up: the main menu names the adrpy-ai found and the range expected. It keeps working, but a command whose flags changed may be refused by adrpy, and that refusal is shown as adrpy gives it. Install an adrpy-ai in the range again (`pip install "adrpy-ai>=0.1.dev0,<0.2"`), or an adrpy-tui validated with the newer series.
@@ -54,15 +63,12 @@ The range moves one series at a time, when adrpy-tui is validated against the ne
 
 Requires Python 3.11 or later, on Windows, macOS or Linux.
 
-**Not on PyPI yet.** adrpy-ai is not on PyPI either, and adrpy-tui is not published until it is (ADR0003V01). Until then, install adrpy-ai from git, then adrpy-tui from a clone of this repository:
-
 ```bash
-pip install git+https://github.com/FRACerqueira/adrpy-ai.git@develop
-git clone https://github.com/FRACerqueira/adrpy-tui.git
-pip install ./adrpy-tui
+pip install adrpy-tui
+adrpy-tui
 ```
 
-Once both are published, `pip install adrpy-tui` will be the only step.
+It installs adrpy-ai with it. As a command-line tool in its own environment, with [pipx](https://pipx.pypa.io/): `pipx install adrpy-tui`. Straight from GitHub, a branch or a commit, without cloning: `pip install git+https://github.com/FRACerqueira/adrpy-tui.git`. To work on adrpy-tui itself, see [Contributing](https://github.com/FRACerqueira/adrpy-tui/blob/main/CONTRIBUTING.md).
 
 ## Quick start
 
@@ -77,7 +83,7 @@ adrpy-tui --version       # the installed adrpy-tui and adrpy-ai
 3. **A form** asks only for what its command needs, suggests values the repository already uses, and checks what it can before running. **Ctrl+R** runs it: a confirmation shows the exact `adrpy` command line; nothing runs until you confirm.
 4. **The result** shows what adrpy did, its warnings, or why it refused -- with a hint to repair it when adrpy gives one.
 
-## What you can do
+## Features
 
 ```
 Main menu

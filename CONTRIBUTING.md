@@ -22,7 +22,7 @@ This project follows the [Code of Conduct](CODE_OF_CONDUCT.md). Participation im
 
 ## Development Setup
 
-Requires Python 3.11+. adrpy-ai is not on PyPI yet, so install it from git first ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)):
+Requires Python 3.11+. Development works against adrpy-ai's `develop` branch, so install it from git first ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)):
 
 ```bash
 git clone https://github.com/FRACerqueira/adrpy-tui.git
