@@ -15,7 +15,7 @@ def client():
     return Client()
 
 
-FIXTURE_CONFIG = Path(__file__).parent / "fixtures" / "adr-config.adrplus"
+FIXTURE_CONFIG = Path(__file__).parent / "fixtures" / ".adrpy.json"
 
 
 @pytest.fixture

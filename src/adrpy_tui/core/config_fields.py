@@ -1,4 +1,4 @@
-"""The fields of adr-config.adrplus, as the `config` and `installconfig`
+"""The fields of .adrpy.json, as the `config` and `installconfig`
 editors show them: their group, their editor, and the limits `adrpy help
 config` states (adrpy's own refusal stays the final word)."""
 

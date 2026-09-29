@@ -1,5 +1,5 @@
 """`config`: its own screen, the editor of the repository's
-adr-config.adrplus (ui/config.py)."""
+.adrpy.json (ui/config.py)."""
 
 from adrpy_tui.core.config_fields import CONFIG_FIELDS
 

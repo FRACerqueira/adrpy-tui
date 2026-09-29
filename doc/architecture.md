@@ -91,7 +91,7 @@ graph TD
 | `core/registry.py` | Maps each command to its form module (as adrpy-ai's `core/registry.py` maps verbs to `cli/` modules), lays out the menus, and gives the commands a decision's state allows. |
 | `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources (ADR004V01). A command with a screen of its own says so (`VIEW`: explore, check, config, installconfig, migrate, skills list); flags a screen deliberately does not offer are listed with the reason (`NOT_OFFERED`). |
 | `core/fields.py` | The field kinds, their checks before running, which are shown (`shown_when`) and which are the screen's own (`local`), and the translation of values into flags. |
-| `core/config_fields.py` | The 27 fields of adr-config.adrplus, their group, editor and limits, shared by the config and install-level config editors. |
+| `core/config_fields.py` | The 27 fields of .adrpy.json, their group, editor and limits, shared by the config and install-level config editors. |
 | `core/decisions.py` | `explore`'s decisions read into the one shape every screen reads (`listed`), a decision's canonical state, the repository's label for each state, and `adrpy config`'s data and text settings read with their default when they are of another type. |
 | `core/migration.py` | The legacy naming pattern: built part by part, parsed, what a part reads from a name, and a first proposal. |
 | `core/text.py` | Text from files made safe to show: no control character reaches the terminal; `field_text`, what a text field keeps. |

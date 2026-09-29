@@ -9,7 +9,7 @@ Creates, under <folder>:
            lists of several pages;
 - legacy/  hand-written decision files with no header, for `migrate`;
 - broken/  two files with the same number, for `check`;
-- empty/   a folder with no adr-config.adrplus, for `init`.
+- empty/   a folder with no .adrpy.json, for `init`.
 
 Every decision and log entry is written by adrpy's own commands, so the
 files are always what adrpy writes; only legacy/'s files and broken/'s copy

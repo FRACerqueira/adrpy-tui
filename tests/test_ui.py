@@ -1331,7 +1331,7 @@ def test_init_warns_when_the_repository_is_already_initialized(tmp_path, user_st
 
     async def scenario(pilot):
         await _open_init(pilot)
-        assert "already has adr-config.adrplus" in _text(app.screen, "#form-warning")
+        assert "already has .adrpy.json" in _text(app.screen, "#form-warning")
 
     run_app(app, scenario)
 
@@ -2245,7 +2245,7 @@ def test_an_adrpy_within_the_range_says_nothing(tmp_path, user_state, monkeypatc
 def test_the_decision_log_group_says_it_also_browses_the_entries(tmp_path, user_state):
     """Found in a documentation review: the group's description still said
     only "Write a decision-log entry." after "Browse the entries" joined it."""
-    (tmp_path / "adr-config.adrplus").write_text("{}", encoding="utf-8")
+    (tmp_path / ".adrpy.json").write_text("{}", encoding="utf-8")
     app = AdrpyTui(tmp_path, client=FakeClient(answers={"config": {
         "success": True, "data": {"config": REPO_CONFIG, "warnings": []}}}), user_state=user_state)
 
@@ -3300,7 +3300,7 @@ def test_a_preview_opens_only_a_file_inside_the_repository_whoever_names_it(tmp_
 
 def test_the_log_browser_does_not_list_a_folder_outside_the_repository(tmp_path, user_state):
     """adrpy refuses `folderlog: ../x` from `config`, but reads it back from a
-    hand-edited (or cloned) adr-config.adrplus: the log browser listed and
+    hand-edited (or cloned) .adrpy.json: the log browser listed and
     opened the files there."""
     repo, log = tmp_path / "repo", tmp_path / "outside" / "log"
     repo.mkdir()

@@ -53,3 +53,12 @@ def test_every_pack_has_exactly_the_reference_keys_and_placeholders(language):
 ])
 def test_match_language(name, expected):
     assert i18n.match_language(name) == expected
+
+
+
+def test_every_language_names_the_repository_config_as_adrpy_json():
+    """The init menu and form texts name the file init writes."""
+    for code in i18n.LANGUAGES:
+        texts = i18n.load(code)
+        for key in ("menu.repository.init.description", "form.init_configured"):
+            assert ".adrpy.json" in texts(key), (code, key)
