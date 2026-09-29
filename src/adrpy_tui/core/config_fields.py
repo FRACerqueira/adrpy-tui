@@ -5,7 +5,7 @@ config` states (adrpy's own refusal stays the final word)."""
 from adrpy_tui.core.fields import Field
 
 # The groups, in the order the editor lists them.
-GROUPS = ("folders", "names", "status", "header", "template", "migration", "plugins")
+GROUPS = ("folders", "names", "status", "header", "template", "migration")
 
 _STATUS = "|()<:"  # also '<!--' and '-->'; adrpy says so if they are typed
 _HEADER = "|"
@@ -46,5 +46,4 @@ CONFIG_FIELDS = (
     _text("headermigrated", "header", 40),
     Field("template", "multiline", group="template", max_length=10000),
     _text("migrationpattern", "migration", 40, forbidden="", guarded=True),
-    Field("disableplugins", "bool", group="plugins"),
 )

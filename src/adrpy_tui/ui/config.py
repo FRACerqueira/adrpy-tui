@@ -7,7 +7,7 @@ created first, from a language pack or a config file."""
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, LoadingIndicator, RadioButton, RadioSet, Select, Static, Switch, TextArea
+from textual.widgets import Button, Input, LoadingIndicator, RadioButton, RadioSet, Select, Static, TextArea
 
 from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
@@ -26,16 +26,12 @@ def shown_value(field, value):
     """A value as one line of the list."""
     if value is None or value == "":
         return "—"
-    if isinstance(value, bool):
-        return "true" if value else "false"
     text = str(value)
     first = text.strip().splitlines()[0] if text.strip() else ""
     return first + " …" if "\n" in text.strip() or len(first) > 60 else first
 
 
 def as_flag_value(field, value):
-    if field.kind == "bool":
-        return "true" if value in (True, "true") else "false"
     return str(value)
 
 
@@ -59,8 +55,6 @@ class FieldEditScreen(ModalScreen):
             if field.kind == "select":
                 yield Select([(choice, choice) for choice in field.choices], value=str(value) if str(value) in
                              field.choices else field.choices[0], allow_blank=False, id="editor")
-            elif field.kind == "bool":
-                yield Switch(value=value in (True, "true"), id="editor")
             elif field.kind == "multiline":
                 yield SafeTextArea(str(value or ""), id="editor")
             else:

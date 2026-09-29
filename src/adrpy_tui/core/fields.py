@@ -23,8 +23,7 @@ class Field:
     # "text", "date", "switch", "decision", "choice" (one of `choices`),
     # "language" (one of adrpy's languages), "file" (an existing file's
     # path), "multi" (any of `choices`, sent comma-separated; none: adrpy's
-    # default, every one), "select" (one of `choices`), "multiline"; in the
-    # config editors also "bool" ('true'/'false')
+    # default, every one), "select" (one of `choices`), "multiline"
     kind: str
     required: bool = False
     forbidden: str = ""

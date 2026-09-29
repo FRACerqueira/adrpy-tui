@@ -1361,8 +1361,7 @@ def test_init_through_adrpy_enables_the_menus_that_need_a_repository(tmp_path, u
 REPO_CONFIG = {"folderadr": "doc/adr", "folderlog": "doc/decision-log", "prefix": "ADR", "separator": "-",
                "casetransform": "KebabCase", "lenseq": 3, "lenversion": 2, "lenrevision": 0,
                "statusnew": "Proposed", "statusacc": "Accepted", "statusrej": "Rejected", "statussup": "Superseded",
-               "headerscope": "Scope", "template": "---\n# [Title]\n\nBody", "migrationpattern": "",
-               "disableplugins": False}
+               "headerscope": "Scope", "template": "---\n# [Title]\n\nBody", "migrationpattern": ""}
 
 
 def _config_client(**answers):
@@ -1393,7 +1392,6 @@ def test_config_lists_the_fields_in_groups_with_their_values(tmp_path, user_stat
         assert rows[0] == "— Folders —" and fields.get_option_at_index(0).disabled
         assert "Decisions folder: doc/adr" in rows
         assert "Template for new decisions: --- …" in rows
-        assert "Plugins disabled: false" in rows
         assert "Legacy name pattern: —" in rows
         fields.highlighted = fields.get_option_index("statusnew")
         await pilot.pause()
@@ -1417,15 +1415,11 @@ def test_config_saves_only_the_changed_fields_in_one_command(tmp_path, user_stat
         editor.value = "_"
         await pilot.press("tab", "enter")  # OK
         await pilot.pause()
-        editor = await _edit(pilot, fields, "disableplugins")
-        editor.value = True
-        await pilot.press("tab", "enter")
-        await pilot.pause()
         await pilot.press("ctrl+r")
         await pilot.pause()
         line = _text(app.screen, "#command-line")
         assert line.startswith("adrpy config --path ")
-        assert line.endswith("--separator _ --headerscope Escopo --disableplugins true")
+        assert line.endswith("--separator _ --headerscope Escopo")
 
     run_app(app, scenario)
 
