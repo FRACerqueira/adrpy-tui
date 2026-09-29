@@ -56,7 +56,7 @@ def test_the_sample_repository_has_decision_log_entries(samples):
 
 def test_the_legacy_repository_has_files_without_a_header(samples):
     folder = samples / "legacy" / "doc" / "adr"
-    assert sorted(p.name for p in folder.glob("*.md")) == sorted(make_sample_repo.LEGACY_FILES)
+    assert sorted(p.name for p in folder.glob("*.md") if p.name != "INDEX.md") == sorted(make_sample_repo.LEGACY_FILES)
     assert (samples / "legacy" / ".adrpy.json").is_file()
 
 

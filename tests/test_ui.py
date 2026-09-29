@@ -494,7 +494,7 @@ def test_new_creates_the_decision_through_adrpy(repo, user_state):
         assert isinstance(app.screen, ResultScreen) and app.screen.result.success
 
     run_app(app, scenario)
-    assert [path.name for path in (repo / "doc" / "adr").glob("*.md")] == ["ADR001V01-use-postgre-sql.md"]
+    assert [path.name for path in (repo / "doc" / "adr").glob("*.md") if path.name != "INDEX.md"] == ["ADR001V01-use-postgre-sql.md"]
 
 
 def test_an_obvious_mistake_is_shown_without_running_adrpy(tmp_path, user_state):
@@ -3812,3 +3812,22 @@ def test_the_config_editor_marks_as_guarded_the_fields_adrpy_guards():
     from adrpy_tui.core.config_fields import CONFIG_FIELDS
 
     assert {field.flag for field in CONFIG_FIELDS if field.guarded} == set(GUARDED_CONFIG_FIELDS)
+
+
+def test_migrate_never_offers_the_decisions_index(tmp_path, user_state):
+    """adrpy writes an INDEX.md in the decisions folder (its ADR0013V01R01):
+    a page it generates, never a file to migrate."""
+    folder = tmp_path / "doc" / "adr"
+    folder.mkdir(parents=True)
+    (folder / "0001-legacy.md").write_text("# x\n", encoding="utf-8")
+    (folder / "INDEX.md").write_text("# ADR\n", encoding="utf-8")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [], "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert [path.name for path in app.screen._files] == ["0001-legacy.md"]
+
+    run_app(app, scenario)

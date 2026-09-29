@@ -75,7 +75,9 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
                                     classes="error", markup=False))
             return
         with_header = {d["path"] for d in listed(explore.data) if d["header"]["is_valid"]}
-        self._files = [p for p in markdown_files(folder, recursive=False) if str(p) not in with_header]
+        # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R01).
+        self._files = [p for p in markdown_files(folder, recursive=False)
+                       if str(p) not in with_header and p.name != "INDEX.md"]
         if not self._files:
             await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))
             return
