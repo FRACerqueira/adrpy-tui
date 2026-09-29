@@ -294,6 +294,7 @@
   "picker.count_all": "{total} decisions, all shown ({key}: only the available ones)",
   "preview.outside": "Not opened: {path} is outside the repository.",
   "preview.excerpt": "Excerpt: the first {shown} of {total} lines. The whole file: {path}",
+  "preview.excerpt_characters": "Excerpt: the first {shown} of {total} characters. The whole file: {path}",
   "preview.missing": "Not a file: {path}",
   "column.folder": "Folder",
   "explore.all_folders": "All folders",

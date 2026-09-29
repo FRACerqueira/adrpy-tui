@@ -13,7 +13,7 @@ from textual.containers import Vertical
 from textual.widgets import Button, Static
 
 from adrpy_tui.core import client as client_module
-from adrpy_tui.core.client import INTERNAL_ERROR, Result, display_command
+from adrpy_tui.core.client import display_command
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.result import ResultScreen
@@ -46,14 +46,11 @@ class CommandRunner:
         app.running_leaves.add(leave)
 
         def work():
-            command = commands[0][0]
-            try:
-                for command, flags in commands:
-                    result = app.client.run(command, flags, write=True, leave=leave)
-                    if not result.success:
-                        break
-            except Exception as error:  # noqa: BLE001 -- shown as the result, never lost
-                result = Result((), -1, False, code=INTERNAL_ERROR, detail=app.internal_error_text(error))
+            # Client.run returns a Result whatever happens (core/client.py).
+            for command, flags in commands:
+                result = app.client.run(command, flags, write=True, leave=leave)
+                if not result.success:
+                    break
             app.call_from_thread(self._finish, command, result)
 
         app.run_worker(work, thread=True)

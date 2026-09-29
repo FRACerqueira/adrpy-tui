@@ -8,9 +8,11 @@ NOT_INSTALLED = "unknown (not installed)"
 
 
 def installed_version(distribution):
+    """Its version, or NOT_INSTALLED -- also when its metadata is damaged
+    (not UTF-8, no Version): it is shown, never allowed to stop the TUI."""
     try:
-        return version(distribution)
-    except PackageNotFoundError:
+        return version(distribution) or NOT_INSTALLED
+    except (PackageNotFoundError, ValueError, OSError):
         return NOT_INSTALLED
 
 

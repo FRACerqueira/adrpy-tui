@@ -5,7 +5,7 @@ from textual.binding import Binding
 from textual.widgets import OptionList, Static
 
 from adrpy_tui.core import i18n
-from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen
+from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -33,6 +33,8 @@ class LanguageScreen(AdrpyScreen):
         options.focus()
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         if event.option.id == BACK:
             self.action_back()
         else:

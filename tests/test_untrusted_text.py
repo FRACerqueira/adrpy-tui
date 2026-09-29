@@ -135,7 +135,7 @@ def test_a_hostile_link_in_a_decision_is_only_named(tmp_path, user_state):
     on), and "%1b" in one reached the terminal as ESC: Textual unquotes a
     link before handing it over."""
     page = tmp_path / "ADR001V01-a.md"
-    links = ["<foo[/]>", "<[@click=app.quit]x>", "%1b[2Jgone.md", "<[/x]missing.md>"]
+    links = ["<foo[/]>", "<[@click=app.quit]x>", "%1b[2Jgone.md", "<[/x]missing.md>", "<../[/x]out.md>"]
     page.write_text("# A\n\n" + "\n\n".join(f"see [t{i}]({link})" for i, link in enumerate(links)) + "\n",
                     encoding="utf-8")
     app = AdrpyTui(tmp_path, client=_repo_client(tmp_path), user_state=user_state)
@@ -151,9 +151,156 @@ def test_a_hostile_link_in_a_decision_is_only_named(tmp_path, user_state):
                     await settle(pilot)
         assert isinstance(app.screen, PreviewScreen)
         messages = [notification.message for notification in app._notifications]
-        assert len(messages) == 4
+        assert len(messages) == 5
         assert all(ESC not in message for message in messages)
         assert any(message.endswith("missing.md") for message in messages)  # a long path wraps when drawn
         _assert_safe(app, "foo[/]", "[@click=app.quit]x")
 
     _run(app, scenario, notifications=True)
+
+
+SURROGATE = chr(0xD800)
+
+
+def _assert_encodable(app):
+    _drawn(app).encode("utf-8")  # what reaches the terminal must be encodable
+
+
+def test_a_result_shows_its_data_detail_and_warnings_as_they_are(tmp_path, user_state):
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.ui.result import ResultScreen
+
+    app = AdrpyTui(tmp_path, client=_repo_client(tmp_path), user_state=user_state)
+    done = Result((), 0, True, data={"created": f"C:/r/ADR001V01-a{RLO}b.md"}, warnings=[f"note{RLO}x"])
+    failed = Result((), 1, False, code="x", detail=f"refused{RLO}here")
+
+    async def scenario(pilot):
+        for result in (done, failed):
+            app.push_screen(ResultScreen("new", result))
+            await settle(pilot)
+            _assert_safe(app, SHOWN_RLO)
+            app.pop_screen()
+            await settle(pilot)
+
+    _run(app, scenario)
+
+
+def test_check_shows_a_hint_and_related_files_as_they_are(tmp_path, user_state):
+    errors = [{"code": "no-header", "file": "C:/r/a.md", "hint": f"Run{RLO}migrate.",
+               "related_files": [f"C:/r/b{RLO}c.md"], "detail": f"d{RLO}"}]
+    app = AdrpyTui(tmp_path, client=_repo_client(tmp_path, check={
+        "success": False, "code": "repository-inconsistent", "detail": "x", "warnings": [],
+        "data": {"errors": errors}}), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.check"])
+        _assert_safe(app, SHOWN_RLO)
+
+    _run(app, scenario)
+
+
+def test_the_configuration_list_and_the_picker_show_repository_values_as_they_are(tmp_path, user_state):
+    from test_ui import REPO_CONFIG
+
+    config = {**REPO_CONFIG, "prefix": f"AD{RLO}R", "statusnew": f"Prop{RLO}osed"}
+    client = _repo_client(tmp_path, [_decision("ADR001V01-a.md")])
+    client.answers["config"] = {"success": True, "data": {"config": config, "warnings": []}}
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.config"])
+        _assert_safe(app, SHOWN_RLO)
+        await pilot.press("escape")
+        await pilot.press("escape")
+        await settle(pilot)
+        await _walk(app, pilot, ["decisions", "decisions.approve"])
+        _assert_safe(app, SHOWN_RLO)
+
+    _run(app, scenario)
+
+
+def test_migrate_shows_a_hostile_file_name_and_preview_as_they_are(tmp_path, user_state):
+    from textual.widgets import Button
+
+    adr = tmp_path / "doc" / "adr"
+    adr.mkdir(parents=True)
+    (adr / f"0001-le{RLO}gacy.md").write_text("# x\n", encoding="utf-8")
+    preview = [{"file": f"C:/r/0001-le{RLO}gacy.md", "number": 1, "version": 0, "title": f"t{RLO}x"}]
+    client = _repo_client(tmp_path)
+    client.answers["explore"]["data"]["migrationpattern_preview"] = preview
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        _assert_safe(app, SHOWN_RLO)
+        app.screen.query_one("#preview", Button).press()
+        await settle(pilot)
+        _assert_safe(app, SHOWN_RLO)
+
+    _run(app, scenario)
+
+
+def test_a_name_holding_a_lone_surrogate_is_drawn_encodable(tmp_path, user_state):
+    decision = _decision(f"ADR001V01-a{SURROGATE}b.md", update="Accepted", updated="2026-02-01")
+    app = AdrpyTui(tmp_path, client=_repo_client(tmp_path, [decision]), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["explore", "explore.explore"])
+        _assert_encodable(app)
+        assert "<U+D800>" in _drawn(app)
+
+    _run(app, scenario)
+
+
+
+def test_a_missing_file_s_name_is_never_read_as_markup(tmp_path, user_state):
+    """The missing-file notification names the path it looked for; on Windows
+    a link's "/" becomes "\\" there, so the link test cannot reach it."""
+    from adrpy_tui.ui.preview import open_preview
+
+    app = AdrpyTui(tmp_path, client=_repo_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        open_preview(app, tmp_path / "gone [b]y [@click=app.quit]x.md")
+        await settle(pilot)
+        _assert_safe(app, "[b]y", "[@click=app.quit]x")
+
+    _run(app, scenario, notifications=True)
+
+
+def test_a_hostile_link_in_a_command_s_help_is_only_named(tmp_path, user_state):
+    from textual.widgets import Markdown
+
+    from adrpy_tui.ui.help import HelpScreen
+
+    contract = {"success": True, "data": {"commands": [{
+        "name": "new", "summary": "s", "description": "d", "arguments": [], "failure_codes": []}], "warnings": []}}
+    app = AdrpyTui(tmp_path, client=FakeClient(answers={"help": contract}), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(HelpScreen("new"))
+        await settle(pilot)
+        markdown = app.screen.query_one(Markdown)
+        markdown.post_message(Markdown.LinkClicked(markdown, "x[/y]z"))
+        await settle(pilot)
+        _assert_safe(app, "x[/y]z")
+
+    _run(app, scenario, notifications=True)
+
+
+def test_the_log_browser_s_classification_filter_holds_plain_text(tmp_path, user_state):
+    """Its options are Text: a classification "[@click=app.quit]x" is shown as
+    written, never an action; the list row alone could not tell."""
+    from rich.text import Text
+
+    log = tmp_path / "doc" / "decision-log"
+    log.mkdir(parents=True)
+    (log / "2026-01-01--[@click=app.quit]x--scope--slug.md").write_text("# x\n", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=_repo_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        prompts = [prompt for prompt, _ in app.screen.query(Select).first()._options[1:]]
+        assert [(type(p).__name__, p.plain, p.spans) for p in prompts] == [("Text", "[@click=app.quit]x", [])]
+
+    _run(app, scenario)

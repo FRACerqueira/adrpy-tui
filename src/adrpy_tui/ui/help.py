@@ -6,7 +6,7 @@ from textual.widgets import LoadingIndicator, Markdown, Static
 
 from adrpy_tui.core.registry import command_name
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import AdrpyScreen, on_top
 
 
 def _cell(text):
@@ -59,9 +59,11 @@ class HelpScreen(AdrpyScreen):
             # Like every other Markdown here, a link is named, never opened in a browser.
             body.mount(Markdown(contract_markdown(self.app.texts, self.command, commands[0]), open_links=False))
         else:
-            body.mount(Static(result.detail or result.code or "", classes="error", markup=False))
+            body.mount(Static(visible(result.detail or result.code or ""), classes="error", markup=False))
 
     def on_markdown_link_clicked(self, event):
+        if not on_top(self):
+            return
         self.app.notify(visible(event.href), markup=False)
 
     def action_back(self):

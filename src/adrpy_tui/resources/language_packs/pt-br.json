@@ -294,6 +294,7 @@
   "picker.count_all": "{total} decisões, todas visíveis ({key}: só as disponíveis)",
   "preview.outside": "Não aberto: {path} está fora do repositório.",
   "preview.excerpt": "Trecho: as primeiras {shown} de {total} linhas. O arquivo inteiro: {path}",
+  "preview.excerpt_characters": "Trecho: os primeiros {shown} de {total} caracteres. O arquivo inteiro: {path}",
   "preview.missing": "Não é um arquivo: {path}",
   "column.folder": "Pasta",
   "explore.all_folders": "Todas as pastas",

@@ -10,7 +10,7 @@ from textual.widgets import DirectoryTree, Input, Static
 
 from adrpy_tui.core import keys
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PAGE_SIZE
 
 
@@ -38,9 +38,13 @@ class RepositoryScreen(AdrpyScreen):
         yield tree
 
     def on_directory_tree_directory_selected(self, event):
+        if not on_top(self):
+            return
         self.query_one("#repository-path", Input).value = str(event.path)
 
     def on_input_submitted(self, event):
+        if not on_top(self):
+            return
         self.action_use()
 
     def action_use(self):

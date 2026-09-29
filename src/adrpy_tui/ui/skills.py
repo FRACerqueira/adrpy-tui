@@ -46,7 +46,7 @@ class SkillsListScreen(AdrpyScreen):
         texts, body = self.app.texts, self.query_one("#body")
         await body.remove_children()
         if not result.success:
-            await body.mount(Static(result.detail or result.code or "", classes="error", markup=False))
+            await body.mount(Static(visible(result.detail or result.code or ""), classes="error", markup=False))
             return
         header = [texts(f"skills.column.{name}") for name in ("skill", "provider", "scope", "state", "file")]
         rows = [tuple(visible(str(value or "")) for value in (
@@ -61,7 +61,7 @@ class SkillsListScreen(AdrpyScreen):
         await body.mount(PagedList(*(row(_cells(cells, widths), id=str(i)) for i, cells in enumerate(rows)),
                                    list_id="skills"))
         for warning in result.warnings:
-            await body.mount(Static(str(warning), classes="warning", markup=False))
+            await body.mount(Static(visible(str(warning)), classes="warning", markup=False))
 
     def action_back(self):
         self.app.pop_screen()

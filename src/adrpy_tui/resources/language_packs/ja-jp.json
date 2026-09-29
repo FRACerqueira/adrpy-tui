@@ -294,6 +294,7 @@
   "picker.count_all": "{total} 件の決定をすべて表示 ({key}: 利用可能のみ)",
   "preview.outside": "開きませんでした: {path} はリポジトリの外にあります。",
   "preview.excerpt": "抜粋: {total} 行のうち最初の {shown} 行。ファイル全体: {path}",
+  "preview.excerpt_characters": "抜粋: {total} 文字のうち最初の {shown} 文字。ファイル全体: {path}",
   "preview.missing": "ファイルではありません: {path}",
   "column.folder": "フォルダー",
   "explore.all_folders": "すべてのフォルダー",

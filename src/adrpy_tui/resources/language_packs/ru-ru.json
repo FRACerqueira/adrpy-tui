@@ -294,6 +294,7 @@
   "picker.count_all": "{total} решений, показаны все ({key}: только доступные)",
   "preview.outside": "Не открыто: {path} находится вне репозитория.",
   "preview.excerpt": "Фрагмент: первые {shown} из {total} строк. Весь файл: {path}",
+  "preview.excerpt_characters": "Фрагмент: первые {shown} из {total} символов. Весь файл: {path}",
   "preview.missing": "Не файл: {path}",
   "column.folder": "Папка",
   "explore.all_folders": "Все папки",

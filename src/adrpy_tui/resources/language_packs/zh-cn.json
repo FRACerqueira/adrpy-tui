@@ -294,6 +294,7 @@
   "picker.count_all": "全部 {total} 个决策 ({key}: 仅可用)",
   "preview.outside": "未打开：{path} 位于仓库之外。",
   "preview.excerpt": "摘录：共 {total} 行中的前 {shown} 行。完整文件：{path}",
+  "preview.excerpt_characters": "摘录：共 {total} 个字符中的前 {shown} 个。完整文件：{path}",
   "preview.missing": "不是文件: {path}",
   "column.folder": "文件夹",
   "explore.all_folders": "所有文件夹",

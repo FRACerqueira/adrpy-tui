@@ -9,7 +9,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, OptionList, Static
 
 from adrpy_tui.core import contrast, themes
-from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen
+from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -42,6 +42,8 @@ class AppearanceScreen(AdrpyScreen):
             self.app.apply_preset(event.option.id)
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         if event.option.id == BACK:
             self.action_back()
         elif event.option.id == CUSTOMIZE:
@@ -100,6 +102,8 @@ class ColorsScreen(AdrpyScreen):
             options.replace_option_prompt(role, self._option(role).prompt)
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         if event.option.id == BACK:
             self.action_back()
         elif event.option.id == RESET_ALL:
@@ -167,9 +171,13 @@ class ColorEditScreen(ModalScreen):
             self.dismiss(value)
 
     def on_input_submitted(self, event):
+        if not on_top(self):
+            return
         self._ok()
 
     def on_button_pressed(self, event):
+        if not on_top(self):
+            return
         if event.button.id == "ok":
             self._ok()
         elif event.button.id == "reset":

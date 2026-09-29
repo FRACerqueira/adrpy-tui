@@ -13,20 +13,26 @@ _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 _CONTROL_BUT_CRLF = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]|\r(?!\n)")
 
 
-def printable(text):
-    """Text to show, with its line breaks as LF."""
+def _without_controls(text):
     return _CONTROL.sub("", text.replace("\r\n", "\n"))
+
+
+def printable(text):
+    """Text to show, with its line breaks as LF. A lone surrogate (a name
+    that is not valid UTF-8) becomes U+FFFD: written to the terminal it
+    cannot be encoded, and killed the thread that draws the screen."""
+    return "".join("\ufffd" if unicodedata.category(c) == "Cs" else c for c in _without_controls(text))
 
 
 def visible(text):
     """A name, a path or a command line to show: `printable`, and every
     character that changes how the rest of the line reads without showing
     itself -- a bidirectional override, a zero-width one, a line
-    separator (Unicode Cf, Zl, Zp) -- written out as <U+XXXX>, so
-    "abc<U+202E>dm.txt" is not read as "abctxt.md". Not for a decision's
-    own text, where such a character may be meant."""
-    return "".join(f"<U+{ord(c):04X}>" if unicodedata.category(c) in ("Cf", "Zl", "Zp") else c
-                   for c in printable(text))
+    separator (Unicode Cf, Zl, Zp), a lone surrogate (Cs) -- written out
+    as <U+XXXX>, so "abc<U+202E>dm.txt" is not read as "abctxt.md". Not for
+    a decision's own text, where such a character may be meant."""
+    return "".join(f"<U+{ord(c):04X}>" if unicodedata.category(c) in ("Cf", "Zl", "Zp", "Cs") else c
+                   for c in _without_controls(text))
 
 
 def safe(text):

@@ -294,6 +294,7 @@
   "picker.count_all": "결정 {total}개 모두 표시 ({key}: 사용 가능만)",
   "preview.outside": "열지 않음: {path}은(는) 저장소 밖에 있습니다.",
   "preview.excerpt": "발췌: {total}줄 중 처음 {shown}줄. 전체 파일: {path}",
+  "preview.excerpt_characters": "발췌: {total}자 중 처음 {shown}자. 전체 파일: {path}",
   "preview.missing": "파일이 아님: {path}",
   "column.folder": "폴더",
   "explore.all_folders": "모든 폴더",

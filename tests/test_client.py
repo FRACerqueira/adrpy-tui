@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 import time
@@ -127,6 +128,13 @@ def _hanging(monkeypatch, seconds, then=""):
                                                       True: ("adrpy-skills", (sys.executable, "-c", code))})
 
 
+def _answering(monkeypatch):
+    """adrpy replaced by a program that answers success at once."""
+    code = "import json; print(json.dumps({'success': True, 'data': {}}))"
+    monkeypatch.setattr(client_module, "_PROGRAMS", {False: ("adrpy", (sys.executable, "-c", code)),
+                                                      True: ("adrpy-skills", (sys.executable, "-c", code))})
+
+
 def test_a_read_that_does_not_answer_is_stopped(monkeypatch):
     """ADR006V01: a read changes nothing, so one that hangs is stopped and
     becomes a failure; it no longer holds every later call behind it."""
@@ -200,3 +208,130 @@ def test_one_adrpy_call_at_a_time():
     for thread in threads:
         thread.join()
     assert most[0] == 1
+
+
+def test_a_value_holding_a_line_break_and_ending_in_backslashes_is_shown_as_it_runs(monkeypatch):
+    """The wrapper added quotes without doubling the trailing backslashes, so
+    the closing quote read as escaped: "a<LF>\\" was shown as a value ending in
+    a quote. A trailing backslash is doubled before the closing quote, as the
+    Windows rules parse it."""
+    monkeypatch.setattr("sys.platform", "win32")
+    body = "a" + chr(10) + "b" + chr(92)
+    line = display_command("log", ["--body", body])
+    assert line == 'adrpy log --body "a' + chr(10) + "b" + chr(92) * 2 + '"'
+
+
+def test_a_write_waiting_behind_a_hung_read_can_be_left_before_it_starts():
+    """Leave only reached a running adrpy: a write queued behind a hung read
+    ignored it, then started once the lock was free -- after the person had
+    left. Now the waiting for the lock ends too, and the write never starts."""
+    release, calls = threading.Event(), []
+
+    def runner(argv, **_):
+        calls.append(argv)
+        release.wait(10)
+        return completed({"success": True, "data": {}})
+
+    client = Client(runner=runner)
+    reading = threading.Thread(target=client.run, args=("explore",))
+    reading.start()
+    time.sleep(0.1)
+    leave = threading.Event()
+    threading.Timer(0.3, leave.set).start()
+    started = time.monotonic()
+    result = client.run("new", ("--path", "."), write=True, leave=leave)
+    release.set()
+    reading.join()
+    assert time.monotonic() - started < 1.5
+    assert (result.success, result.code) == (False, client_module.NOT_STARTED)
+    assert [argv for argv in calls if "new" in argv] == []
+
+
+def test_a_stopped_read_does_not_wait_for_what_adrpy_left_holding_its_output(monkeypatch):
+    """After the kill, the wait for the output was unbounded: a process adrpy
+    started, still holding the pipe, kept the call -- and the lock -- as long
+    as it lived."""
+    grandchild = "import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(20)'])"
+    code = f"{grandchild}; time.sleep(20)"
+    monkeypatch.setattr(client_module, "_PROGRAMS", {False: ("adrpy", (sys.executable, "-c", code)),
+                                                      True: ("adrpy-skills", (sys.executable, "-c", code))})
+    monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.5)
+    started = time.monotonic()
+    result = Client().run("explore")
+    assert time.monotonic() - started < 5
+    assert result.code == TIMED_OUT
+
+
+def test_shutdown_stops_a_read_and_leaves_a_write(tmp_path, monkeypatch):
+    """Quitting waited for a read in flight (the process lingered up to
+    READ_TIMEOUT). shutdown() stops a read -- it changes nothing -- and
+    leaves a write to its own end, never stopping it (ADR006V01)."""
+    marker = tmp_path / "finished"
+    _hanging(monkeypatch, 1.5, f"open({str(marker)!r}, 'w').write('x')")
+    client = Client()
+    threading.Timer(0.3, client.shutdown).start()
+    started = time.monotonic()
+    assert client.run("explore").success is False
+    assert time.monotonic() - started < 1.2
+    time.sleep(2)
+    assert not marker.exists()  # the read's process was stopped
+
+    client = Client()
+    threading.Timer(0.3, client.shutdown).start()
+    result = client.run("new", write=True)
+    assert result.code == ABANDONED
+    time.sleep(2.5)
+    assert marker.exists()  # the write's was not
+
+
+def test_a_write_is_refused_while_one_left_running_still_runs(tmp_path, monkeypatch):
+    """Leaving a write released the one-call lock while adrpy still wrote: a
+    second write could run beside it -- two adrpy processes on one working
+    copy, what adrpy-ai's own ADR001V01 calls a usage error. A read (Check)
+    still runs; another write waits until the first has ended."""
+    marker = tmp_path / "finished"
+    _hanging(monkeypatch, 1.5, f"open({str(marker)!r}, 'w').write('x')")
+    client = Client()
+    leave = threading.Event()
+    threading.Timer(0.3, leave.set).start()
+    assert client.run("new", write=True, leave=leave).code == ABANDONED
+    assert client.run("approve", write=True).code == client_module.WRITE_STILL_RUNNING
+    time.sleep(2)
+    assert marker.exists()
+    _answering(monkeypatch)
+    assert client.run("approve", write=True).success
+
+
+def test_a_read_runs_while_a_write_left_running_still_runs(tmp_path, monkeypatch):
+    _hanging(monkeypatch, 1.5)
+    client = Client()
+    leave = threading.Event()
+    threading.Timer(0.3, leave.set).start()
+    assert client.run("new", write=True, leave=leave).code == ABANDONED
+    _answering(monkeypatch)
+    assert client.run("check").success
+
+
+def test_other_failures_to_start_adrpy_are_failures_too():
+    for error in (ValueError("embedded null character"), TypeError("expected str")):
+        def runner(argv, _error=error, **_):
+            raise _error
+
+        result = Client(runner=runner).run("explore")
+        assert (result.success, result.code) == (False, RUN_FAILED)
+
+
+def test_an_empty_or_relative_pythonpath_entry_does_not_let_the_current_folder_in(tmp_path, monkeypatch):
+    """-P keeps the current folder off the module path, but an empty or "."
+    PYTHONPATH entry (left by `set PYTHONPATH=%PYTHONPATH%;C:\\x`) put it
+    back: a repository's own adrpy/ ran again."""
+    fake = tmp_path / "adrpy"
+    fake.mkdir()
+    (fake / "__init__.py").write_text("", encoding="utf-8")
+    (fake / "__main__.py").write_text("import pathlib; pathlib.Path('RAN').write_text('x')", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    for value in (os.pathsep, ".", "", f"{os.pathsep}C:/elsewhere"):
+        monkeypatch.setenv("PYTHONPATH", value)
+        result = Client().run("config", ("--path", "."))
+        assert not (tmp_path / "RAN").exists(), repr(value)
+        assert result.code == "config-not-found"

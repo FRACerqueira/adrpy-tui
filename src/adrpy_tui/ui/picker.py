@@ -7,9 +7,10 @@ from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import Input, Label, OptionList, Static, Switch
 
-from adrpy_tui.core.text import visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import state
+from adrpy_tui.core.text import visible
+from adrpy_tui.ui.base import on_top
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
 
 UNKNOWN_LABEL = "?"
@@ -69,7 +70,7 @@ class AdrPicker(Vertical):
             eligible = decision_state in self._field.eligible
             if folded not in decision["filename"].casefold() or (only_available and not eligible):
                 continue
-            label = self._labels.get(decision_state, UNKNOWN_LABEL)
+            label = visible(self._labels.get(decision_state, UNKNOWN_LABEL))
             options.add_option(row(f"{visible(decision['filename'])}  ·  {label}", id=str(index),
                                    disabled=not eligible))
         if options.option_count:
@@ -111,7 +112,7 @@ class AdrPicker(Vertical):
     def show_failure(self, detail):
         """explore could not list the decisions: says why, in adrpy's words."""
         paged = self.query_one(PagedList)
-        paged.empty_text = self.app.texts("picker.failed", detail=detail)
+        paged.empty_text = self.app.texts("picker.failed", detail=visible(str(detail)))
         paged.update_page()
 
     def on_input_changed(self, event):
@@ -120,6 +121,8 @@ class AdrPicker(Vertical):
         self._show()
 
     def on_input_submitted(self, event):
+        if not on_top(self.screen):
+            return
         event.stop()
         self.focus()
 
@@ -139,6 +142,8 @@ class AdrPicker(Vertical):
                 return
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self.screen):
+            return
         event.stop()
         self._chose(self._decisions[int(event.option.id)])
 

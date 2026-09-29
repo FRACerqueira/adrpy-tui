@@ -10,10 +10,10 @@ from textual.binding import Binding
 from textual.widgets import Input, Select, Static
 
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
+from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
 from adrpy_tui.ui.explore import _cells
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
-from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, inside_repository, open_preview
 
 ALL = "*"
 _WIDTHS = (12, 22, 18, 0)
@@ -52,12 +52,16 @@ class LogScreen(AdrpyScreen):
 
     def on_mount(self):
         folder = self.app.repo / self.app.folderlog
+        # A configuration naming a folder outside the repository (adrpy reads
+        # one back from a hand-edited file) lists nothing there.
+        inside = inside_repository(self.app.repo, folder)
         self._entries = sorted(path for path in folder.rglob("*.md") if path.name != "INDEX.md") \
-            if folder.is_dir() else []
+            if inside and folder.is_dir() else []
         classifications = sorted({entry_parts(path.name)[1] for path in self._entries} - {""})
         self.query_one("#logs-classification", Select).set_options(
             [(self.app.texts("logs.all_classifications"), ALL), *((Text(visible(c)), c) for c in classifications)])
-        self.query_one(PagedList).empty_text = self.app.texts("logs.empty", folder=visible(str(folder)))
+        self.query_one(PagedList).empty_text = self.app.texts("logs.empty", folder=visible(str(folder))) if inside \
+            else self.app.texts("preview.outside", path=visible(self.app.folderlog))
         self._fill()
         self.query_one("#entries").focus()
 
@@ -95,6 +99,8 @@ class LogScreen(AdrpyScreen):
         self.query_one("#logs-current", Static).update(text)
 
     def on_input_submitted(self, event):
+        if not on_top(self):
+            return
         self.query_one("#entries").focus()
 
     def on_select_changed(self, event):
@@ -108,6 +114,8 @@ class LogScreen(AdrpyScreen):
         return self._entries[int(options.get_option_at_index(options.highlighted).id)]
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         open_preview(self.app, self._entries[int(event.option.id)])
 
     def action_preview(self):

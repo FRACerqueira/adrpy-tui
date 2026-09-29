@@ -60,3 +60,25 @@ def test_a_save_that_fails_half_way_leaves_the_file_as_it_was(tmp_path, monkeypa
     state.set_language("en-us")
     monkeypatch.undo()
     assert path.read_text(encoding="utf-8") == before
+
+
+
+def test_the_state_path_does_not_need_a_home_folder(monkeypatch):
+    """Path.home() raises when no home can be determined (a service account,
+    a stripped environment): the TUI did not start."""
+    from adrpy_tui.core import state
+
+    def no_home():
+        raise RuntimeError("Could not determine home directory.")
+
+    monkeypatch.setattr(state.Path, "home", staticmethod(no_home))
+    monkeypatch.delenv("APPDATA", raising=False)
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
+    assert state.default_state_path().name == "state.json"
+
+
+
+def test_a_state_file_nested_too_deep_to_read_starts_empty(tmp_path):
+    path = tmp_path / "state.json"
+    path.write_text("[" * 100000, encoding="utf-8")
+    assert UserState(path).language is None

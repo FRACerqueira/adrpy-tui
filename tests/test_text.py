@@ -38,3 +38,22 @@ def test_a_folder_s_name_in_the_tree_is_plain_text_without_control_characters():
 
     label = FoldersTree.process_label(None, "[red]x\x1b]0;owned\x07")
     assert (label.plain, label.spans) == ("[red]x]0;owned", [])
+
+
+def test_visible_writes_out_every_character_that_hides_itself():
+    """Bidirectional, zero-width and separator characters (Cf, Zl, Zp) and a
+    lone surrogate (Cs) are written out; what only decorates a letter stays."""
+    from adrpy_tui.core.text import visible
+
+    for char in ("\u202e", "\u200b", "\ufeff", "\u2066", "\u2028", "\u2029", "\ud800"):
+        assert visible(f"a{char}b") == f"a<U+{ord(char):04X}>b"
+    assert visible("e\u0301\tx\ny\x1b") == "e\u0301\tx\ny"
+
+
+def test_a_lone_surrogate_never_reaches_the_terminal():
+    """A file name may hold one (NTFS allows it; a non-UTF-8 byte decodes to
+    one on Linux); written to the terminal it killed Textual's writer thread
+    and froze the screen for the rest of the session."""
+    shown = printable("0001-le\ud800gacy")
+    assert shown == "0001-le\ufffdgacy"
+    shown.encode("utf-8")

@@ -48,10 +48,13 @@ so the TUI always talks to the adrpy installed next to it:
 
 `-P` keeps the current folder off the module path: without it, a
 repository holding an `adrpy/` folder would run instead of the installed
-adrpy. Every call returns a `Result`, never raises: a read is stopped
+adrpy. For the same reason an empty or relative `PYTHONPATH` entry, which
+names the current folder again, is dropped from adrpy's environment. Every call returns a `Result`, never raises: a read is stopped
 after `READ_TIMEOUT`, a write never is -- the person may leave it and adrpy
-goes on to its end -- and an adrpy that cannot be started is a failure like
-any other (ADR006V01).
+goes on to its end, and no other write starts while it runs -- and an adrpy
+that cannot be started is a failure like any other (ADR006V01). Waiting for
+the one-call lock ends as well when the person leaves, and `shutdown()`,
+called when the TUI quits, stops a read in flight and leaves a write.
 
 It is required as `adrpy-ai>=0.1.dev0,<0.2`, the series adrpy-tui was
 validated against, development builds included. An adrpy-ai installed

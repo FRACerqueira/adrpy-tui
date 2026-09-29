@@ -5,6 +5,8 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
+from adrpy_tui.ui.base import on_top
+
 
 class ConfirmScreen(ModalScreen[bool]):
     # The command line scrolls in a box of its own, so a long one (a log
@@ -34,6 +36,8 @@ class ConfirmScreen(ModalScreen[bool]):
         self.query_one("#yes", Button).focus()
 
     def on_button_pressed(self, event):
+        if not on_top(self):
+            return
         self.dismiss(event.button.id == "yes")
 
     def action_scroll(self, way):

@@ -6,6 +6,7 @@ to the TUI (ADR003V01).
 """
 
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -25,7 +26,11 @@ CONTRACT_VIOLATION = "tui-contract-violation"
 TIMED_OUT = "tui-timeout"
 ABANDONED = "tui-left-running"
 RUN_FAILED = "tui-run-failed"
-INTERNAL_ERROR = "tui-internal-error"  # the TUI itself failed; the traceback is in the error log
+# A write the TUI did not start: the person left while it waited for adrpy,
+# or one left running still runs (two adrpy writes on one working copy are
+# a usage error for adrpy-ai, its own ADR001V01).
+NOT_STARTED = "tui-not-started"
+WRITE_STILL_RUNNING = "tui-write-still-running"
 READ_TIMEOUT = 60  # seconds a read may take before it is stopped
 
 # -P: `python -m` would put the current folder first on the module path, so
@@ -65,7 +70,20 @@ def display_command(command, flags):
     # list2cmdline quotes a value only for a space or a tab: a line break
     # alone would read as the start of another command line.
     parts = (subprocess.list2cmdline([arg]) for arg in argv)
-    return " ".join(f'"{part}"' if "\n" in part and not part.startswith('"') else part for part in parts)
+    return " ".join(_quoted(part) if "\n" in part and not part.startswith('"') else part for part in parts)
+
+
+def _quoted(arg):
+    """`arg` quoted as Windows parses it back: the backslashes before a quote,
+    and those before the closing one, doubled."""
+    quoted, backslashes = [], 0
+    for char in arg:
+        if char == "\\":
+            backslashes += 1
+            continue
+        quoted.append("\\" * (backslashes * 2 + 1) + '"' if char == '"' else "\\" * backslashes + char)
+        backslashes = 0
+    return '"' + "".join(quoted) + "\\" * (backslashes * 2) + '"'
 
 
 class _TimedOut(Exception):
@@ -73,16 +91,43 @@ class _TimedOut(Exception):
 
 
 class _Left(Exception):
-    pass
+    def __init__(self, process=None):
+        super().__init__()
+        self.process = process  # a write's, still running; None when nothing was started
+
+
+def _environment():
+    """This environment for adrpy, but a PYTHONPATH entry that is empty or
+    relative -- which names the current folder, what -P keeps out -- dropped."""
+    environment = dict(os.environ)
+    if "PYTHONPATH" in environment:
+        kept = [entry for entry in environment["PYTHONPATH"].split(os.pathsep) if entry and os.path.isabs(entry)]
+        if kept:
+            environment["PYTHONPATH"] = os.pathsep.join(kept)
+        else:
+            del environment["PYTHONPATH"]
+    return environment
+
+
+def _stop(process):
+    process.kill()
+    try:
+        # Bounded: a process adrpy started may hold the output open past the kill.
+        process.communicate(timeout=2)
+    except subprocess.TimeoutExpired:
+        pass
 
 
 def _run(argv, timeout=None, leave=None):
-    """Runs adrpy. A read stops it after `timeout` seconds; a write (no
-    timeout) is never stopped -- when `leave` is set, the waiting ends and
-    adrpy goes on to its own end (ADR006V01)."""
+    """Runs adrpy. A read (a timeout) is stopped after `timeout` seconds, or
+    once `leave` is set; a write (no timeout) is never stopped -- when
+    `leave` is set, the waiting ends and adrpy goes on to its own end
+    (ADR006V01)."""
+    if leave is not None and leave.is_set():
+        raise _Left()
     # stdin is the TUI's terminal; adrpy never prompts, so give it nothing.
     process = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               text=True, encoding="utf-8", errors="replace")
+                               text=True, encoding="utf-8", errors="replace", env=_environment())
     deadline = None if timeout is None else time.monotonic() + timeout
     while True:
         try:
@@ -90,11 +135,23 @@ def _run(argv, timeout=None, leave=None):
             return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
         except subprocess.TimeoutExpired:
             if deadline is not None and time.monotonic() > deadline:
-                process.kill()
-                process.communicate()
+                _stop(process)
                 raise _TimedOut() from None
             if leave is not None and leave.is_set():
-                raise _Left() from None
+                if timeout is not None:  # a read changes nothing: stop it
+                    _stop(process)
+                    raise _Left() from None
+                raise _Left(process) from None
+
+
+class _Either:
+    """Set once either event is."""
+
+    def __init__(self, *events):
+        self._events = [event for event in events if event is not None]
+
+    def is_set(self):
+        return any(event.is_set() for event in self._events)
 
 
 class Client:
@@ -102,26 +159,52 @@ class Client:
         self._runner = runner
         # One adrpy call at a time, whichever worker asks (adrpy-ai ADR001V01).
         self._lock = threading.Lock()
+        self._closing = threading.Event()  # the TUI is quitting: stop reads, leave writes
+        self._left = []  # the processes of writes left running
+
+    def shutdown(self):
+        """Every call in flight or waiting ends now: a read is stopped, a
+        write left to its own end."""
+        self._closing.set()
+
+    def _still_writing(self):
+        self._left = [process for process in self._left if process.poll() is None]
+        return bool(self._left)
 
     def run(self, command, flags=(), write=False, leave=None):
         """One call, always a Result: a read is stopped after READ_TIMEOUT;
         a write is not, and ends with ABANDONED once `leave` is set."""
         _, prefix, verb = _split(command)
         argv = (*prefix, verb, *flags)
-        with self._lock:
+        stop = _Either(leave, self._closing)
+        # Waiting for the lock ends too when the person leaves: a write queued
+        # behind a hung read must not start after they left.
+        while not self._lock.acquire(timeout=0.2):
+            if stop.is_set():
+                return Result(argv, -1, False, code=NOT_STARTED,
+                              detail="adrpy was not run: another call still held it when you left.")
+        try:
+            if write and self._still_writing():
+                return Result(argv, -1, False, code=WRITE_STILL_RUNNING,
+                              detail="A command you left is still running: wait for it to end, then run check "
+                              "to see the repository's state.")
             try:
-                completed = self._runner(list(argv), timeout=None if write else READ_TIMEOUT, leave=leave)
+                completed = self._runner(list(argv), timeout=None if write else READ_TIMEOUT, leave=stop)
             except _TimedOut:
                 return Result(argv, -1, False, code=TIMED_OUT,
                               detail=f"adrpy did not answer within {READ_TIMEOUT} s and was stopped "
                               "(a read changes nothing).")
-            except _Left:
+            except _Left as left:
+                if left.process is not None:
+                    self._left.append(left.process)
                 return Result(argv, -1, False, code=ABANDONED,
                               detail="adrpy is still running: its result is unknown. Run check to see the "
                               "repository's state.")
-            except OSError as error:
+            except (OSError, ValueError, TypeError) as error:
                 return Result(argv, -1, False, code=RUN_FAILED,
                               detail=f"adrpy could not be started: {safe(str(error))}")
+        finally:
+            self._lock.release()
         return _parse(argv, completed)
 
     def help(self, command):

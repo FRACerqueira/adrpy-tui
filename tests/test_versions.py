@@ -56,3 +56,17 @@ def test_an_installed_version_that_cannot_be_read_is_named_not_a_crash(monkeypat
     monkeypatch.setattr(versions, "installed_version", lambda name: found)
     monkeypatch.setattr(versions, "adrpy_range", lambda: "<0.2,>=0.1.dev0")
     assert versions.adrpy_outside_range() == (found or "unknown", ">=0.1.dev0, <0.2")
+
+
+
+@pytest.mark.parametrize("failure", [UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid"), None])
+def test_damaged_metadata_reads_as_not_installed(monkeypatch, failure):
+    """A dist-info whose METADATA is not UTF-8 raised in the app's constructor
+    and in --version; one with no Version header gave None, shown as "None"."""
+    def version(name):
+        if failure is None:
+            return None
+        raise failure
+
+    monkeypatch.setattr(versions, "version", version)
+    assert versions.installed_version("adrpy-ai") == versions.NOT_INSTALLED

@@ -9,7 +9,7 @@ from textual.screen import ModalScreen
 from textual.widgets import OptionList, Static
 
 from adrpy_tui.core import keys
-from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen
+from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -45,6 +45,8 @@ class KeysScreen(AdrpyScreen):
             options.replace_option_prompt(action, self._option(action).prompt)
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         if event.option.id == BACK:
             self.action_back()
         elif event.option.id == RESET_ALL:
@@ -80,6 +82,8 @@ class KeyCaptureScreen(ModalScreen):
             yield Static("", id="key-problem", classes="error", markup=False)
 
     def on_key(self, event: events.Key):
+        if not on_top(self):
+            return
         event.stop()
         event.prevent_default()
         key = event.key

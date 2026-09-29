@@ -8,14 +8,18 @@ language again on the next run.
 
 import json
 import os
+import tempfile
 from pathlib import Path
 
 
 def default_state_path():
-    if os.name == "nt":
-        base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
-    else:
-        base = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    try:
+        if os.name == "nt":
+            base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+        else:
+            base = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    except RuntimeError:  # no home folder can be determined: the temporary folder, not a crash
+        base = Path(tempfile.gettempdir())
     return base / "adrpy-tui" / "state.json"
 
 

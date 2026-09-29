@@ -47,8 +47,8 @@ class ErrorList(Vertical):
     def on_option_list_option_highlighted(self, event):
         event.stop()
         error = self._errors[int(event.option.id)]
-        lines = [text for text in (error.get("detail"), error.get("hint")) if text]
-        related = [_name(path) for path in error.get("related_files") or []]
+        lines = [visible(str(text)) for text in (error.get("detail"), error.get("hint")) if text]
+        related = [visible(_name(path)) for path in error.get("related_files") or []]
         if related:
             lines.append(self.app.texts("errors.related", files=", ".join(related)))
         self.query_one(f"#{self.id}-hint", Static).update("\n".join(lines))

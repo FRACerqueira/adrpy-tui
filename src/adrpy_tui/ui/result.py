@@ -9,13 +9,14 @@ from textual.widgets import Button, Static
 from adrpy_tui.core import keys
 from adrpy_tui.core.client import ABANDONED
 from adrpy_tui.core.registry import FORMS
+from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.errors import ErrorList
 from adrpy_tui.ui.preview import open_preview
 
 
 def _text(value):
-    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    return visible(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False))
 
 
 def result_widgets(texts, result, success_text=None):
@@ -30,7 +31,7 @@ def result_widgets(texts, result, success_text=None):
     else:
         yield Static(texts("result.failure", code=result.code), classes="error title", markup=False)
         if result.detail:
-            yield Static(result.detail, classes="error", markup=False)
+            yield Static(visible(result.detail), classes="error", markup=False)
         errors = result.data.get("errors")
         if isinstance(errors, list) and errors and all(isinstance(error, dict) for error in errors):
             yield ErrorList(errors)

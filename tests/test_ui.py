@@ -2676,6 +2676,7 @@ def _focus_client(tmp_path):
     for name in ("ADR004V01-p.md", "ADR005V01-p.md"):  # Proposed ones, for approve's arrows to move
         decisions.append(_decision(name))
         decisions[-1]["path"] = str(tmp_path / "doc" / "adr" / name)
+        pathlib.Path(decisions[-1]["path"]).write_text("# p\n", encoding="utf-8")  # a preview can open
     errors = [{"code": "no-header", "file": f"/r/{n}.md", "hint": "Run migrate."} for n in range(3)]
     skills = [{"skill": "adrpy", "provider": f"p{n}", "scope": "project", "installed": False, "drifted": None,
                "file": f"f{n}"} for n in range(3)]
@@ -3208,5 +3209,108 @@ def test_the_log_browser_shows_the_highlighted_entry_s_whole_name_below_the_list
     async def scenario(pilot):
         await _walk(app, pilot, ["log", "log.browse"])
         assert _text(app.screen, "#logs-current") == f"{name}  ·  2026"
+
+    run_app(app, scenario)
+
+
+def test_a_file_of_one_huge_line_is_previewed_as_its_first_characters(tmp_path, user_state):
+    """The line limit let a file of one 5 MB line through: 10 s to render,
+    the screen frozen meanwhile. The characters are bounded too."""
+    from adrpy_tui.ui.preview import PREVIEW_CHARACTERS
+
+    page = tmp_path / "wide.md"
+    page.write_text("x" * (PREVIEW_CHARACTERS * 3), encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(PreviewScreen(page))
+        await settle(pilot)
+        assert len(app.screen.query_one(Markdown).source) == PREVIEW_CHARACTERS
+        assert _text(app.screen, "#excerpt") == (
+            f"Excerpt: the first {PREVIEW_CHARACTERS} of {PREVIEW_CHARACTERS * 3} characters. "
+            f"The whole file: {page}")
+
+    run_app(app, scenario)
+
+
+def _link_folder(link, target):
+    """A folder link: a junction on Windows (no admin needed), else a symlink."""
+    import os
+    import subprocess
+
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], check=True, capture_output=True)
+    else:
+        os.symlink(target, link, target_is_directory=True)
+
+
+def test_a_link_through_a_folder_link_leading_outside_is_not_followed(tmp_path, user_state):
+    """The link check was lexical: a junction or symlink inside the repository
+    (a committed symlink, on Linux) led to any file outside it."""
+    repo, outside = tmp_path / "repo", tmp_path / "outside"
+    adr = repo / "doc" / "adr"
+    adr.mkdir(parents=True)
+    outside.mkdir()
+    (outside / "secret.md").write_text("# SECRET\n", encoding="utf-8")
+    _link_folder(adr / "j", outside)
+    source = adr / "ADR001V01-a.md"
+    source.write_text("# A\n", encoding="utf-8")
+    (adr / "inside.md").write_text("# Inside\n", encoding="utf-8")
+    app = AdrpyTui(repo, client=FakeClient(), user_state=user_state)
+
+    async def follow(pilot, href):
+        markdown = app.screen.query_one(Markdown)
+        markdown.post_message(Markdown.LinkClicked(markdown, href))
+        await settle(pilot)
+
+    async def scenario(pilot):
+        app.push_screen(PreviewScreen(source))
+        await settle(pilot)
+        await follow(pilot, "j/secret.md")
+        assert app.screen.path == source
+        await follow(pilot, "inside.md")  # the positive control
+        assert app.screen.path.name == "inside.md"
+
+    run_app(app, scenario)
+
+
+def test_a_preview_opens_only_a_file_inside_the_repository_whoever_names_it(tmp_path, user_state):
+    """open_preview checked nothing: a path adrpy reported, a result's file
+    or a log entry outside the repository opened as any other."""
+    from adrpy_tui.ui.preview import open_preview
+
+    repo, outside = tmp_path / "repo", tmp_path / "outside.md"
+    repo.mkdir()
+    outside.write_text("# Outside\n", encoding="utf-8")
+    (repo / "inside.md").write_text("# Inside\n", encoding="utf-8")
+    app = AdrpyTui(repo, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        open_preview(app, outside)
+        await settle(pilot)
+        assert not isinstance(app.screen, PreviewScreen)
+        open_preview(app, repo / "inside.md")
+        await settle(pilot)
+        assert isinstance(app.screen, PreviewScreen)
+
+    run_app(app, scenario)
+
+
+def test_the_log_browser_does_not_list_a_folder_outside_the_repository(tmp_path, user_state):
+    """adrpy refuses `folderlog: ../x` from `config`, but reads it back from a
+    hand-edited (or cloned) adr-config.adrplus: the log browser listed and
+    opened the files there."""
+    repo, log = tmp_path / "repo", tmp_path / "outside" / "log"
+    repo.mkdir()
+    log.mkdir(parents=True)
+    (log / "2026-01-01--leak--x--secret.md").write_text("# secret\n", encoding="utf-8")
+    client = FakeClient(answers={"config": {"success": True, "data": {
+        "config": {**REPO_CONFIG, "folderlog": "../outside/log"}, "warnings": []}}})
+    app = AdrpyTui(repo, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert app.screen.query_one("#entries").option_count == 0
+        assert "outside the repository" in _text(app.screen, "#entries-page")
 
     run_app(app, scenario)

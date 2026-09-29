@@ -76,3 +76,30 @@ class _LikeTheOldFormScreen(DOMNode):
 def test_the_check_catches_the_bug_it_was_written_for():
     assert "_running" in _assigned_in_init(_LikeTheOldFormScreen)
     assert "_running" in _textual_names(_LikeTheOldFormScreen)
+
+
+# The handlers of what a person does on a screen: a key, a list's choice, a
+# button, Enter in a field, a link, a folder in a tree.
+_ACTION_HANDLERS = ("on_option_list_option_selected", "on_button_pressed", "on_input_submitted", "on_key",
+                    "on_markdown_link_clicked", "on_directory_tree_directory_selected", "on_adr_picker_chosen")
+
+
+def test_every_action_handler_first_checks_its_screen_is_in_front():
+    """Two keys that reach the app before the first is handled are both
+    queued on the screen in front then: the second's handler ran on a screen
+    already closed and closed (or opened) whatever was in front by then -- an
+    empty app, a crash, an edit lost. Every such handler starts with
+    `if not on_top(...): return` (ui/base.py)."""
+    import ast
+    import pathlib
+
+    missing = []
+    for path in sorted((pathlib.Path(__file__).parent.parent / "src" / "adrpy_tui" / "ui").glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in _ACTION_HANDLERS:
+                body = [statement for statement in node.body if not isinstance(statement, ast.Expr)
+                        or not isinstance(statement.value, ast.Constant)]
+                first = ast.unparse(body[0]) if body else ""
+                if not first.startswith("if not on_top("):
+                    missing.append(f"{path.name}:{node.lineno} {node.name}")
+    assert missing == []

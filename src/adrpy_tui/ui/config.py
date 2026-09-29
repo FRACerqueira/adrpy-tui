@@ -11,7 +11,8 @@ from textual.widgets import Button, Input, LoadingIndicator, RadioButton, RadioS
 
 from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.core.text import visible
+from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.paged import PagedList, row
 from adrpy_tui.ui.running import CommandRunner
@@ -74,9 +75,13 @@ class FieldEditScreen(ModalScreen):
         return editor.text if isinstance(editor, TextArea) else editor.value
 
     def on_input_submitted(self, event):
+        if not on_top(self):
+            return
         self.dismiss(self._current())
 
     def on_button_pressed(self, event):
+        if not on_top(self):
+            return
         self.dismiss(self._current() if event.button.id == "ok" else None)
 
     def action_cancel(self):
@@ -127,7 +132,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         texts = self.app.texts
         await body.mount(Static(texts(f"config.title.{self.command}"), classes="title"))
         if not result.success:
-            await body.mount(Static(result.detail or result.code or "", classes="error", markup=False))
+            await body.mount(Static(visible(result.detail or result.code or ""), classes="error", markup=False))
             return
         if self._is_install and not result.data.get("configured"):
             await body.mount_all(self._create_widgets())
@@ -152,10 +157,11 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         changed = field.flag in self._changed
         value = self._changed[field.flag] if changed else self._saved.get(field.flag)
         mark = f" {CHANGED}" if changed else ""
-        return row(f"  {texts(f'config.field.{field.flag}')}: {shown_value(field, value)}{mark}", id=field.flag)
+        return row(f"  {texts(f'config.field.{field.flag}')}: {visible(str(shown_value(field, value)))}{mark}",
+                   id=field.flag)
 
     def _description(self, field):
-        description = self._descriptions.get(field.flag, "")
+        description = visible(self._descriptions.get(field.flag, ""))
         if field.guarded:
             description = f"{description}\n{self.app.texts('config.guarded')}".strip()
         return description
@@ -166,6 +172,8 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
             self.query_one("#field-description", Static).update(self._description(field))
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         field = self._fields.get(event.option.id)
         if not field:
             return
@@ -225,6 +233,8 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         yield Button(texts("config.create"), id="create", variant="primary")
 
     def on_button_pressed(self, event):
+        if not on_top(self):
+            return
         if event.button.id != "create":
             return
         if self.query_one("#create-seed").value:

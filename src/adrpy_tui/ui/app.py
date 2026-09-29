@@ -200,8 +200,11 @@ class AdrpyTui(App):
         await self.push_screen(StartupScreen())
 
     def exit(self, *args, **kwargs):
+        # Quitting never waits for adrpy: a read in flight is stopped, a write
+        # left to its own end (ADR006V01).
         for leave in list(self.running_leaves):
             leave.set()
+        self.client.shutdown()
         super().exit(*args, **kwargs)
 
     def internal_error_text(self, error):
@@ -210,11 +213,15 @@ class AdrpyTui(App):
         log = self.user_state.error_log
         try:
             log.parent.mkdir(parents=True, exist_ok=True)
-            log.write_text("".join(traceback.format_exception(error)), encoding="utf-8")
+            # errors="replace": a message may hold what UTF-8 cannot encode.
+            log.write_text("".join(traceback.format_exception(error)), encoding="utf-8", errors="replace")
         except OSError:
             pass
-        return self.texts("app.internal_error", error=visible(f"{type(error).__name__}: {error}"),
-                          path=visible(str(log)))
+        try:
+            said = f"{type(error).__name__}: {error}"
+        except Exception:  # noqa: BLE001 -- an error whose own text fails is still said
+            said = type(error).__name__
+        return self.texts("app.internal_error", error=visible(said), path=visible(str(log)))
 
     def repository_read(self, result):
         self.configured = result.success

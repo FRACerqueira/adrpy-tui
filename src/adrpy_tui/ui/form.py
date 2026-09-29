@@ -15,7 +15,8 @@ from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.fields import build_flags, problem, shown
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
-from adrpy_tui.ui.base import HINTS_FORM, HINTS_PICKER_FORM, AdrpyScreen
+from adrpy_tui.core.text import visible
+from adrpy_tui.ui.base import HINTS_FORM, HINTS_PICKER_FORM, AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PAGE_SIZE
 from adrpy_tui.ui.picker import AdrPicker
 from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
@@ -170,6 +171,8 @@ class FormScreen(CommandRunner, AdrpyScreen):
         """Shows adrpy's defaults for the chosen decision: copies its
         scope/domain into fields still empty, and its title as a
         placeholder."""
+        if not on_top(self):
+            return
         header = event.decision.get("header") or {}
         for field in self.form.FIELDS:
             editor = self.query_one(f"#field-{field.flag}")
@@ -180,7 +183,8 @@ class FormScreen(CommandRunner, AdrpyScreen):
                 editor.value = header.get(field.prefill_from) or ""
                 self._prefilled[field.flag] = editor.value
             if field.default_from:
-                editor.placeholder = self.app.texts("form.default", value=event.decision.get(field.default_from) or "")
+                editor.placeholder = self.app.texts("form.default",
+                                                    value=visible(str(event.decision.get(field.default_from) or "")))
 
     def on_input_changed(self, event):
         flag = event.input.id.removeprefix("field-")
@@ -190,10 +194,12 @@ class FormScreen(CommandRunner, AdrpyScreen):
 
     def _show_similar(self, flag, value):
         found = similar(value, self._candidates[flag])[:_SIMILAR_SHOWN]
-        text = self.app.texts("form.similar", values=", ".join(found)) if found else ""
+        text = self.app.texts("form.similar", values=", ".join(visible(value) for value in found)) if found else ""
         self.query_one(f"#similar-{flag}", Static).update(text)
 
     def on_button_pressed(self, event):
+        if not on_top(self):
+            return
         if event.button.id == "run":
             self.action_run()
 

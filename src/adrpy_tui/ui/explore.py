@@ -13,7 +13,7 @@ from textual.widgets import Input, LoadingIndicator, Markdown, Select, Static
 from adrpy_tui.core.decisions import folder_of, state
 from adrpy_tui.core.registry import commands_taking
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen
+from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.preview import PREVIEW_BINDING, excerpt, follow_link, open_preview
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
@@ -76,13 +76,13 @@ class ExploreScreen(AdrpyScreen):
         paged, texts = self.query_one(PagedList), self.app.texts
         if not result.success:
             self._decisions = []
-            paged.empty_text = texts("picker.failed", detail=result.detail or result.code)
+            paged.empty_text = texts("picker.failed", detail=visible(result.detail or result.code or ""))
         else:
             self._decisions = sorted(result.data.get("decisions", []), key=lambda decision: decision["filename"])
             paged.empty_text = texts("picker.empty")
         notes = [texts("explore.inconsistent", count=len(errors))
                  for errors in [(result.data.get("consistency") or {}).get("errors") or []] if errors]
-        notes += [str(warning) for warning in result.warnings]
+        notes += [visible(str(warning)) for warning in result.warnings]
         self.query_one("#explore-notes", Static).update("\n".join(notes))
         root = self.app.repo / self.app.folderadr
         self._folders = {decision["path"]: folder_of(decision["path"], root) for decision in self._decisions}
@@ -129,6 +129,8 @@ class ExploreScreen(AdrpyScreen):
         self._fill()
 
     def on_input_submitted(self, event):
+        if not on_top(self):
+            return
         self.query_one("#decisions").focus()
 
     def on_option_list_option_highlighted(self, event):
@@ -147,6 +149,8 @@ class ExploreScreen(AdrpyScreen):
         self.query_one("#explore-current", Static).update(text)
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         self.app.push_screen(DetailScreen(self._decisions[int(event.option.id)]))
 
     def action_preview(self):
@@ -185,7 +189,7 @@ class DetailScreen(AdrpyScreen):
         await body.remove_children()
         if not result.success:
             # What is on screen may no longer be so: say it, and offer no action on it.
-            await body.mount(Static(self.app.texts("detail.read_failed", detail=result.detail or result.code or ""),
+            await body.mount(Static(self.app.texts("detail.read_failed", detail=visible(result.detail or result.code or "")),
                                     id="read-failed", classes="error", markup=False))
         await body.mount_all(self._widgets(actions=result.success))
         actions = self.query("#actions")
@@ -221,12 +225,16 @@ class DetailScreen(AdrpyScreen):
         yield Markdown(content, open_links=False)
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         self.app.push_screen(FormScreen(event.option.id, decision=self.decision["path"]))
 
     def action_preview(self):
         open_preview(self.app, self.decision["path"])
 
     def on_markdown_link_clicked(self, event):
+        if not on_top(self):
+            return
         follow_link(self.app, self.decision["path"], event.href)
 
     def action_back(self):

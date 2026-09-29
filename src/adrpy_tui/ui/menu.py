@@ -9,7 +9,8 @@ from textual.widgets import OptionList, Static
 from textual.widgets.option_list import OptionDoesNotExist
 
 from adrpy_tui.core.registry import FORMS, MAIN_MENU, command_name
-from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen
+from adrpy_tui.core.text import visible
+from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
 
 # Items that open no form but are available.
@@ -31,7 +32,8 @@ class MenuScreen(AdrpyScreen):
         yield Static(texts("menu.main" if self.menu is MAIN_MENU else f"menu.{self.menu.id}"), classes="title")
         problem = self.app.repo_problem
         if self.menu is MAIN_MENU and problem is not None:
-            yield Static(texts("menu.repo_problem", detail=problem.detail or problem.code), classes="error", markup=False)
+            yield Static(texts("menu.repo_problem", detail=visible(problem.detail or problem.code or "")),
+                         classes="error", markup=False)
         back = [] if self.menu is MAIN_MENU else [row(texts("menu.back"), id=BACK)]
         if self.menu is MAIN_MENU and self.app.adrpy_outside_range:
             found, expected = self.app.adrpy_outside_range
@@ -96,6 +98,8 @@ class MenuScreen(AdrpyScreen):
         self.query_one("#description", Static).update(description)
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
         if event.option.id == BACK:
             self.action_back()
             return

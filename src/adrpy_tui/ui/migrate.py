@@ -13,9 +13,9 @@ from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Swi
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
-from adrpy_tui.ui.base import AdrpyScreen
+from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
-from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, inside_repository, open_preview
 from adrpy_tui.ui.running import CommandRunner
 
 
@@ -63,11 +63,15 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         await body.mount(Static(texts("form.migrate"), classes="title"))
         failed = next((result for result in (config, explore) if not result.success), None)
         if failed:
-            await body.mount(Static(failed.detail or failed.code or "", classes="error", markup=False))
+            await body.mount(Static(visible(failed.detail or failed.code or ""), classes="error", markup=False))
             return
         settings = config.data.get("config") or {}
         self._current = settings.get("migrationpattern") or ""
         folder = self.app.repo / settings.get("folderadr", "doc/adr")
+        if not inside_repository(self.app.repo, folder):
+            await body.mount(Static(texts("preview.outside", path=visible(str(settings.get("folderadr")))),
+                                    classes="error", markup=False))
+            return
         with_header = {d["path"] for d in explore.data.get("decisions", []) if (d.get("header") or {}).get("is_valid")}
         self._files = sorted(p for p in folder.glob("*.md") if str(p) not in with_header)
         if not self._files:
@@ -103,7 +107,7 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         """Offers every position of `stem`, and starts from `parts` (the
         repository's own pattern) or a proposal read from the name."""
         self._sample = stem
-        self.query_one("#sample", Static).update(self.app.texts("migrate.sample", name=stem))
+        self.query_one("#sample", Static).update(self.app.texts("migrate.sample", name=visible(stem)))
         parts = parts or propose(stem)
         positions = [(f"{i:02}", i) for i in range(len(stem))] or [("00", 0)]
         lengths = [(f"{i:02}", i) for i in range(1, len(stem) + 1)] or [("01", 1)]
@@ -141,7 +145,7 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         parts = self._parts()
         for name in PARTS:
             text = self.app.texts("migrate.reads", text=read(self._sample, parts[name])) if name in parts else ""
-            self.query_one(f"#reads-{name}", Static).update(text)
+            self.query_one(f"#reads-{name}", Static).update(visible(text))
         self.query_one("#pattern", Static).update(self.app.texts("migrate.pattern", pattern=self.pattern()))
         self.query_one("#preview-area").remove_children()
 
@@ -154,9 +158,15 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
             self._refresh()
 
     def on_option_list_option_selected(self, event):
+        if not on_top(self):
+            return
+        if event.option_list.id != "files":  # a row of the preview, not a file
+            return
         self._use_sample(printable(self._files[int(event.option.id)].stem), self._parts())
 
     def on_button_pressed(self, event):
+        if not on_top(self):
+            return
         if event.button.id == "preview":
             pattern = self.pattern()
             self.read(lambda app: (pattern, app.client.run(
@@ -170,18 +180,18 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         area = self.query_one("#preview-area")
         await area.remove_children()
         if not result.success:
-            await area.mount(Static(result.detail or result.code or "", classes="error", markup=False))
+            await area.mount(Static(visible(result.detail or result.code or ""), classes="error", markup=False))
             return
         rows = result.data.get("migrationpattern_preview") or []
         await area.mount(PagedList(*(row(self._preview_row(entry), id=str(i)) for i, entry in enumerate(rows)),
                                    list_id="preview-options"))
         for warning in result.warnings:
-            await area.mount(Static(str(warning), classes="warning", markup=False))
+            await area.mount(Static(visible(str(warning)), classes="warning", markup=False))
 
     @staticmethod
     def _preview_row(entry):
         name = Path(str(entry.get("file", "")).replace("\\", "/")).name
-        return f"{name}  ·  N {entry.get('number')}  ·  V {entry.get('version')}  ·  {entry.get('title')}"
+        return visible(f"{name}  ·  N {entry.get('number')}  ·  V {entry.get('version')}  ·  {entry.get('title')}")
 
     def _commands(self):
         path = ("--path", str(self.app.repo))

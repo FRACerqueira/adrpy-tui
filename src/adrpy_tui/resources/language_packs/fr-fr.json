@@ -294,6 +294,7 @@
   "picker.count_all": "{total} décisions, toutes visibles ({key} : seulement les disponibles)",
   "preview.outside": "Non ouvert : {path} est en dehors du dépôt.",
   "preview.excerpt": "Extrait : les {shown} premières lignes sur {total}. Le fichier entier : {path}",
+  "preview.excerpt_characters": "Extrait : les {shown} premiers caractères sur {total}. Le fichier entier : {path}",
   "preview.missing": "Pas un fichier : {path}",
   "column.folder": "Dossier",
   "explore.all_folders": "Tous les dossiers",

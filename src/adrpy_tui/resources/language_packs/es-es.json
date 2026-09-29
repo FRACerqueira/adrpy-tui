@@ -294,6 +294,7 @@
   "picker.count_all": "{total} decisiones, todas visibles ({key}: solo las disponibles)",
   "preview.outside": "No se abrió: {path} está fuera del repositorio.",
   "preview.excerpt": "Extracto: las primeras {shown} de {total} líneas. El archivo completo: {path}",
+  "preview.excerpt_characters": "Extracto: los primeros {shown} de {total} caracteres. El archivo completo: {path}",
   "preview.missing": "No es un archivo: {path}",
   "column.folder": "Carpeta",
   "explore.all_folders": "Todas las carpetas",

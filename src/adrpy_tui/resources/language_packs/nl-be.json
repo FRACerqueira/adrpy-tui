@@ -294,6 +294,7 @@
   "picker.count_all": "{total} beslissingen, alle zichtbaar ({key}: alleen beschikbare)",
   "preview.outside": "Niet geopend: {path} ligt buiten de repository.",
   "preview.excerpt": "Uittreksel: de eerste {shown} van {total} regels. Het hele bestand: {path}",
+  "preview.excerpt_characters": "Uittreksel: de eerste {shown} van {total} tekens. Het hele bestand: {path}",
   "preview.missing": "Geen bestand: {path}",
   "column.folder": "Map",
   "explore.all_folders": "Alle mappen",
