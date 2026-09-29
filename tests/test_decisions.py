@@ -44,7 +44,7 @@ def test_a_missing_label_falls_back_to_the_canonical_state():
 
 
 def test_explore_reports_canonical_states_whatever_the_labels(repo, client):
-    """The finding behind ADR001V01 rule 5, kept as a permanent test: a
+    """The finding behind ADR0001V01 rule 5, kept as a permanent test: a
     repository labelled in Portuguese still gets canonical states."""
     assert client.run("config", ("--path", str(repo), "--statusnew", "Proposto", "--statusacc", "Aceito")).success
     created = client.run("new", ("--path", str(repo), "--title", "Teste")).data["created"]

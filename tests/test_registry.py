@@ -1,4 +1,4 @@
-"""The forms and menus against the installed adrpy (ADR004V01)."""
+"""The forms and menus against the installed adrpy (ADR0004V01)."""
 
 import pytest
 

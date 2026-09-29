@@ -2208,7 +2208,7 @@ def test_backspace_and_restore_every_key_go_back_to_the_defaults(tmp_path, user_
 
 
 def test_an_adrpy_outside_the_validated_range_is_said_on_the_main_menu(tmp_path, user_state, monkeypatch):
-    """An adrpy-ai upgraded apart from the TUI (ADR003V01): a warning, and
+    """An adrpy-ai upgraded apart from the TUI (ADR0003V01): a warning, and
     the TUI keeps working."""
     from adrpy_tui.core import versions
 
@@ -2369,7 +2369,7 @@ def test_a_web_link_is_never_opened(repo, user_state, client, monkeypatch):
 
 
 def test_a_link_opens_only_a_file_inside_the_repository(tmp_path, user_state, monkeypatch):
-    """ADR006V02: a link in a file the person may not have written opens
+    """ADR0006V02: a link in a file the person may not have written opens
     only a .md inside the repository. A network path made the machine
     connect to another host on one click (Path.is_file on //host/share)."""
     repo = tmp_path / "repo"

@@ -2,7 +2,7 @@
 command's result -- lands on the screen that asked, only while that screen
 is still there and only if it is the latest; a failure becomes something on
 the screen, never the end of the app; a write that does not answer can be
-left (ADR006V02). One person, one TUI (the product's own assumption)."""
+left (ADR0006V02). One person, one TUI (the product's own assumption)."""
 
 import threading
 
@@ -157,7 +157,7 @@ def test_the_preview_key_does_nothing_while_migrate_runs(tmp_path, user_state):
 
 
 def test_a_write_past_its_time_can_be_left_and_check_is_offered(tmp_path, user_state, monkeypatch):
-    """ADR006V02: a write is never stopped; past the time a read may take,
+    """ADR0006V02: a write is never stopped; past the time a read may take,
     the screen says adrpy still runs, lets the person leave, and the
     result it then shows is "unknown", with Check at hand."""
     monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.3)
@@ -334,7 +334,7 @@ def test_quitting_during_a_read_does_not_wait_for_it(tmp_path, user_state):
 
 
 def test_quitting_during_a_write_leaves_it(tmp_path, user_state):
-    """ADR006V02: quitting never waits for a write; it is left to its end."""
+    """ADR0006V02: quitting never waits for a write; it is left to its end."""
     import time
 
     client = _holding(tmp_path, "approve")
@@ -544,7 +544,7 @@ def test_a_crash_never_waits_for_adrpy(tmp_path, user_state):
 def test_a_refused_write_offers_check_and_check_says_a_left_write_still_runs(tmp_path, user_state):
     """WRITE_STILL_RUNNING told the person to run Check without offering it,
     and Check showed the repository as it was mid-write without saying so
-    (ADR006V02R02's visibility plan)."""
+    (ADR0006V02R02's visibility plan)."""
     class StillRunning:
         def poll(self):
             return None

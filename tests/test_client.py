@@ -138,7 +138,7 @@ def _answering(monkeypatch):
 
 
 def test_a_read_that_does_not_answer_is_stopped(monkeypatch):
-    """ADR006V02: a read changes nothing, so one that hangs is stopped and
+    """ADR0006V02: a read changes nothing, so one that hangs is stopped and
     becomes a failure; it no longer holds every later call behind it."""
     _hanging(monkeypatch, 20)
     monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.5)
@@ -149,7 +149,7 @@ def test_a_read_that_does_not_answer_is_stopped(monkeypatch):
 
 
 def test_a_write_is_never_stopped_only_left(tmp_path, monkeypatch):
-    """ADR006V02: a write may be half-way through its files, so the TUI
+    """ADR0006V02: a write may be half-way through its files, so the TUI
     never ends it; leaving stops the waiting, and adrpy goes on to its end."""
     marker = tmp_path / "finished"
     _hanging(monkeypatch, 1.5, f"open({str(marker)!r}, 'w').write('x')")
@@ -267,7 +267,7 @@ def test_a_stopped_read_does_not_wait_for_what_adrpy_left_holding_its_output(mon
 def test_shutdown_stops_a_read_and_leaves_a_write(tmp_path, monkeypatch):
     """Quitting waited for a read in flight (the process lingered up to
     READ_TIMEOUT). shutdown() stops a read -- it changes nothing -- and
-    leaves a write to its own end, never stopping it (ADR006V02)."""
+    leaves a write to its own end, never stopping it (ADR0006V02)."""
     marker = tmp_path / "finished"
     _hanging(monkeypatch, 1.5, f"open({str(marker)!r}, 'w').write('x')")
     client = Client()
@@ -289,7 +289,7 @@ def test_shutdown_stops_a_read_and_leaves_a_write(tmp_path, monkeypatch):
 def test_a_write_is_refused_while_one_left_running_still_runs(tmp_path, monkeypatch):
     """Leaving a write released the one-call lock while adrpy still wrote: a
     second write could run beside it -- two adrpy processes on one working
-    copy, what adrpy-ai's own ADR001V01 calls a usage error. A read (Check)
+    copy, what adrpy-ai's own ADR0001V01 calls a usage error. A read (Check)
     still runs; another write waits until the first has ended."""
     marker = tmp_path / "finished"
     _hanging(monkeypatch, 1.5, f"open({str(marker)!r}, 'w').write('x')")

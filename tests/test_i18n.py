@@ -20,7 +20,7 @@ def _placeholders(text):
 
 
 def test_the_packs_are_the_languages_adrpy_supports(client):
-    """ADR005V01: the same list as `adrpy help init`'s --language."""
+    """ADR0005V01: the same list as `adrpy help init`'s --language."""
     contract = client.run("help", ("init",)).data["commands"][0]
     [language] = [argument for argument in contract["arguments"] if argument["name"] == "language"]
     adrpy_languages = re.search(r"\(([^)]*)\)", language["description"]).group(1)

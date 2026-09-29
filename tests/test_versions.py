@@ -16,7 +16,7 @@ def _declared():
 
 
 def test_the_start_up_check_reads_the_range_pyproject_declares():
-    """One range (ADR003V01): the installed package's metadata is
+    """One range (ADR0003V01): the installed package's metadata is
     pyproject's, as of the last install -- reinstall after changing it."""
     assert Requirement(f"adrpy-ai{versions.adrpy_range()}").specifier == _declared().specifier
 
@@ -50,7 +50,7 @@ def test_an_adrpy_within_the_range_or_not_installed_is_not_named(monkeypatch):
 
 @pytest.mark.parametrize("found", ["v0.1", "", None, "unknown", "local-build"])
 def test_an_installed_version_that_cannot_be_read_is_named_not_a_crash(monkeypatch, found):
-    """ADR003V01: the check warns, it never refuses -- a damaged dist-info
+    """ADR0003V01: the check warns, it never refuses -- a damaged dist-info
     (None, "") or a version with no leading number raised AttributeError
     in the app's constructor, before any screen."""
     monkeypatch.setattr(versions, "installed_version", lambda name: found)
