@@ -182,9 +182,9 @@ def test_a_write_past_its_time_can_be_left_and_check_is_offered(tmp_path, user_s
 
 def test_a_decision_without_a_name_is_left_out_not_fatal(tmp_path, user_state):
     """A decision without "filename" ended the app (KeyError in a result
-    handler); it was then shown as a failure note. Round 4: explore's
-    decisions are read into one shape first (decisions.listed), and one with
-    no name or path is left out -- nothing could be shown or run for it."""
+    handler); it was then shown as a failure note. explore's decisions are
+    read into one shape first (decisions.listed), and one with no name or
+    path is left out -- nothing could be shown or run for it."""
     client = _focus_client(tmp_path)
     decisions = client.answers["explore"]["data"]["decisions"]
     client.answers["explore"] = {"success": True, "data": {"decisions": [{"x": 1}, *decisions], "warnings": []}}
@@ -584,9 +584,9 @@ def test_a_failure_note_says_when_its_details_could_not_be_written(tmp_path, use
 def test_a_failure_while_showing_a_failure_is_not_fatal(tmp_path, user_state, monkeypatch):
     """_deliver showed a read's failure with show_internal_error; if that
     failed too, the exception reached the worker and ended the app. The
-    failure is still said, the simplest way: a notification naming it. (It
-    was provoked with a decision {"x": 1}, which explore's decisions now
-    leave out: the read itself fails here.)"""
+    failure is still said, the simplest way: a notification naming it. The
+    read itself fails here: a malformed decision such as {"x": 1} is left
+    out by explore's decisions and cannot provoke it."""
     class Failing(FakeClient):
         def _answer(self, argv, **options):
             if command_of(argv) == "check":

@@ -54,7 +54,7 @@ class SkillsListScreen(AdrpyScreen):
                     PureWindowsPath(str(entry.get("file", ""))).as_posix()))
                 for entry in result.data.get("skills", [])]
         # Each column as wide as its longest text in this language: a fixed
-        # width cut "installed, changed by hand" and most languages' labels.
+        # width would cut "installed, changed by hand" and most languages' labels.
         widths = tuple(max([least] + [cell_len(cells[i]) + 2 for cells in (header, *rows)])
                        for i, least in enumerate(_WIDTHS)) + (0,)
         await body.mount(Static(_cells(header, widths), classes="info", markup=False))

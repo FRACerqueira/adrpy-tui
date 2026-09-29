@@ -20,7 +20,7 @@ def _without_controls(text):
 def printable(text):
     """Text to show, with its line breaks as LF. A lone surrogate (a name
     that is not valid UTF-8) becomes U+FFFD: written to the terminal it
-    cannot be encoded, and killed the thread that draws the screen."""
+    cannot be encoded, and would kill the thread that draws the screen."""
     return "".join("\ufffd" if unicodedata.category(c) == "Cs" else c for c in _without_controls(text))
 
 

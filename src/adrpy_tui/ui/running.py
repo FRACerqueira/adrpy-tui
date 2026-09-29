@@ -60,7 +60,7 @@ class CommandRunner:
         # A write is never stopped; past the time a read may take, the person
         # is told and may leave it (ADR0006V02). The loop's own timer: a
         # Textual timer sleeps in a thread on Windows, and one still sleeping
-        # at quit held the app about READ_TIMEOUT (seen once in 77 runs).
+        # at quit held the app about READ_TIMEOUT.
         self._still_running = asyncio.get_running_loop().call_later(client_module.READ_TIMEOUT,
                                                                     self._say_still_running)
 

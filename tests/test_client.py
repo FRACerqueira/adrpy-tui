@@ -139,7 +139,7 @@ def _answering(monkeypatch):
 
 def test_a_read_that_does_not_answer_is_stopped(monkeypatch):
     """ADR0006V02: a read changes nothing, so one that hangs is stopped and
-    becomes a failure; it no longer holds every later call behind it."""
+    becomes a failure, instead of holding every later call behind it."""
     _hanging(monkeypatch, 20)
     monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.5)
     started = time.monotonic()
@@ -226,7 +226,7 @@ def test_a_value_holding_a_line_break_and_ending_in_backslashes_is_shown_as_it_r
 def test_a_write_waiting_behind_a_hung_read_can_be_left_before_it_starts():
     """Leave only reached a running adrpy: a write queued behind a hung read
     ignored it, then started once the lock was free -- after the person had
-    left. Now the waiting for the lock ends too, and the write never starts."""
+    left. Leaving ends the wait for the lock too, and the write never starts."""
     release, calls = threading.Event(), []
 
     def runner(argv, **_):
@@ -364,8 +364,8 @@ def test_the_confirmation_reads_back_as_the_argv_on_windows():
 
 
 def test_a_write_already_left_is_never_started(tmp_path, monkeypatch):
-    """_run checks leave before starting adrpy; that half of the fix had no
-    test. And a call that never started was reported "still running"."""
+    """_run checks leave before starting adrpy -- no other test catches its
+    removal -- and a call that never started was reported "still running"."""
     marker = tmp_path / "started"
     _hanging(monkeypatch, 0, f"open({str(marker)!r}, 'w').write('x')")
     leave = threading.Event()
@@ -401,9 +401,10 @@ def test_a_left_write_printing_more_than_a_pipe_holds_still_ends(tmp_path, monke
 
 
 def test_a_left_write_is_drained_on_every_system(monkeypatch):
-    """The drain of a left write's output ran only on the POSIX legs: on
-    Windows, removing it passed the suite. Leaving a write starts it with the
-    write's own process, and it reads the output to its end, whatever fails."""
+    """The drain of a left write's output was tested only on the POSIX legs;
+    no other test catches its removal on Windows. Leaving a write starts it
+    with the write's own process, and it reads the output to its end,
+    whatever fails."""
     drained = []
     monkeypatch.setattr(client_module, "_drain", drained.append)
     _hanging(monkeypatch, 20)

@@ -205,7 +205,7 @@ def test_text_drawn_on_its_own_background_meets_wcag_aa(tmp_path, user_state, pr
 def test_the_active_row_stands_out_from_the_other_rows(tmp_path, user_state, preset):
     """Reported on explore: the active row differed from the others by its
     text color alone (1.13:1 on Default between the two backgrounds). Its
-    background now stands apart from the rows' own at WCAG's 3:1 for a
+    background stands apart from the rows' own at WCAG's 3:1 for a
     component, and its text still reads at 4.5:1 -- with the list focused
     and without."""
     from textual.color import Color
@@ -419,7 +419,6 @@ def test_pending_commands_are_listed_but_disabled(tmp_path, user_state):
 
     async def scenario(pilot):
         options = _options(app.screen)
-        # Every item of every menu has its screen now.
         assert not any("(not available yet)" in str(item.prompt)
                        for item in (options.get_option_at_index(i) for i in range(options.option_count)))
 
@@ -2237,8 +2236,8 @@ def test_an_adrpy_within_the_range_says_nothing(tmp_path, user_state, monkeypatc
 
 
 def test_the_decision_log_group_says_it_also_browses_the_entries(tmp_path, user_state):
-    """Found in a documentation review: the group's description still said
-    only "Write a decision-log entry." after "Browse the entries" joined it."""
+    """The group's description said only "Write a decision-log entry." after
+    "Browse the entries" joined it."""
     (tmp_path / ".adrpy.json").write_text("{}", encoding="utf-8")
     app = AdrpyTui(tmp_path, client=FakeClient(answers={"config": {
         "success": True, "data": {"config": REPO_CONFIG, "warnings": []}}}), user_state=user_state)
@@ -2265,8 +2264,8 @@ def test_a_saved_key_that_cannot_be_used_is_ignored_and_said(tmp_path, user_stat
 
 
 def test_the_key_lines_read_as_before_in_the_interface_s_language(tmp_path, user_state):
-    """The key line is built from keys and hints now; in Portuguese it reads
-    as the fixed texts did."""
+    """The key line is built from keys and hints; in Portuguese it reads
+    exactly as the fixed texts it replaced."""
     user_state.set_language("pt-br")
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
@@ -2834,7 +2833,7 @@ def test_every_screen_meets_wcag_contrast_in_every_preset(tmp_path, user_state, 
 def test_a_long_command_fits_the_confirmation_and_scrolls_by_keyboard(tmp_path, user_state):
     """A 60-line log body made the dialog taller than the screen: the
     command's start and the Yes button off it, the keyboard unable to bring
-    them back. The command line now scrolls in a box of its own, from its
+    them back. The command line scrolls in a box of its own, from its
     start, with the keys a list uses."""
     lines = "adrpy log --path C:/r --body " + chr(10).join(f"line {n}" for n in range(60))
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
@@ -3504,7 +3503,8 @@ def test_a_preview_opens_the_path_it_checked(tmp_path, user_state):
 
 
 def test_migrate_refuses_a_configured_folder_outside_the_repository(tmp_path, user_state):
-    """Its half of the fix had no test (a mutation dropping it passed)."""
+    """migrate refuses a configured decisions folder outside the repository;
+    no other test catches the check's removal."""
     repo, outside = tmp_path / "repo", tmp_path / "outside" / "adr"
     repo.mkdir()
     outside.mkdir(parents=True)
@@ -3718,7 +3718,7 @@ def test_change_repository_left_as_it_is_keeps_the_repository(tmp_path, user_sta
 
 
 def test_every_way_into_a_text_area_is_filtered(tmp_path, user_state):
-    """load_text had no test: a text area loaded unfiltered passed the suite."""
+    """No other test catches a text area loaded unfiltered through load_text."""
     from adrpy_tui.ui.inputs import SafeTextArea
 
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
@@ -3737,7 +3737,7 @@ def test_every_way_into_a_text_area_is_filtered(tmp_path, user_state):
 
 def test_the_confirmation_says_when_a_value_keeps_crlf_line_endings(tmp_path, user_state):
     """The confirmation draws a CRLF value with LF breaks -- a CR cannot be
-    drawn -- so what runs held a CR the line did not show. It now says so."""
+    drawn -- so what runs held a CR the line did not show. The confirmation says so."""
     crlf = {**REPO_CONFIG, "template": "---" + chr(13) + chr(10) + "# [Title]" + chr(13) + chr(10) + "Body"}
     client = FakeClient(answers={"config": {"success": True, "data": {"config": crlf, "warnings": []}}})
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
