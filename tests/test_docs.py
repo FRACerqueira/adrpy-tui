@@ -62,7 +62,7 @@ def _navigation(current):
     """The line to the README, every page in reading order (the current one
     in bold, not a link) and the decisions."""
     pages = [f"**{title}**" if name == current else f"[{title}]({name})" for name, title in READING_ORDER]
-    return " · ".join(["[← README](../README.md)", *pages, "[Decisions](adr/)"])
+    return " · ".join(["[← README](../README.md)", *pages, "[Decisions](adr/INDEX.md)"])
 
 
 def test_the_reading_order_is_every_page():

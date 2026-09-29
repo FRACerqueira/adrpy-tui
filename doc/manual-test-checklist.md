@@ -1,6 +1,6 @@
 <img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
 
-[← README](../README.md) · [Screens and forms](forms.md) · [Architecture](architecture.md) · **Manual test checklist** · [Decisions](adr/)
+[← README](../README.md) · [Screens and forms](forms.md) · [Architecture](architecture.md) · **Manual test checklist** · [Decisions](adr/INDEX.md)
 
 # Manual test checklist
 
@@ -113,4 +113,4 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 
 ---
 
-[← README](../README.md) · [Screens and forms](forms.md) · [Architecture](architecture.md) · **Manual test checklist** · [Decisions](adr/)
+[← README](../README.md) · [Screens and forms](forms.md) · [Architecture](architecture.md) · **Manual test checklist** · [Decisions](adr/INDEX.md)

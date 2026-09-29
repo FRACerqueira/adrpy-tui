@@ -1,6 +1,6 @@
 <img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
 
-[← README](../README.md) · [Screens and forms](forms.md) · **Architecture** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+[← README](../README.md) · [Screens and forms](forms.md) · **Architecture** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/INDEX.md)
 
 # Architecture
 
@@ -154,4 +154,4 @@ is in the [manual test checklist](manual-test-checklist.md).
 
 ---
 
-[← README](../README.md) · [Screens and forms](forms.md) · **Architecture** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+[← README](../README.md) · [Screens and forms](forms.md) · **Architecture** · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/INDEX.md)

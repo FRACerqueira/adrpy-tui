@@ -1,6 +1,6 @@
 <img src="../src/adrpy_tui/icon.png" width="160" alt="adrpy-tui icon">
 
-[← README](../README.md) · **Screens and forms** · [Architecture](architecture.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+[← README](../README.md) · **Screens and forms** · [Architecture](architecture.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/INDEX.md)
 
 # Screens and forms
 
@@ -313,4 +313,4 @@ menus rebuilt.
 
 ---
 
-[← README](../README.md) · **Screens and forms** · [Architecture](architecture.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/)
+[← README](../README.md) · **Screens and forms** · [Architecture](architecture.md) · [Manual test checklist](manual-test-checklist.md) · [Decisions](adr/INDEX.md)
