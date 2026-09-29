@@ -111,6 +111,7 @@
   "problem.date_future": "오늘 이후일 수 없습니다.",
   "problem.date_before": "{date} 이전일 수 없습니다.",
   "confirm.question": "이 명령을 실행할까요?",
+  "confirm.crlf": "값에 Windows 줄 끝(CRLF)이 유지됩니다. 위에서는 일반 줄바꿈으로 표시됩니다.",
   "confirm.yes": "예",
   "confirm.no": "아니요",
   "result.success": "완료되었습니다.",

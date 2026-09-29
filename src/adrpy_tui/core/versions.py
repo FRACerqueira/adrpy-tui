@@ -4,6 +4,8 @@ start-up check of adrpy-ai against the range adrpy-tui declares (ADR003V01)."""
 import re
 from importlib.metadata import PackageNotFoundError, requires, version
 
+from adrpy_tui.core.text import visible
+
 NOT_INSTALLED = "unknown (not installed)"
 
 
@@ -11,7 +13,8 @@ def installed_version(distribution):
     """Its version, or NOT_INSTALLED -- also when its metadata is damaged
     (not UTF-8, no Version): it is shown, never allowed to stop the TUI."""
     try:
-        return version(distribution) or NOT_INSTALLED
+        # Shown as it is (the header, --version): never acting on the terminal.
+        return visible(version(distribution) or NOT_INSTALLED)
     except (PackageNotFoundError, ValueError, OSError):
         return NOT_INSTALLED
 
@@ -26,7 +29,7 @@ def adrpy_range():
     for requirement in declared:
         name = re.match(r"[A-Za-z0-9._-]+", requirement)
         if name and name.group(0).lower().replace("_", "-") == "adrpy-ai" and ";" not in requirement:
-            return requirement[name.end():].strip().strip("()")
+            return visible(requirement[name.end():].strip().strip("()"))
     return ""
 
 

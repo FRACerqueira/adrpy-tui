@@ -10,7 +10,7 @@ from textual.widgets import DirectoryTree, Input, Static
 
 from adrpy_tui.core import keys
 from adrpy_tui.core.files import is_dir
-from adrpy_tui.core.text import visible
+from adrpy_tui.core.text import field_text, visible
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.inputs import SafeInput
 from adrpy_tui.ui.paged import PAGE_SIZE
@@ -35,6 +35,9 @@ class RepositoryScreen(AdrpyScreen):
         yield Static(texts("repository.title"), classes="title")
         yield SafeInput(str(self.app.repo), id="repository-path")
         yield Static("", id="problem-path", classes="error", markup=False)
+        # A path as the field shows it -> the folder it names: the field drops
+        # a bidirectional control, and the folder named without it is another.
+        self._shown = {field_text(str(self.app.repo)): self.app.repo}
         tree = FoldersTree(self.app.repo.parent, id="folders")
         tree.styles.max_height = PAGE_SIZE + 2
         yield tree
@@ -42,6 +45,7 @@ class RepositoryScreen(AdrpyScreen):
     def on_directory_tree_directory_selected(self, event):
         if not on_top(self):
             return
+        self._shown[field_text(str(event.path))] = event.path
         self.query_one("#repository-path", Input).value = str(event.path)
 
     def on_input_submitted(self, event):
@@ -51,6 +55,9 @@ class RepositoryScreen(AdrpyScreen):
 
     def action_use(self):
         value = self.query_one("#repository-path", Input).value.strip()
+        if value in self._shown:
+            self.app.use_repository(self._shown[value])
+            return
         try:
             # An empty value would be "." -- the folder the TUI was started in.
             path = Path(value).expanduser() if value else None

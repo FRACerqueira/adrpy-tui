@@ -111,6 +111,7 @@
   "problem.date_future": "Mag niet na vandaag liggen.",
   "problem.date_before": "Mag niet vóór {date} liggen.",
   "confirm.question": "Deze opdracht uitvoeren?",
+  "confirm.crlf": "Een waarde behoudt Windows-regeleinden (CRLF); hierboven worden ze als gewone regeleinden getoond.",
   "confirm.yes": "Ja",
   "confirm.no": "Nee",
   "result.success": "Klaar.",

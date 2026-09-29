@@ -111,6 +111,7 @@
   "problem.date_future": "Ne peut pas être après aujourd'hui.",
   "problem.date_before": "Ne peut pas être avant le {date}.",
   "confirm.question": "Exécuter cette commande ?",
+  "confirm.crlf": "Une valeur garde des fins de ligne Windows (CRLF) ; ci-dessus, elles sont affichées comme de simples retours à la ligne.",
   "confirm.yes": "Oui",
   "confirm.no": "Non",
   "result.success": "Terminé.",

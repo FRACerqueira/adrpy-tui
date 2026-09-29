@@ -111,6 +111,7 @@
   "problem.date_future": "不能晚于今天。",
   "problem.date_before": "不能早于 {date}。",
   "confirm.question": "执行此命令？",
+  "confirm.crlf": "某个值保留 Windows 换行符 (CRLF)；上方将其显示为普通换行。",
   "confirm.yes": "是",
   "confirm.no": "否",
   "result.success": "完成。",

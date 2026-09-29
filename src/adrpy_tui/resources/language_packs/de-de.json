@@ -111,6 +111,7 @@
   "problem.date_future": "Darf nicht nach heute liegen.",
   "problem.date_before": "Darf nicht vor dem {date} liegen.",
   "confirm.question": "Diesen Befehl ausführen?",
+  "confirm.crlf": "Ein Wert behält Windows-Zeilenenden (CRLF); oben werden sie als einfache Zeilenumbrüche angezeigt.",
   "confirm.yes": "Ja",
   "confirm.no": "Nein",
   "result.success": "Fertig.",

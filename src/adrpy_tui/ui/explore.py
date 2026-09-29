@@ -10,7 +10,7 @@ from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, LoadingIndicator, Markdown, Select, Static
 
-from adrpy_tui.core.decisions import folder_of, state
+from adrpy_tui.core.decisions import folder_of, listed, state
 from adrpy_tui.core.registry import commands_taking
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
@@ -37,6 +37,11 @@ def _cells(values, widths=_WIDTHS):
             value = value[:-1]
         padded.append(value + " " * (width - cell_len(value)))
     return "".join(padded).rstrip()
+
+
+def _errors_of(consistency):
+    errors = consistency.get("errors") if isinstance(consistency, dict) else None
+    return errors if isinstance(errors, list) else []
 
 
 def _read_explore(app):
@@ -78,10 +83,10 @@ class ExploreScreen(AdrpyScreen):
             self._decisions = []
             paged.empty_text = texts("picker.failed", detail=visible(result.detail or result.code or ""))
         else:
-            self._decisions = sorted(result.data.get("decisions", []), key=lambda decision: decision["filename"])
+            self._decisions = sorted(listed(result.data), key=lambda decision: decision["filename"])
             paged.empty_text = texts("picker.empty")
         notes = [texts("explore.inconsistent", count=len(errors))
-                 for errors in [(result.data.get("consistency") or {}).get("errors") or []] if errors]
+                 for errors in [_errors_of(result.data.get("consistency"))] if errors]
         notes += [visible(str(warning)) for warning in result.warnings]
         self.query_one("#explore-notes", Static).update("\n".join(notes))
         root = self.app.repo / self.app.folderadr
@@ -186,7 +191,7 @@ class DetailScreen(AdrpyScreen):
             return
         gone = False
         if result.success:
-            again = [d for d in result.data.get("decisions", []) if d["path"] == self.decision["path"]]
+            again = [d for d in listed(result.data) if d["path"] == self.decision["path"]]
             if again:
                 self.decision = again[0]
             gone = not again  # renamed, deleted, or moved behind a link: nothing of it to offer

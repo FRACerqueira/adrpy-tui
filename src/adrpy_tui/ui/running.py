@@ -33,7 +33,10 @@ class CommandRunner:
         if self._command_running:
             return
         lines = "\n".join(visible(display_command(command, flags)) for command, flags in commands)
-        self.app.push_screen(ConfirmScreen(lines), lambda yes: yes and self._run(commands))
+        # A CR cannot be drawn: a value keeping CRLF line endings is said so.
+        crlf = any("\r\n" in str(flag) for _, flags in commands for flag in flags)
+        note = self.app.texts("confirm.crlf") if crlf else None
+        self.app.push_screen(ConfirmScreen(lines, note=note), lambda yes: yes and self._run(commands))
 
     def _run(self, commands):
         if self._command_running:
@@ -65,6 +68,8 @@ class CommandRunner:
         """The result replaces this screen -- whatever was opened over it."""
         app = self.app
         self._still_running.cancel()
+        if not self.is_attached or self not in app.screen_stack:  # closed meanwhile, or the app quitting
+            return
         while app.screen is not self and self in app.screen_stack:
             await app.pop_screen()
         await app.switch_screen(ResultScreen(command, result))

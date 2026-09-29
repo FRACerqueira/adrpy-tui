@@ -8,7 +8,8 @@ language-pack key `field.<flag>`.
 
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
+
+from adrpy_tui.core.files import is_file
 
 # Characters adrpy refuses in a header-table cell, and additionally in a
 # title, which also lands in a file name (`adrpy help new`).
@@ -85,7 +86,7 @@ def problem(field, value, decision=None):
     for char in field.forbidden:
         if char in value:
             return "problem.forbidden", {"char": char}
-    if field.kind == "file" and not Path(value).is_file():
+    if field.kind == "file" and not is_file(value):
         return "problem.file_missing", {"path": value}
     if field.kind == "date":
         try:

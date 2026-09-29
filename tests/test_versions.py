@@ -94,3 +94,26 @@ def test_version_with_damaged_metadata_still_prints(monkeypatch, capsys):
     monkeypatch.setattr(__main__, "metadata", metadata)
     assert __main__.main(["--version"]) == 0
     assert capsys.readouterr().out.startswith("adrpy-tui ")
+
+
+def test_what_package_metadata_says_never_acts_on_the_terminal(monkeypatch, capsys):
+    """Versions, the declared range and the summary came from package
+    metadata as it was: an escape sequence in them reached the header, the
+    main menu's warning and --version's output."""
+    from adrpy_tui import __main__
+
+    monkeypatch.setattr(versions, "version", lambda name: "1.0\x1b[2J\x1b]0;x\x07")
+    monkeypatch.setattr(versions, "requires", lambda name: ["adrpy-ai>=0.1\x1b[2J,<0.2"])
+    monkeypatch.setattr(__main__, "metadata", lambda name: {"Summary": "A TUI\x1b[31m"})
+    assert "\x1b" not in versions.installed_version("adrpy-ai")
+    assert "\x1b" not in versions.adrpy_range()
+    assert __main__.main(["--version"]) == 0
+    assert "\x1b" not in capsys.readouterr().out
+
+
+def test_version_without_a_summary_prints_no_none(monkeypatch, capsys):
+    from adrpy_tui import __main__
+
+    monkeypatch.setattr(__main__, "metadata", lambda name: {"Summary": None})
+    assert __main__.main(["--version"]) == 0
+    assert "None" not in capsys.readouterr().out

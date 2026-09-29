@@ -22,7 +22,10 @@ class CheckScreen(AdrpyScreen):
         yield LoadingIndicator()
 
     def on_screen_resume(self):
-        # Also sent when the screen first opens.
+        # Also sent when the screen first opens. Whether a left write runs is
+        # asked as the read begins: one that ends while check reads may have
+        # left the repository half-written in what check saw.
+        self._writing = self.app.client.still_writing()
         self.read(lambda app: app.client.run("check", ("--path", str(app.repo))), self._show)
 
     async def _show(self, result):
@@ -31,7 +34,7 @@ class CheckScreen(AdrpyScreen):
         body = self.query_one("#body")
         await body.remove_children()
         count = result.data.get("decisions", 0)
-        if self.app.client.still_writing():  # ADR006V02R02: what it shows may be half-written
+        if self._writing or self.app.client.still_writing():  # ADR006V02R02: may be half-written
             await body.mount(Static(self.app.texts("check.write_still_running"), id="write-still-running",
                                     classes="warning", markup=False))
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))

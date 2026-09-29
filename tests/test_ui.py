@@ -525,7 +525,9 @@ def test_forbidden_characters_cannot_be_typed_in_a_title(tmp_path, user_state):
 
 
 def test_scope_offers_the_values_the_repository_already_uses(tmp_path, user_state):
-    decisions = [{"header": {"scope": "security", "domain": None}}, {"header": {"scope": "backend"}}, {"header": None}]
+    decisions = [{**_decision("ADR001V01-a.md"), "header": {"scope": "security", "domain": None}},
+                 {**_decision("ADR002V01-b.md"), "header": {"scope": "backend"}},
+                 {**_decision("ADR003V01-c.md"), "header": None}]
     client = FakeClient(answers={"explore": {"success": True, "data": {"decisions": decisions, "warnings": []}}})
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
 
@@ -3321,22 +3323,45 @@ def test_every_screen_field_is_a_safe_one():
     """Every text field of the interface is SafeInput or SafeTextArea
     (ui/inputs.py), so none takes a control or an invisible character; the
     date's MaskedInput takes only what its template allows."""
-    import ast
-
     bare = []
     for path in sorted((pathlib.Path(__file__).parent.parent / "src" / "adrpy_tui" / "ui").glob("*.py")):
-        if path.name == "inputs.py":
-            continue
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            name = None
-            if isinstance(node, ast.Call):
-                name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
-            elif isinstance(node, ast.ClassDef):
-                name = next((getattr(base, "id", None) for base in node.bases), None)
-            if name in ("Input", "TextArea"):
-                bare.append(f"{path.name}:{node.lineno}")
+        if path.name != "inputs.py":
+            bare += [f"{path.name}:{line}" for line in _bare_fields(path.read_text(encoding="utf-8"))]
     assert bare == []
+
+
+def _bare_fields(source):
+    """The lines of `source` that make or extend a bare Input or TextArea:
+    called or subclassed, by name, as `widgets.Input`, under an alias, or as
+    any of a class's bases."""
+    import ast
+
+    tree = ast.parse(source)
+    names = {"Input", "TextArea"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            names |= {alias.asname for alias in node.names if alias.name in ("Input", "TextArea") and alias.asname}
+
+    def named(expression):
+        return getattr(expression, "id", None) or getattr(expression, "attr", None)
+
+    lines = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and named(node.func) in names:
+            lines.append(node.lineno)
+        elif isinstance(node, ast.ClassDef) and any(named(base) in names for base in node.bases):
+            lines.append(node.lineno)
+    return lines
+
+
+@pytest.mark.parametrize("source", [
+    "class F(Mixin, Input): pass", "class F(widgets.TextArea): pass",
+    "from textual.widgets import Input as Field\nField()", "widgets.Input()",
+])
+def test_the_safe_field_check_sees_every_way_to_a_bare_field(source):
+    """The check read only a class's first base and only a plain name: a
+    second base, `widgets.Input` or an alias passed it."""
+    assert _bare_fields(source)
 
 
 def test_a_field_filters_what_is_typed_pasted_or_filled_in(tmp_path, user_state):
@@ -3356,7 +3381,7 @@ def test_a_field_filters_what_is_typed_pasted_or_filled_in(tmp_path, user_state)
         title.post_message(events.Paste("\x7fnow\ud800"))  # pasted
         await settle(pilot)
         assert title.value == "Use itnow"
-        area = SafeTextArea("line\x1b one\r\nline\u200b two\r\n")  # a document keeps one line ending
+        area = SafeTextArea("line\x1b one\r\nline\u2066 two\r\n")  # a document keeps one line ending
         await app.screen.mount(area)
         assert area.text == "line one\r\nline two\r\n"
         area.insert("\x07more\ttab")
@@ -3564,5 +3589,220 @@ def test_a_picker_event_arriving_after_its_screen_closed_does_nothing(tmp_path, 
         picker.on_input_submitted(event)
         picker.on_option_list_option_selected(event)
         assert app.is_running
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("decision", [
+    {**_decision("ADR001V01-a.md"), "header": "oops"}, {**_decision("ADR001V01-a.md"), "header": [1]},
+    {**_decision("ADR001V01-a.md"), "filename": 5}, {**_decision("ADR001V01-a.md"), "path": 5}, "not a dict",
+])
+def test_a_decision_of_an_unexpected_shape_never_ends_the_app(tmp_path, user_state, decision):
+    """explore's decisions were read as adrpy sent them: a header that is not
+    an object, or a file name that is not text, raised in the list's own
+    filter -- the next key typed in it ended the app, after the screen had
+    shown a failure note."""
+    app = AdrpyTui(tmp_path, client=_client_with([decision, _decision("ADR002V01-b.md")]), user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "explore", "explore")
+        assert isinstance(app.screen, ExploreScreen)
+        assert not app.screen.query("#internal-error")
+        app.screen.query_one("#explore-filter").focus()
+        await pilot.press("a", "d", "r")
+        await settle(pilot)
+        assert app.is_running and isinstance(app.screen, ExploreScreen)
+
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("scope", [5, True, ["a", "b"], {"k": 1}])
+def test_a_header_value_that_is_not_text_is_never_filled_in(tmp_path, user_state, scope):
+    """version filled its scope from the chosen decision's header as it came:
+    a number ended the app, a list became `--scope ab`."""
+    decisions = [_decision("ADR001V01-a.md", update="Accepted", updated="2026-02-01", scope=scope, domain="d")]
+    app = AdrpyTui(tmp_path, client=_client_with(decisions), user_state=user_state)
+
+    async def scenario(pilot):
+        options = await _open(pilot, "version")
+        options.focus()
+        options.highlighted = 0
+        await pilot.press("enter")
+        await settle(pilot)
+        assert app.is_running
+        assert app.screen.query_one("#field-scope").value == ""
+        assert app.screen.query_one("#field-domain").value == "d"
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("config", [["a"], "text", 5])
+def test_a_configuration_that_is_not_an_object_still_reaches_the_menu(tmp_path, user_state, config):
+    """repository_read called config.get on whatever `config` held: a list
+    left the start-up screen on a failure note, never reaching the menu."""
+    client = FakeClient(answers={"config": {"success": True, "data": {"config": config, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        assert isinstance(app.screen, MenuScreen)
+        assert (app.folderadr, app.folderlog) == ("doc/adr", "doc/decision-log")
+
+    run_app(app, scenario)
+
+
+
+def test_a_path_that_cannot_be_read_as_a_path_is_said_not_fatal(tmp_path, user_state, monkeypatch):
+    """excerpt caught OSError only: a path read_start refuses with ValueError
+    (a NUL in it) raised. inside_repository refuses such a path first today;
+    this keeps the reader from depending on it."""
+    from adrpy_tui.ui import preview
+
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        monkeypatch.setattr(preview, "inside_repository", lambda root, path: True)
+        content, note = preview.excerpt(app, str(tmp_path / "a\x00.md"))
+        assert note is None and content.startswith("`")
+
+    run_app(app, scenario)
+
+
+
+def test_a_persian_scope_keeps_its_zero_width_non_joiner_when_filled_in(tmp_path, user_state):
+    scope = "می\u200cشود"
+    decisions = [_decision("ADR001V01-a.md", update="Accepted", updated="2026-02-01", scope=scope, domain="d")]
+    app = AdrpyTui(tmp_path, client=_client_with(decisions), user_state=user_state)
+
+    async def scenario(pilot):
+        options = await _open(pilot, "version")
+        options.focus()
+        options.highlighted = 0
+        await pilot.press("enter")
+        await settle(pilot)
+        assert app.screen.query_one("#field-scope").value == scope
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("template", ["---\n# [Title] \U0001F468\u200d\U0001F4BB\n\ufeffBody", "a\u202eb"])
+def test_a_template_opened_and_left_as_it_is_is_no_change(tmp_path, user_state, template):
+    """Opening a template and pressing OK marked it changed and saved it
+    without its BOM and ZWJ. A bidirectional control the field drops is no
+    change either: the person changed nothing."""
+    config = {**REPO_CONFIG, "template": template}
+    client = FakeClient(answers={"config": {"success": True, "data": {"config": config, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        fields = await _open_config(pilot)
+        await _edit(pilot, fields, "template")
+        app.screen.query_one("#ok").press()
+        await pilot.pause()
+        assert not any(row.endswith("•") for row in _rows(fields) if row.startswith("Template"))
+
+    run_app(app, scenario)
+
+
+def test_change_repository_left_as_it_is_keeps_the_repository(tmp_path, user_state):
+    """The path field drops a bidirectional control: pressing the run key on
+    the path as it opened used the folder named without it -- another
+    repository, when one of that name sits next to it."""
+    started, sibling = tmp_path / "pro\u202eject", tmp_path / "project"
+    started.mkdir()
+    sibling.mkdir()
+    app = AdrpyTui(started, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(RepositoryScreen())
+        await settle(pilot)
+        app.screen.action_use()
+        await settle(pilot)
+        assert app.repo == started
+
+    run_app(app, scenario)
+
+
+def test_every_way_into_a_text_area_is_filtered(tmp_path, user_state):
+    """load_text had no test: a text area loaded unfiltered passed the suite."""
+    from adrpy_tui.ui.inputs import SafeTextArea
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        area = SafeTextArea("a\x1b\u202eb")
+        await app.screen.mount(area)
+        assert area.text == "ab"
+        area.load_text("c\x1b\u202ed")
+        assert area.text == "cd"
+        area.insert("\x07e\u2066")
+        assert area.text == "ecd" or area.text == "cde"
+
+    run_app(app, scenario)
+
+
+def test_the_confirmation_says_when_a_value_keeps_crlf_line_endings(tmp_path, user_state):
+    """The confirmation draws a CRLF value with LF breaks -- a CR cannot be
+    drawn -- so what runs held a CR the line did not show. It now says so."""
+    crlf = {**REPO_CONFIG, "template": "---" + chr(13) + chr(10) + "# [Title]" + chr(13) + chr(10) + "Body"}
+    client = FakeClient(answers={"config": {"success": True, "data": {"config": crlf, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        fields = await _open_config(pilot)
+        editor = await _edit(pilot, fields, "template")
+        editor.insert("x")
+        app.screen.query_one("#ok").press()
+        await pilot.pause()
+        await pilot.press("ctrl+r")
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen)
+        assert _text(app.screen, "#crlf-note") == app.texts("confirm.crlf")
+
+    run_app(app, scenario)
+
+
+def test_the_confirmation_says_nothing_of_line_endings_without_crlf(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        fields = await _open_config(pilot)
+        editor = await _edit(pilot, fields, "template")
+        editor.insert("x")
+        app.screen.query_one("#ok").press()
+        await pilot.pause()
+        await pilot.press("ctrl+r")
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen)
+        assert not app.screen.query("#crlf-note")
+
+    run_app(app, scenario)
+
+
+def test_an_empty_setting_is_its_default():
+    from adrpy_tui.core import decisions
+
+    assert decisions.setting({"folderadr": ""}, "folderadr", "doc/adr") == "doc/adr"
+    assert decisions.labels({"statusacc": ""})["Accepted"] == "Accepted"
+
+
+def test_an_error_s_fields_are_read_into_one_shape():
+    from adrpy_tui.ui.errors import _normalised
+
+    assert _normalised({"file": None, "code": 5, "related_files": [None, "", 5, "a.md"]}) == {
+        "file": None, "code": "5", "detail": "", "hint": "", "related_files": ["", "", "5", "a.md"]}
+    assert _normalised({"file": ""})["file"] is None
+
+
+def test_an_error_s_empty_related_files_are_not_listed(tmp_path, user_state):
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+    error = {"file": "a.md", "code": "x", "related_files": [None, "", "doc/b.md"]}
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("approve", Result((), 1, False, code="x", data={"errors": [error]})))
+        await settle(pilot)
+        assert _text(app.screen, "#errors-hint") == app.texts("errors.related", files="b.md")
 
     run_app(app, scenario)

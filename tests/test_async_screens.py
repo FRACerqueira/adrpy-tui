@@ -180,18 +180,20 @@ def test_a_write_past_its_time_can_be_left_and_check_is_offered(tmp_path, user_s
     run_app(app, scenario)
 
 
-def test_an_answer_of_the_wrong_shape_is_shown_as_a_failure_not_fatal(tmp_path, user_state):
+def test_a_decision_without_a_name_is_left_out_not_fatal(tmp_path, user_state):
     """A decision without "filename" ended the app (KeyError in a result
-    handler); the traceback goes to a file the person can find."""
+    handler); it was then shown as a failure note. Round 4: explore's
+    decisions are read into one shape first (decisions.listed), and one with
+    no name or path is left out -- nothing could be shown or run for it."""
     client = _focus_client(tmp_path)
-    client.answers["explore"] = {"success": True, "data": {"decisions": [{"x": 1}], "warnings": []}}
+    decisions = client.answers["explore"]["data"]["decisions"]
+    client.answers["explore"] = {"success": True, "data": {"decisions": [{"x": 1}, *decisions], "warnings": []}}
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
 
     async def scenario(pilot):
         await _walk(app, pilot, ["explore", "explore.explore"])
-        note = str(app.screen.query_one("#internal-error").render())
-        assert "KeyError" in note
-        assert user_state.error_log.exists()
+        assert not app.screen.query("#internal-error")
+        assert app.screen.query_one("#decisions").option_count == len(decisions)
 
     run_app(app, scenario)
 
@@ -581,18 +583,29 @@ def test_a_failure_note_says_when_its_details_could_not_be_written(tmp_path, use
 
 def test_a_failure_while_showing_a_failure_is_not_fatal(tmp_path, user_state, monkeypatch):
     """_deliver showed a read's failure with show_internal_error; if that
-    failed too, the exception reached the worker and ended the app."""
-    client = _focus_client(tmp_path)
-    client.answers["explore"] = {"success": True, "data": {"decisions": [{"x": 1}], "warnings": []}}
-    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+    failed too, the exception reached the worker and ended the app. The
+    failure is still said, the simplest way: a notification naming it. (It
+    was provoked with a decision {"x": 1}, which explore's decisions now
+    leave out: the read itself fails here.)"""
+    class Failing(FakeClient):
+        def _answer(self, argv, **options):
+            if command_of(argv) == "check":
+                raise RuntimeError("the runner broke")
+            return super()._answer(argv, **options)
+
+    app = AdrpyTui(tmp_path, client=Failing(answers=_focus_client(tmp_path).answers), user_state=user_state)
+    notified = []
 
     def fails(error):
         raise KeyError("the note itself")
 
     async def scenario(pilot):
         monkeypatch.setattr(app, "internal_error_text", fails)
-        await _walk(app, pilot, ["explore", "explore.explore"])
+        monkeypatch.setattr(app, "notify", lambda message, **options: notified.append((message, options)))
+        app.push_screen(CheckScreen())
+        await settle(pilot)
         assert app.is_running
+        assert [(message, options["severity"]) for message, options in notified] == [("RuntimeError", "error")]
 
     run_app(app, scenario)
 
@@ -621,5 +634,60 @@ def test_a_detail_offers_no_action_while_it_reads_its_decision_again(tmp_path, u
         client.release.set()
         await settle(pilot)
         assert not app.screen.query_one("#actions").disabled  # offered again once read
+
+    run_app(app, scenario)
+
+
+def test_check_warns_when_a_left_write_was_still_running_as_it_began(tmp_path, user_state):
+    """Check asked whether a left write still ran once adrpy check had
+    answered: a write that ended while check read left a possibly half-written
+    snapshot on screen with no warning."""
+    class EndsDuringCheck:
+        ended = False
+
+        def poll(self):
+            return 0 if self.ended else None
+
+    write = EndsDuringCheck()
+
+    class Client(FakeClient):
+        def _answer(self, argv, **options):
+            if command_of(argv) == "check":
+                write.ended = True  # the left write ends while check reads
+            return super()._answer(argv, **options)
+
+    client = Client(answers=_focus_client(tmp_path).answers)
+    client._left.append(write)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(CheckScreen())
+        await settle(pilot)
+        assert app.screen.query("#write-still-running")
+
+    run_app(app, scenario)
+
+
+def test_a_run_finishing_after_its_screen_closed_changes_nothing(tmp_path, user_state):
+    """_finish ran for a screen already closed -- on quit, a left write's
+    thread still hands its result back -- and, with the screen gone from the
+    stack, put the result over whatever was in front (at quit, it raised on
+    the empty stack instead)."""
+    import asyncio
+
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=_focus_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        form = FormScreen("new")
+        app.push_screen(form)
+        await settle(pilot)
+        app.pop_screen()
+        await settle(pilot)
+        form._still_running = asyncio.get_running_loop().call_later(100, lambda: None)
+        await form._finish("new", Result((), 0, True))
+        await settle(pilot)
+        assert isinstance(app.screen, MenuScreen)
 
     run_app(app, scenario)

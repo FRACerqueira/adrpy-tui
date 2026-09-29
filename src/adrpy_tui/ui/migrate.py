@@ -12,7 +12,7 @@ from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Swi
 
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
-from adrpy_tui.core.decisions import setting
+from adrpy_tui.core.decisions import listed, repository_config, setting
 from adrpy_tui.core.files import inside_repository, markdown_files
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen, on_top
@@ -67,14 +67,14 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         if failed:
             await body.mount(Static(visible(failed.detail or failed.code or ""), classes="error", markup=False))
             return
-        settings = config.data.get("config") or {}
+        settings = repository_config(config.data)
         self._current = setting(settings, "migrationpattern", "")
         folder = self.app.repo / setting(settings, "folderadr", "doc/adr")
         if not inside_repository(self.app.repo, folder):
             await body.mount(Static(texts("preview.outside", path=visible(setting(settings, "folderadr", ""))),
                                     classes="error", markup=False))
             return
-        with_header = {d["path"] for d in explore.data.get("decisions", []) if (d.get("header") or {}).get("is_valid")}
+        with_header = {d["path"] for d in listed(explore.data) if d["header"]["is_valid"]}
         self._files = [p for p in markdown_files(folder, recursive=False) if str(p) not in with_header]
         if not self._files:
             await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))

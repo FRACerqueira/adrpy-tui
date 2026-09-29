@@ -111,6 +111,7 @@
   "problem.date_future": "今日より後の日付は指定できません。",
   "problem.date_before": "{date} より前の日付は指定できません。",
   "confirm.question": "このコマンドを実行しますか?",
+  "confirm.crlf": "値に Windows の改行 (CRLF) が含まれます。上では通常の改行として表示されています。",
   "confirm.yes": "はい",
   "confirm.no": "いいえ",
   "result.success": "完了しました。",

@@ -137,7 +137,9 @@ decisions and log folders the configuration names: nothing outside the
 repository opens, and no folder link (a symlink, a Windows junction) inside
 it is followed; each folder on the way is looked at, never resolved, since
 resolving opens the target. The decisions and log listings skip a folder
-link, and a folder they cannot read, instead of looping or failing; a
+link, and a folder they cannot read, instead of looping or failing -- a
+folder link being a symlink, a junction or a WSL symlink; any other reparse
+point (a OneDrive placeholder, a deduplicated file) is the file itself; a
 decision's detail reads its file through the same checks. A command's help names its links too. A file
 longer than `PREVIEW_LINES` (500, `ui/preview.py`) shows its first 500
 lines, and one past `PREVIEW_CHARACTERS` (100 000) its first characters,
@@ -161,13 +163,23 @@ terminal as it is, it cannot be encoded and would stop the screen drawing. `test
 Every text field keeps only what can be read as it is (`field_text`,
 `ui/inputs.py`): whatever is typed, pasted, or filled in -- a suggestion, a
 decision's scope, a value of the configuration -- drops control characters,
-the invisible ones (Cf: a bidirectional override, a zero-width space), the
-line and paragraph separators and lone surrogates; a multi-line field keeps
-its line breaks and tabs. No field needs them, and what the confirmation
-shows is then what runs. The date field is left out: its mask takes digits
-only. A field of adrpy's answer of another type than expected -- an error's
-code as a number, a folder as a list -- is read as text or as its default,
-never the end of the screen.
+the bidirectional controls (embeddings, overrides, isolates and marks, which
+reorder what is drawn even inside the field), the tag characters (U+E0000
+to U+E007F, text nobody sees -- words smuggled into a decision an AI agent
+reads later), the line and paragraph
+separators and lone surrogates; a multi-line field keeps its line breaks and
+tabs. The other invisible characters are part of a language's text -- the
+ZWNJ of a Persian word, the ZWJ of an emoji, a BOM -- and stay: the
+confirmation writes them out as `<U+200C>` and the like, so what it shows is
+what runs. A value that keeps CRLF line endings, which cannot be drawn, is
+said so below the command line. A value shown in a field and left as it was
+is no change: a configuration value or the repository path whose field
+dropped a bidirectional control keeps its own. The date field is left out:
+its mask takes digits only. A field of adrpy's answer of another type than
+expected -- an error's code as a number, a folder as a list, a decision's
+header that is not an object -- is read as text or as its default, never the
+end of the screen; a decision whose name or path is not text is left out of
+every list (`decisions.listed`).
 
 ## Components
 
@@ -271,7 +283,7 @@ time is stopped and shown as `tui-timeout` ([ADR006V02](adr/ADR006V02R02-a-read-
 write that was left still runs, another write is refused
 (`tui-write-still-running`) -- two adrpy writes on one working copy are a
 usage error for adrpy-ai -- and reads, Check first, still run; the refusal
-offers Check, and Check, while that write runs, says above its result that
+offers Check, and Check, when that write ran as it began to read, says above its result that
 what it shows may be the repository half-way through it, and to run it again
 once it has ended. A write still waiting for adrpy (a hung read ahead of it)
 can be left before it starts (`tui-not-started`). Quitting never waits, a

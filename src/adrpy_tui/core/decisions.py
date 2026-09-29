@@ -38,6 +38,41 @@ def state(decision):
     return MIGRATED if header.get("is_migrated") else INVALID
 
 
+# The header cells the screens read as text: another type (a number, a
+# list) is read as no value.
+_HEADER_TEXTS = ("status_create", "status_update", "status_change", "scope", "domain",
+                 "date_create", "date_update", "superseded_by_file")
+
+
+def listed(data):
+    """`explore`'s decisions in the shape every screen reads them: adrpy's
+    JSON is read, not trusted (the screens filter and sort them in their own
+    handlers, where no failure is contained). One whose name or path is not
+    text is left out: nothing could be shown or run for it."""
+    decisions = data.get("decisions")
+    kept = []
+    for decision in decisions if isinstance(decisions, list) else []:
+        if not isinstance(decision, dict):
+            continue
+        if not all(isinstance(decision.get(key), str) and decision[key] for key in ("filename", "path")):
+            continue
+        header = decision.get("header")
+        header = dict(header) if isinstance(header, dict) else {}
+        for key in _HEADER_TEXTS:
+            if not isinstance(header.get(key), str):
+                header[key] = None
+        for key in ("is_valid", "is_migrated"):
+            header[key] = header.get(key) is True
+        kept.append({**decision, "header": header})
+    return kept
+
+
+def repository_config(data):
+    """`adrpy config`'s `config`, or {} when it is not an object."""
+    config = data.get("config")
+    return config if isinstance(config, dict) else {}
+
+
 TOP = "."  # a decision straight in the decisions folder
 
 

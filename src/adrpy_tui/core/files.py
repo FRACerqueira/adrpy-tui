@@ -10,9 +10,17 @@ import stat
 from pathlib import Path, PurePath
 
 
+# The reparse points that lead elsewhere: a symlink, a junction (mount
+# point) and a WSL symlink. Any other tag -- a OneDrive placeholder, a
+# deduplicated file, an app execution alias -- is the file itself.
+_LINK_TAGS = (0xA000000C, 0xA0000003, 0xA000001D)
+
+
 def _is_link(status):
-    return stat.S_ISLNK(status.st_mode) or bool(getattr(status, "st_file_attributes", 0)
-                                                 & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+    if stat.S_ISLNK(status.st_mode):
+        return True
+    reparse = getattr(status, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+    return bool(reparse) and getattr(status, "st_reparse_tag", 0) in _LINK_TAGS
 
 
 def inside_repository(root, path):
@@ -85,15 +93,20 @@ def read_start(path, lines, characters):
     total lines, its total characters). Only that start is kept; the rest is
     counted as it streams by, never held."""
     decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
-    kept, kept_size, total, newlines, last = [], 0, 0, 0, ""
+    kept, kept_size, total, breaks, open_line, after_cr = [], 0, 0, 0, False, False
     with open(path, "rb") as source:
         while True:
             chunk = source.read(1 << 20)
             text = decoder.decode(chunk, final=not chunk)
             if text:
                 total += len(text)
-                newlines += text.count("\n")
-                last = text[-1]
+                # Line breaks as splitlines cuts them (CR, LF, CRLF, U+2028...),
+                # a CRLF split across two chunks counted once.
+                pieces = (text[1:] if after_cr and text[0] == "\n" else text).splitlines(keepends=True)
+                breaks += sum(1 for piece in pieces if piece.splitlines()[0] != piece)
+                if pieces:
+                    open_line = pieces[-1].splitlines()[0] == pieces[-1]
+                after_cr = text[-1] == "\r"
                 # Kept until either limit is reached: past it, nothing more is shown.
                 if kept_size <= characters and len("".join(kept).splitlines()) <= lines:
                     kept.append(text)
@@ -101,4 +114,4 @@ def read_start(path, lines, characters):
             if not chunk:
                 break
     start = "".join((("".join(kept)).splitlines(keepends=True))[:lines])[:characters]
-    return start, newlines + (1 if total and last != "\n" else 0), total
+    return start, breaks + (1 if open_line else 0), total

@@ -17,10 +17,11 @@ class ConfirmScreen(ModalScreen[bool]):
                     ("up", "up"), ("down", "down"), ("pageup", "page_up"), ("pagedown", "page_down"),
                     ("home", "home"), ("end", "end")))]
 
-    def __init__(self, command_line, question=None):
+    def __init__(self, command_line, question=None, note=None):
         super().__init__()
         self._command_line = command_line
         self._question = question
+        self._note = note
 
     def compose(self):
         texts = self.app.texts
@@ -28,6 +29,8 @@ class ConfirmScreen(ModalScreen[bool]):
             yield Static(self._question or texts("confirm.question"), markup=False)
             with VerticalScroll(id="command-scroll"):
                 yield Static(self._command_line, id="command-line", classes="summary", markup=False)
+            if self._note:
+                yield Static(self._note, id="crlf-note", classes="info", markup=False)
             with Horizontal(id="buttons"):
                 yield Button(texts("confirm.yes"), id="yes", variant="primary")
                 yield Button(texts("confirm.no"), id="no")

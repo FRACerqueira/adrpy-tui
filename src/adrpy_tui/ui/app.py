@@ -222,7 +222,7 @@ class AdrpyTui(App):
 
     def repository_read(self, result):
         self.configured = result.success
-        config = result.data.get("config") or {}
+        config = decisions.repository_config(result.data)
         self.labels = decisions.labels(config)
         self.folderadr = decisions.setting(config, "folderadr", "doc/adr")
         self.folderlog = decisions.setting(config, "folderlog", "doc/decision-log")

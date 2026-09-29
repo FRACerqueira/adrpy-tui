@@ -35,16 +35,25 @@ def visible(text):
                    for c in _without_controls(text))
 
 
+# The controls that reorder what is drawn: embeddings, overrides, isolates
+# and marks. The other format characters (Cf) are part of a language's
+# text -- a Persian ZWNJ, an emoji's ZWJ, a BOM -- and a field keeps them;
+# the confirmation writes them out (`visible`).
+_BIDI_CONTROLS = frozenset("‪‫‬‭‮⁦⁧⁨⁩‎‏؜")
+
+
 def field_text(text, multiline=False):
-    """What a text field keeps (ui/inputs.py): printable text only -- no
-    control character, no lone surrogate, nothing that hides itself (Cf, Zl,
-    Zp). A multi-line field also keeps its tabs and line breaks, a CR only as
-    part of a CRLF (a template keeps its line endings)."""
+    """What a text field keeps (ui/inputs.py): no control character, no
+    lone surrogate, no line or paragraph separator (Zl, Zp), no
+    bidirectional control, no tag character (U+E0000-E007F: text nobody
+    sees, smuggled into a decision an AI agent reads later). A multi-line field also keeps its tabs and line
+    breaks, a CR only as part of a CRLF (a template keeps its line endings)."""
     kept = []
     for index, char in enumerate(text):
         if multiline and (char in "\t\n" or char == "\r" and text[index + 1:index + 2] == "\n"):
             kept.append(char)
-        elif unicodedata.category(char) not in ("Cc", "Cs", "Cf", "Zl", "Zp"):
+        elif (char not in _BIDI_CONTROLS and not "\U000e0000" <= char <= "\U000e007f"
+              and unicodedata.category(char) not in ("Cc", "Cs", "Zl", "Zp")):
             kept.append(char)
     return "".join(kept)
 

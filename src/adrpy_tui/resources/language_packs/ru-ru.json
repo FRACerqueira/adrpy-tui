@@ -111,6 +111,7 @@
   "problem.date_future": "Не может быть позже сегодняшнего дня.",
   "problem.date_before": "Не может быть раньше {date}.",
   "confirm.question": "Выполнить эту команду?",
+  "confirm.crlf": "Значение сохраняет окончания строк Windows (CRLF); выше они показаны как обычные переводы строк.",
   "confirm.yes": "Да",
   "confirm.no": "Нет",
   "result.success": "Готово.",

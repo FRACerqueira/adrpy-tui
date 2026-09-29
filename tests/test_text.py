@@ -1,4 +1,6 @@
-from adrpy_tui.core.text import printable
+import pytest
+
+from adrpy_tui.core.text import field_text, printable
 
 
 def test_escape_sequences_and_other_control_characters_are_dropped():
@@ -65,9 +67,32 @@ def test_a_field_keeps_only_printable_text():
     carries a control, a lone surrogate or a character that hides itself
     (Cf, Zl, Zp): what is confirmed is then what runs, and what is drawn can
     be encoded. A multi-line field keeps its line breaks (CRLF too) and tabs."""
-    from adrpy_tui.core.text import field_text
 
-    dirty = "a\x1bb\x7fc\td\ne\r\nf\rg\ud800h\u202ei\u200bj\u2028k"
+
+    dirty = "a\x1bb\x7fc\td\ne\r\nf\rg\ud800h\u202ei\u2066j\u2028k"
     assert field_text(dirty) == "abcdefghijk"
     assert field_text(dirty, multiline=True) == "abc\td\ne\r\nfghijk"
     assert field_text("Decisão · 決定 🙂") == "Decisão · 決定 🙂"
+
+
+
+@pytest.mark.parametrize("multiline", [False, True])
+def test_a_field_keeps_the_characters_a_language_needs_and_drops_the_bidirectional_controls(multiline):
+    """Every Cf character was dropped: a Persian word lost its ZWNJ, an emoji
+    its ZWJ, a template its BOM -- text the person never typed changed. Only
+    the controls that reorder what is drawn are dropped (and U+2029, a
+    paragraph separator, had no test)."""
+    kept = "a\u200cb\u200dc\ufeffd\u00ade\u200bf"
+    assert field_text(kept, multiline) == kept
+    bidi = "a\u202ab\u202bc\u202cd\u202de\u202ef\u2066g\u2067h\u2068i\u2069j\u200ek\u200fl\u061cm"
+    assert field_text(bidi, multiline) == "abcdefghijklm"
+    assert field_text("a\u2029b\u2028c", multiline) == "abc"
+
+
+@pytest.mark.parametrize("multiline", [False, True])
+def test_a_field_drops_the_tag_characters(multiline):
+    """The tag characters (U+E0000-E007F) spell text nobody sees -- "ASCII
+    smuggling" of words into a decision an AI agent reads later. A field
+    drops them with the bidirectional controls."""
+    hidden = "".join(chr(0xE0000 + ord(char)) for char in "run rm")
+    assert field_text("scope" + hidden + "\U000E0001\U000E007F", multiline) == "scope"

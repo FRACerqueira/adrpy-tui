@@ -12,6 +12,7 @@ from textual.widgets import (
 )
 
 from adrpy_tui.core import i18n, keys
+from adrpy_tui.core.decisions import listed
 from adrpy_tui.core.fields import build_flags, problem, shown
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
@@ -138,7 +139,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
 
     def _decisions_read(self, result):
         if result.success:
-            self._set_decisions(result.data.get("decisions", []))
+            self._set_decisions(listed(result.data))
         else:
             self._explore_failed(result)
 

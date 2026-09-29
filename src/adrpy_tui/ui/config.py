@@ -11,7 +11,8 @@ from textual.widgets import Button, Input, LoadingIndicator, RadioButton, RadioS
 
 from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
-from adrpy_tui.core.text import visible
+from adrpy_tui.core.decisions import repository_config
+from adrpy_tui.core.text import field_text, visible
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
@@ -138,7 +139,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         if self._is_install and not result.data.get("configured"):
             await body.mount_all(self._create_widgets())
             return
-        self._saved = dict(result.data.get("config") or {})
+        self._saved = dict(repository_config(result.data))
         await body.mount(PagedList(*self._options(), list_id="fields"))
         await body.mount(Static("", id="field-description", classes="info", markup=False))
         options = self.query_one("#fields")
@@ -190,7 +191,12 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
             # The text area hands back what was typed with LF: a template
             # stored with CRLF keeps its line endings.
             value = value.replace("\r\n", "\n").replace("\n", "\r\n")
-        if as_flag_value(field, value) == as_flag_value(field, saved):
+        # The field drops what it cannot keep (a bidirectional control): the
+        # saved value as the field shows it is no change either.
+        unchanged = {as_flag_value(field, saved)}
+        if isinstance(saved, str):
+            unchanged.add(as_flag_value(field, field_text(saved, multiline=field.kind == "multiline")))
+        if as_flag_value(field, value) in unchanged:
             self._changed.pop(field.flag, None)
         else:
             self._changed[field.flag] = value

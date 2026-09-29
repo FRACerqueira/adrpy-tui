@@ -30,7 +30,7 @@ def excerpt(app, path):
         return "", app.texts("preview.outside", path=visible(str(path)))
     try:
         content, total_lines, total_characters = read_start(path, PREVIEW_LINES, PREVIEW_CHARACTERS)
-    except OSError as error:
+    except (OSError, ValueError) as error:  # ValueError: a path no system call takes (a NUL in it)
         return f"`{visible(str(error))}`", None
     note = None
     if total_lines > PREVIEW_LINES:

@@ -398,3 +398,36 @@ def test_a_left_write_printing_more_than_a_pipe_holds_still_ends(tmp_path, monke
     time.sleep(4)
     _answering(monkeypatch)
     assert client.run("approve", write=True).success
+
+
+def test_a_left_write_is_drained_on_every_system(monkeypatch):
+    """The drain of a left write's output ran only on the POSIX legs: on
+    Windows, removing it passed the suite. Leaving a write starts it with the
+    write's own process, and it reads the output to its end, whatever fails."""
+    drained = []
+    monkeypatch.setattr(client_module, "_drain", drained.append)
+    _hanging(monkeypatch, 20)
+    leave = threading.Event()
+    threading.Timer(0.3, leave.set).start()
+    client = Client()
+    assert client.run("new", write=True, leave=leave).code == ABANDONED
+    time.sleep(0.2)
+    assert drained == client._left
+    client._left[0].kill()
+
+    class Process:
+        def __init__(self, error=None):
+            self.error, self.read = error, False
+
+        def communicate(self):
+            self.read = True
+            if self.error:
+                raise self.error
+
+    for error in (None, OSError("closed"), ValueError("closed file")):
+        process = Process(error)
+        _drain_original(process)
+        assert process.read
+
+
+_drain_original = client_module._drain
