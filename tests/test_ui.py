@@ -4032,11 +4032,9 @@ def test_migrate_compares_the_folder_as_adrpy_resolves_it(tmp_path, user_state, 
     run_app(app, scenario)
 
 
-def test_the_log_browser_shows_the_files_adrpy_counts_as_strays(tmp_path, user_state):
-    """adrpy leaves out only its own pages: INDEX.md at the log's root
-    (case-blind where names are), and INDEX.md or CYCLES.md by their exact
-    name anywhere. A cycles.md or a sub/index.md is a file that blocks
-    `adrpy log`, so the browser must show it."""
+def test_the_log_browser_hides_the_log_s_own_pages_in_any_case_anywhere(tmp_path, user_state):
+    """adrpy reads the decision log in any case on every system: a cycles.md
+    or a sub/index.md is one of its own pages, never an entry."""
     folder = tmp_path / "doc" / "decision-log"
     (folder / "sub").mkdir(parents=True)
     (folder / "INDEX.md").write_text("# Index\n", encoding="utf-8")
@@ -4048,9 +4046,8 @@ def test_the_log_browser_shows_the_files_adrpy_counts_as_strays(tmp_path, user_s
     async def scenario(pilot):
         app.push_screen(LogScreen())
         await settle(pilot)
-        # adrpy compares its own pages' names as the file system does (os.path.normcase).
-        shown = [] if __import__("os").path.normcase("A") == "a" else ["cycles.md", "sub/index.md"]
-        assert sorted(path.relative_to(folder).as_posix() for path in app.screen._entries) == shown
+        # adrpy reads the log's own pages in any case, on every system.
+        assert sorted(path.relative_to(folder).as_posix() for path in app.screen._entries) == []
 
     run_app(app, scenario)
 
