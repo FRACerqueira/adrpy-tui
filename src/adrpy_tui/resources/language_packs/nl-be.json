@@ -309,6 +309,9 @@
   "logs.all_classifications": "Alle classificaties",
   "logs.count": "{shown} van {total} items",
   "logs.empty": "Geen items in {folder}.",
+  "preview.link": "Niet geopend: {path} wordt bereikt via een maplink, die de TUI niet volgt.",
+  "logs.unreadable": "Niet opgesomd, niet leesbaar: {folders}.",
+  "logs.aliased": "Niet opgesomd: {path} is, bevat of ligt in de beslissingenmap ({folderadr}), die adrpy als logboek weigert.",
   "column.date": "Datum",
   "column.classification": "Classificatie",
   "column.slug": "Slug"

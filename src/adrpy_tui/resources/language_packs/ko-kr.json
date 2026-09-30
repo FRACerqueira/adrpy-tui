@@ -309,6 +309,9 @@
   "logs.all_classifications": "모든 분류",
   "logs.count": "항목 {total}개 중 {shown}개",
   "logs.empty": "{folder}에 항목이 없습니다.",
+  "preview.link": "열지 않음: {path}은(는) 폴더 링크를 통해 도달하며, TUI는 링크를 따라가지 않습니다.",
+  "logs.unreadable": "목록에 없음, 읽을 수 없음: {folders}.",
+  "logs.aliased": "목록에 없음: {path}은(는) 결정 폴더({folderadr})이거나, 그것을 포함하거나, 그 안에 있으며 adrpy는 로그로 거부합니다.",
   "column.date": "날짜",
   "column.classification": "분류",
   "column.slug": "슬러그"

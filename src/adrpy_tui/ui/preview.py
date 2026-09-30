@@ -9,7 +9,7 @@ from textual.binding import Binding
 from textual.widgets import Markdown, Static
 
 from adrpy_tui.core import keys
-from adrpy_tui.core.files import inside_repository, is_file, read_start
+from adrpy_tui.core.files import is_file, outside_reason, read_start
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 
@@ -22,12 +22,19 @@ PREVIEW_LINES = 500
 PREVIEW_CHARACTERS = 100_000
 
 
+def refusal(app, reason, path):
+    """What is said of `path` that outside_reason refused: outside the
+    repository, or reached through a folder link (ADR0006V02)."""
+    return app.texts("preview.link" if reason == "link" else "preview.outside", path=visible(str(path)))
+
+
 def excerpt(app, path):
     """(content to render, the note saying it was cut or refused, or None).
     Every reader of a decision's or entry's file comes here: the preview and
     a decision's detail alike."""
-    if not inside_repository(app.repo, path):
-        return "", app.texts("preview.outside", path=visible(str(path)))
+    reason = outside_reason(app.repo, path)
+    if reason:
+        return "", refusal(app, reason, path)
     try:
         content, total_lines, total_characters = read_start(path, PREVIEW_LINES, PREVIEW_CHARACTERS)
     except (OSError, ValueError) as error:  # ValueError: a path no system call takes (a NUL in it)
@@ -48,8 +55,9 @@ def open_preview(app, path):
     if not path:
         return
     path = Path(os.path.normpath(os.path.abspath(path)))
-    if not inside_repository(app.repo, path):
-        app.notify(app.texts("preview.outside", path=visible(str(path))), severity="warning", markup=False)
+    reason = outside_reason(app.repo, path)
+    if reason:
+        app.notify(refusal(app, reason, path), severity="warning", markup=False)
     elif is_file(path):
         app.push_screen(PreviewScreen(path))
     else:

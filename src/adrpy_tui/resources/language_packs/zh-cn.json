@@ -309,6 +309,9 @@
   "logs.all_classifications": "所有分类",
   "logs.count": "{total} 个条目中的 {shown} 个",
   "logs.empty": "{folder} 中没有条目。",
+  "preview.link": "未打开：{path} 通过文件夹链接访问，TUI 不跟随链接。",
+  "logs.unreadable": "未列出，无法读取：{folders}。",
+  "logs.aliased": "未列出：{path} 就是、包含或位于决策文件夹（{folderadr}）中，adrpy 不接受它作为日志。",
   "column.date": "日期",
   "column.classification": "分类",
   "column.slug": "别名"

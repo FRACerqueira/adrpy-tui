@@ -309,6 +309,9 @@
   "logs.all_classifications": "Toutes les classifications",
   "logs.count": "{shown} sur {total} entrées",
   "logs.empty": "Aucune entrée dans {folder}.",
+  "preview.link": "Non ouvert : {path} est atteint par un lien de dossier, que la TUI ne suit pas.",
+  "logs.unreadable": "Non listés, illisibles : {folders}.",
+  "logs.aliased": "Non listé : {path} est, contient ou se trouve dans le dossier des décisions ({folderadr}), qu'adrpy refuse comme journal.",
   "column.date": "Date",
   "column.classification": "Classification",
   "column.slug": "Slug"

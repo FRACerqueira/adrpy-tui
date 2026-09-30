@@ -309,6 +309,9 @@
   "logs.all_classifications": "Todas as classificações",
   "logs.count": "{shown} de {total} entradas",
   "logs.empty": "Nenhuma entrada em {folder}.",
+  "preview.link": "Não aberto: {path} é alcançado por um link de pasta, que a TUI não segue.",
+  "logs.unreadable": "Não listadas, não podem ser lidas: {folders}.",
+  "logs.aliased": "Não listado: {path} é, contém ou está na pasta de decisões ({folderadr}), que o adrpy recusa como log.",
   "column.date": "Data",
   "column.classification": "Classificação",
   "column.slug": "Slug"

@@ -309,6 +309,9 @@
   "logs.all_classifications": "All classifications",
   "logs.count": "{shown} of {total} entries",
   "logs.empty": "No entries in {folder}.",
+  "preview.link": "Not opened: {path} is reached through a folder link, which the TUI does not follow.",
+  "logs.unreadable": "Not listed, cannot be read: {folders}.",
+  "logs.aliased": "Not listed: {path} is, holds or lies in the decisions folder ({folderadr}), which adrpy refuses as the log.",
   "column.date": "Date",
   "column.classification": "Classification",
   "column.slug": "Slug"

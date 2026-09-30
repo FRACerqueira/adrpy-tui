@@ -1,8 +1,8 @@
 """What the TUI reads or lists from a repository, and the paths a person
 gives it (ADR0006V02). Nothing here follows a folder link, resolves a path
-(resolving opens the target, which may be on another machine), reads more
-of a file than is shown, or raises on a path that cannot be looked at: such
-a path is simply not available."""
+with one on the way (resolving opens the target, which may be on another
+machine), reads more of a file than is shown, or raises on a path that
+cannot be looked at: such a path is simply not available."""
 
 import codecs
 import os
@@ -29,32 +29,49 @@ def _is_link(status):
     return bool(reparse) and getattr(status, "st_reparse_tag", 0) in _LINK_TAGS
 
 
-def inside_repository(root, path):
-    """Whether `path` lies inside the repository `root` with no folder link
-    on the way -- a symlink or a Windows junction may lead anywhere. Lexical
-    first, so nothing outside the repository (a network path) is touched;
-    then each component below the root is looked at with lstat. A component
-    that is not there has nothing to follow; one that cannot be looked at
-    (access denied) is not inside."""
+def outside_reason(root, path):
+    """None when `path` lies inside the repository `root` with no folder
+    link on the way -- a symlink or a Windows junction may lead anywhere;
+    "link" when one is on the way; "outside" otherwise. Lexical first, so
+    nothing outside the repository (a network path) is touched; then each
+    component below the root is looked at with lstat. A component that is
+    not there has nothing to follow; one that cannot be looked at (access
+    denied) is not inside."""
     root = os.path.normpath(os.path.abspath(root))
     target = os.path.normpath(os.path.abspath(path))
     try:
         if os.path.commonpath([root, target]) != root:
-            return False
+            return "outside"
     except ValueError:  # another drive
-        return False
+        return "outside"
     current = root
     for part in PurePath(os.path.relpath(target, root)).parts:
         current = os.path.join(current, part)
         try:
             status = os.lstat(current)
         except (FileNotFoundError, NotADirectoryError):
-            return True
+            return None
         except (OSError, ValueError):
-            return False
+            return "outside"
         if _is_link(status):
-            return False
-    return True
+            return "link"
+    return None
+
+
+def inside_repository(root, path):
+    """Whether `path` lies inside the repository `root` with no folder link
+    on the way (outside_reason)."""
+    return outside_reason(root, path) is None
+
+
+def repository_folder(root, relative):
+    """(the folder a config setting names, spelled as adrpy resolves it --
+    case, Windows' trailing dots --, and outside_reason's answer for it).
+    Resolved only with no folder link on the way, where resolving opens
+    nothing else."""
+    folder = Path(os.path.abspath(os.path.normpath(Path(root) / relative)))
+    reason = outside_reason(root, folder)
+    return (folder.resolve() if reason is None else folder), reason
 
 
 def is_dir(path):
@@ -73,12 +90,18 @@ def is_file(path):
         return False
 
 
-def markdown_files(folder, recursive=True):
+def markdown_files(folder, recursive=True, unreadable=None):
     """The .md files under `folder`, sorted, never entering a folder link
-    (a junction to a parent would never end); a folder that cannot be read
-    lists nothing."""
+    (a junction to a parent would never end); `.md` compared as adrpy's scan
+    compares it (os.path.normcase). A folder that cannot be read lists
+    nothing, and is added to `unreadable` when given."""
     found = []
-    for top, folders, names in os.walk(folder, onerror=lambda error: None):
+
+    def failed(error):
+        if unreadable is not None:
+            unreadable.append(Path(error.filename))
+
+    for top, folders, names in os.walk(folder, onerror=failed):
         if recursive:
             kept = []
             for name in folders:
@@ -90,7 +113,7 @@ def markdown_files(folder, recursive=True):
             folders[:] = kept
         else:
             folders[:] = []
-        found += [Path(top) / name for name in names if name.lower().endswith(".md")]
+        found += [Path(top) / name for name in names if os.path.normcase(name).endswith(".md")]
     return sorted(found)
 
 

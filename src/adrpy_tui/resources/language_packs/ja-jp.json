@@ -309,6 +309,9 @@
   "logs.all_classifications": "すべての分類",
   "logs.count": "{total} 件中 {shown} 件のエントリ",
   "logs.empty": "{folder} にエントリはありません。",
+  "preview.link": "開きませんでした: {path} はフォルダーリンク経由で到達します。TUI はリンクをたどりません。",
+  "logs.unreadable": "一覧にありません。読み取れません: {folders}。",
+  "logs.aliased": "一覧にありません: {path} は決定フォルダー ({folderadr}) そのもの、それを含む、またはその中にあります。adrpy はログとして拒否します。",
   "column.date": "日付",
   "column.classification": "分類",
   "column.slug": "スラッグ"

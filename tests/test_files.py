@@ -144,9 +144,11 @@ def test_markdown_files_lists_in_order_any_case_and_only_the_top_when_asked(tmp_
     for name in ("b.md", "A.MD", "c.txt", "sub/d.md", "z.md"):
         (tmp_path / name).parent.mkdir(exist_ok=True)
         (tmp_path / name).write_text("x", encoding="utf-8")
+    # `.md` as adrpy's scan compares it: case-blind only where the file system is.
+    upper = ["A.MD"] if os.path.normcase("A") == "a" else []
     assert [p.relative_to(tmp_path).as_posix() for p in files.markdown_files(tmp_path)] == [
-        "A.MD", "b.md", "sub/d.md", "z.md"]  # os.walk gives z.md before the subfolder's files
-    assert [p.name for p in files.markdown_files(tmp_path, recursive=False)] == ["A.MD", "b.md", "z.md"]
+        *upper, "b.md", "sub/d.md", "z.md"]  # os.walk gives z.md before the subfolder's files
+    assert [p.name for p in files.markdown_files(tmp_path, recursive=False)] == [*upper, "b.md", "z.md"]
 
 
 def test_the_path_option_refuses_a_folder_that_cannot_be_looked_at(monkeypatch, capsys):
@@ -165,3 +167,25 @@ def test_the_path_option_refuses_a_folder_that_cannot_be_looked_at(monkeypatch, 
             __main__.main(["--path", "C:/denied"])
     assert ended.value.code == 2
     assert "--path is not a directory" in capsys.readouterr().err
+
+
+
+def test_a_repository_folder_is_spelled_as_adrpy_resolves_it(tmp_path):
+    from adrpy_tui.core.decisions import folder_of
+
+    (tmp_path / "doc" / "adr").mkdir(parents=True)
+    folder, reason = files.repository_folder(tmp_path, "doc/adr" + ("." if os.name == "nt" else ""))
+    assert reason is None
+    assert folder_of(str(tmp_path.resolve() / "doc" / "adr" / "ADR0001V01R01-x.md"), folder) == "."
+
+
+def test_a_repository_folder_behind_a_link_or_outside_says_which(tmp_path):
+    (tmp_path / "doc" / "real").mkdir(parents=True)
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(tmp_path / "doc" / "adr"), str(tmp_path / "doc" / "real")],
+                       check=True, capture_output=True)
+    else:
+        os.symlink(tmp_path / "doc" / "real", tmp_path / "doc" / "adr", target_is_directory=True)
+    assert files.repository_folder(tmp_path, "doc/adr")[1] == "link"
+    assert files.repository_folder(tmp_path, "../elsewhere")[1] == "outside"
+    assert files.inside_repository(tmp_path, tmp_path / "doc" / "adr") is False

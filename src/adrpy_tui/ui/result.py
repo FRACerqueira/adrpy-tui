@@ -88,16 +88,17 @@ class ResultScreen(AdrpyScreen):
             open_preview(self.app, self._where(path))
 
     def _where(self, path):
-        """Some codes name a file by its name only: it is where adrpy looked,
-        the log folder for a log code, else the decisions folder; any other
-        relative path is the repository's. Decided without touching the disk:
-        open_preview's guard is the first to look."""
+        """A log code names a file by its path in the log folder; another code
+        by its name only in the decisions folder, else by a path in the
+        repository. Decided without touching the disk: open_preview's guard
+        is the first to look."""
         if Path(path).is_absolute():
             return path
+        if str(self.result.code or "").startswith("log-"):
+            return str(self.app.repo / self.app.folderlog / path)
         if len(Path(path).parts) > 1:
             return str(self.app.repo / path)
-        folder = self.app.folderlog if str(self.result.code or "").startswith("log-") else self.app.folderadr
-        return str(self.app.repo / folder / path)
+        return str(self.app.repo / self.app.folderadr / path)
 
     def action_back(self):
         form = FORMS.get(self.command)

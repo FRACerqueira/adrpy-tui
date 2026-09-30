@@ -3463,7 +3463,7 @@ def test_a_decision_s_detail_does_not_show_a_file_reached_through_a_folder_link(
     async def scenario(pilot):
         await _walk(app, pilot, ["explore", "explore.explore", ":detail"])
         assert "OUTSIDE-SECRET" not in app.screen.query_one(Markdown).source
-        assert "outside the repository" in _text(app.screen, "#excerpt")
+        assert "folder link" in _text(app.screen, "#excerpt")
 
     run_app(app, scenario)
 
@@ -3648,14 +3648,14 @@ def test_a_configuration_that_is_not_an_object_still_reaches_the_menu(tmp_path, 
 
 def test_a_path_that_cannot_be_read_as_a_path_is_said_not_fatal(tmp_path, user_state, monkeypatch):
     """excerpt caught OSError only: a path read_start refuses with ValueError
-    (a NUL in it) raised. inside_repository refuses such a path first today;
+    (a NUL in it) raised. outside_reason refuses such a path first today;
     this keeps the reader from depending on it."""
     from adrpy_tui.ui import preview
 
     app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
 
     async def scenario(pilot):
-        monkeypatch.setattr(preview, "inside_repository", lambda root, path: True)
+        monkeypatch.setattr(preview, "outside_reason", lambda root, path: None)
         content, note = preview.excerpt(app, str(tmp_path / "a\x00.md"))
         assert note is None and content.startswith("`")
 
@@ -4048,7 +4048,9 @@ def test_the_log_browser_shows_the_files_adrpy_counts_as_strays(tmp_path, user_s
     async def scenario(pilot):
         app.push_screen(LogScreen())
         await settle(pilot)
-        assert sorted(path.relative_to(folder).as_posix() for path in app.screen._entries) == ["cycles.md", "sub/index.md"]
+        # adrpy compares its own pages' names as the file system does (os.path.normcase).
+        shown = [] if __import__("os").path.normcase("A") == "a" else ["cycles.md", "sub/index.md"]
+        assert sorted(path.relative_to(folder).as_posix() for path in app.screen._entries) == shown
 
     run_app(app, scenario)
 
@@ -4204,5 +4206,117 @@ def test_a_log_code_s_bare_file_name_is_previewed_in_the_log_folder(tmp_path, us
         await settle(pilot)
         app.screen.action_preview()
         assert [Path(p) for p in opened] == [tmp_path / "doc" / "decision-log" / "x.md"]
+
+    run_app(app, scenario)
+
+
+
+@pytest.mark.skipif(__import__("os").name != "nt", reason="Windows opens doc/adr. as doc/adr")
+def test_the_log_browser_does_not_take_the_decisions_folder_for_the_log(tmp_path, user_state):
+    """`folderlog: doc/adr.` is the decisions folder on Windows; adrpy refuses it
+    when it matters (folderadr-folderlog-alias-same-directory)."""
+    adr = tmp_path / "doc" / "adr"
+    adr.mkdir(parents=True)
+    (adr / "ADR0001V01R01-x.md").write_text("# x\n", encoding="utf-8")
+    client = FakeClient(answers={"config": {"success": True, "data": {
+        "config": {**REPO_CONFIG, "folderlog": "doc/adr."}, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert app.screen.query_one("#entries").option_count == 0
+        assert "decisions folder" in _text(app.screen, "#entries-page")
+
+    run_app(app, scenario)
+
+
+def test_the_log_browser_names_a_subfolder_it_cannot_list(tmp_path, user_state, monkeypatch):
+    import os
+
+    folder = tmp_path / "doc" / "decision-log"
+    (folder / "secret").mkdir(parents=True)
+    (folder / "2026-01-01--scope-note--a--top.md").write_text("# x\n", encoding="utf-8")
+    real = os.scandir
+
+    def scandir(path="."):
+        if os.path.normpath(str(path)) == os.path.normpath(str(folder / "secret")):
+            raise PermissionError(13, "Access is denied", str(path))
+        return real(path)
+
+    monkeypatch.setattr(os, "scandir", scandir)
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(LogScreen())
+        await settle(pilot)
+        assert len(app.screen._entries) == 1
+        assert "secret" in _text(app.screen, "#logs-unreadable")
+
+    run_app(app, scenario)
+
+
+def test_a_log_folder_reached_through_a_folder_link_is_said_to_be_so(tmp_path, user_state):
+    """ADR0006V02 refuses it, but the folder is inside: "outside the repository"
+    was untrue."""
+    real = tmp_path / "doc" / "real-log"
+    real.mkdir(parents=True)
+    (real / "2026-01-01--scope-note--a--x.md").write_text("# x\n", encoding="utf-8")
+    _link_folder(tmp_path / "doc" / "decision-log", real)
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert app.screen.query_one("#entries").option_count == 0
+        page = _text(app.screen, "#entries-page")
+        assert "folder link" in page and "outside the repository" not in page
+
+    run_app(app, scenario)
+
+
+
+def test_the_result_preview_opens_a_log_file_by_its_path_in_the_log_folder(tmp_path, user_state, monkeypatch):
+    """adrpy names a log file by its path in folderlog (`sub/notes.md`)."""
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.ui import result as result_module
+
+    opened = []
+    monkeypatch.setattr(result_module, "open_preview", lambda app, path: opened.append(path))
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("log", Result((), 1, False, code="log-directory-contains-unrecognized-file",
+                                                   data={"file": "sub/notes.md"})))
+        await settle(pilot)
+        app.screen.action_preview()
+        assert [Path(p) for p in opened] == [tmp_path / "doc" / "decision-log" / "sub" / "notes.md"]
+
+    run_app(app, scenario)
+
+
+
+def test_the_log_browser_shows_an_entry_of_a_folderlog_spelled_with_dots(tmp_path, user_state):
+    """The list holds the folder as it resolves; the highlighted entry's line
+    compared it with the folder as written, and a `..` in it ended the app."""
+    folder = tmp_path / "doc" / "decision-log"
+    folder.mkdir(parents=True)
+    (folder / "2026-01-01--scope-note--a--x.md").write_text("# x\n", encoding="utf-8")
+    client = FakeClient(answers={"config": {"success": True, "data": {
+        "config": {**REPO_CONFIG, "folderlog": "doc/x/../decision-log"}, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["log", "log.browse"])
+        assert "2026-01-01--scope-note--a--x.md" in _text(app.screen, "#logs-current")
+
+    run_app(app, scenario)
+
+
+def test_a_log_folder_not_created_yet_is_no_folder_that_cannot_be_read(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(LogScreen())
+        await settle(pilot)
+        assert _text(app.screen, "#logs-unreadable") == ""
 
     run_app(app, scenario)

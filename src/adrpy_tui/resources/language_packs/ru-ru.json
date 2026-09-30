@@ -309,6 +309,9 @@
   "logs.all_classifications": "Все классификации",
   "logs.count": "{shown} из {total} записей",
   "logs.empty": "В {folder} нет записей.",
+  "preview.link": "Не открыто: {path} доступен через ссылку на папку, по которой TUI не переходит.",
+  "logs.unreadable": "Не показаны, не читаются: {folders}.",
+  "logs.aliased": "Не показано: {path} является папкой решений ({folderadr}), содержит её или лежит в ней; adrpy не принимает её как журнал.",
   "column.date": "Дата",
   "column.classification": "Классификация",
   "column.slug": "Слаг"

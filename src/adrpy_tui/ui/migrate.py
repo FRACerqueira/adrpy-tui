@@ -4,7 +4,6 @@ showing what it reads; a preview of what adrpy reads from every file; then
 `config --migrationpattern` and `migrate`, the second only once the first
 succeeded."""
 
-import os
 from pathlib import Path
 
 from textual.binding import Binding
@@ -14,11 +13,11 @@ from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Swi
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import listed, repository_config, setting
-from adrpy_tui.core.files import inside_repository, markdown_files, same_name
+from adrpy_tui.core.files import markdown_files, repository_folder, same_name
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
-from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview, refusal
 from adrpy_tui.ui.running import CommandRunner
 
 
@@ -73,15 +72,12 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
             return
         settings = repository_config(config.data)
         self._current = setting(settings, "migrationpattern", "")
-        # Spelled as inside_repository reads it (abspath), so what is checked is what gets resolved.
-        folder = Path(os.path.abspath(os.path.normpath(self.app.repo / setting(settings, "folderadr", "doc/adr"))))
-        if not inside_repository(self.app.repo, folder):
-            await body.mount(Static(texts("preview.outside", path=visible(setting(settings, "folderadr", ""))),
+        # Spelled as adrpy spells explore's paths (case, trailing dots), never through a folder link.
+        folder, reason = repository_folder(self.app.repo, setting(settings, "folderadr", "doc/adr"))
+        if reason:
+            await body.mount(Static(refusal(self.app, reason, setting(settings, "folderadr", "")),
                                     classes="error", markup=False))
             return
-        # No folder link on the way (checked above, ADR0006V02), so resolving opens nothing
-        # else: it only spells the folder as adrpy spells explore's paths (case, trailing dots).
-        folder = folder.resolve()
         self._folder = folder
         with_header = {d["path"] for d in listed(explore.data) if d["header"]["is_valid"]}
         # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R02).

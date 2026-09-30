@@ -309,6 +309,9 @@
   "logs.all_classifications": "Alle Klassifikationen",
   "logs.count": "{shown} von {total} Einträgen",
   "logs.empty": "Keine Einträge in {folder}.",
+  "preview.link": "Nicht geöffnet: {path} wird über einen Ordnerlink erreicht, dem die TUI nicht folgt.",
+  "logs.unreadable": "Nicht aufgelistet, nicht lesbar: {folders}.",
+  "logs.aliased": "Nicht aufgelistet: {path} ist der Entscheidungsordner ({folderadr}), enthält ihn oder liegt darin; adrpy lehnt ihn als Log ab.",
   "column.date": "Datum",
   "column.classification": "Klassifikation",
   "column.slug": "Slug"
