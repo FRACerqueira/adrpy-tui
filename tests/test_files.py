@@ -189,3 +189,9 @@ def test_a_repository_folder_behind_a_link_or_outside_says_which(tmp_path):
     assert files.repository_folder(tmp_path, "doc/adr")[1] == "link"
     assert files.repository_folder(tmp_path, "../elsewhere")[1] == "outside"
     assert files.inside_repository(tmp_path, tmp_path / "doc" / "adr") is False
+
+
+def test_markdown_files_can_take_any_case_of_the_extension(tmp_path):
+    """adrpy reads the decision log's `.MD` as an entry on every system."""
+    (tmp_path / "a.MD").write_text("x", encoding="utf-8")
+    assert [p.name for p in files.markdown_files(tmp_path, any_case=True)] == ["a.MD"]

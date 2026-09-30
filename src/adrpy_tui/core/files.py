@@ -90,11 +90,12 @@ def is_file(path):
         return False
 
 
-def markdown_files(folder, recursive=True, unreadable=None):
+def markdown_files(folder, recursive=True, unreadable=None, any_case=False):
     """The .md files under `folder`, sorted, never entering a folder link
     (a junction to a parent would never end); `.md` compared as adrpy's scan
-    compares it (os.path.normcase). A folder that cannot be read lists
-    nothing, and is added to `unreadable` when given."""
+    compares it (os.path.normcase), or in any case (`any_case`: the decision
+    log, as adrpy reads it). A folder that cannot be read lists nothing, and
+    is added to `unreadable` when given."""
     found = []
 
     def failed(error):
@@ -113,7 +114,8 @@ def markdown_files(folder, recursive=True, unreadable=None):
             folders[:] = kept
         else:
             folders[:] = []
-        found += [Path(top) / name for name in names if os.path.normcase(name).endswith(".md")]
+        found += [Path(top) / name for name in names
+                  if (name.lower() if any_case else os.path.normcase(name)).endswith(".md")]
     return sorted(found)
 
 

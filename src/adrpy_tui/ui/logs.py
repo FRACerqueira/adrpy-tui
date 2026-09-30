@@ -9,7 +9,7 @@ from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, Select, Static
 
-from adrpy_tui.core.files import is_dir, markdown_files, repository_folder, same_name
+from adrpy_tui.core.files import is_dir, markdown_files, repository_folder
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
 from adrpy_tui.ui.explore import _cells
@@ -63,10 +63,10 @@ class LogScreen(AdrpyScreen):
             folder.is_relative_to(decisions) or decisions.is_relative_to(folder))
         self._folder = folder
         unreadable = []
-        # adrpy's own pages only, their names compared as its scan compares them: INDEX.md and
-        # CYCLES.md anywhere. Any other file blocks `adrpy log`, so it is shown.
-        self._entries = [path for path in markdown_files(folder, unreadable=unreadable)
-                         if not same_name(path.name, "INDEX.md", "CYCLES.md")] if not (reason or aliased) else []
+        # adrpy's own pages only, their names compared in any case as adrpy compares the log's:
+        # INDEX.md and CYCLES.md anywhere. Any other file blocks `adrpy log`, so it is shown.
+        self._entries = [path for path in markdown_files(folder, unreadable=unreadable, any_case=True)
+                         if path.name.lower() not in ("index.md", "cycles.md")] if not (reason or aliased) else []
         # A folder not created yet has no entries, as adrpy reads it; one that cannot be listed is named.
         if unreadable and is_dir(folder):
             self.query_one("#logs-unreadable", Static).update(texts("logs.unreadable", folders=", ".join(
