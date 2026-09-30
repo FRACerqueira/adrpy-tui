@@ -34,7 +34,9 @@ class MenuScreen(AdrpyScreen):
         if self.menu is MAIN_MENU and problem is not None:
             yield Static(texts("menu.repo_problem", detail=visible(problem.detail or problem.code or "")),
                          classes="error", markup=False)
-            yield Static(texts("menu.repo_problem_fix"), classes="info", markup=False)
+            # Only a config adrpy read but refused is repaired by hand (an empty one adrpy says to remove).
+            if str(problem.code or "").startswith("config-") and problem.code != "config-file-empty":
+                yield Static(texts("menu.repo_problem_fix"), classes="info", markup=False)
         if self.menu is MAIN_MENU:
             for warning in self.app.repo_warnings:
                 yield Static(visible(str(warning)), classes="warning", markup=False)

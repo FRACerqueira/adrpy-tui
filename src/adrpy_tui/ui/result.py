@@ -2,6 +2,7 @@
 adrpy's own explanation, shown as adrpy sent it (ADR0005V01)."""
 
 import json
+from pathlib import Path
 
 from textual.binding import Binding
 from textual.widgets import Button, Static
@@ -15,8 +16,20 @@ from adrpy_tui.ui.errors import ErrorList
 from adrpy_tui.ui.preview import open_preview
 
 
+def _plain(value):
+    """A value as a person reads it: a list item by item, a record field by
+    field, so a Windows path keeps its single backslashes; JSON below that."""
+    if isinstance(value, str):
+        return value
+    if value and isinstance(value, list) and all(isinstance(item, (str, dict)) for item in value):
+        return "; ".join(_plain(item) for item in value)
+    if value and isinstance(value, dict) and all(isinstance(item, str) or item is None for item in value.values()):
+        return ", ".join(f"{key}: {'null' if item is None else item}" for key, item in value.items())
+    return json.dumps(value, ensure_ascii=False)  # an empty list or record reads as [] or {}
+
+
 def _text(value):
-    return visible(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False))
+    return visible(_plain(value))
 
 
 def result_widgets(texts, result, success_text=None):
@@ -72,7 +85,19 @@ class ResultScreen(AdrpyScreen):
         errors = list(self.query(ErrorList).results(ErrorList))
         path = errors[0].highlighted_path() if errors else written
         if isinstance(path, str):
-            open_preview(self.app, path)
+            open_preview(self.app, self._where(path))
+
+    def _where(self, path):
+        """Some codes name a file by its name only: it is where adrpy looked,
+        the log folder for a log code, else the decisions folder; any other
+        relative path is the repository's. Decided without touching the disk:
+        open_preview's guard is the first to look."""
+        if Path(path).is_absolute():
+            return path
+        if len(Path(path).parts) > 1:
+            return str(self.app.repo / path)
+        folder = self.app.folderlog if str(self.result.code or "").startswith("log-") else self.app.folderadr
+        return str(self.app.repo / folder / path)
 
     def action_back(self):
         form = FORMS.get(self.command)

@@ -4088,3 +4088,121 @@ def test_the_migrate_preview_names_a_file_by_its_path_in_the_folder(tmp_path, us
     row_a = screen._preview_row({"file": str(tmp_path / "doc" / "adr" / "a" / "0001-x.md"), "number": 1, "version": 1, "title": "x"})
     row_b = screen._preview_row({"file": str(tmp_path / "doc" / "adr" / "b" / "0001-x.md"), "number": 1, "version": 1, "title": "x"})
     assert row_a != row_b and "a/0001-x.md" in row_a
+
+
+@pytest.mark.parametrize("code, advised", [("config-folderadr-not-relative", True), ("config-invalid-json", True),
+                                           ("config-file-empty", False), ("io-error", False), ("tui-timeout", False)])
+def test_the_repair_by_hand_advice_is_only_for_a_config_adrpy_reads_but_refuses(tmp_path, user_state, code, advised):
+    """A config whose content adrpy refuses is repaired by hand; an empty one
+    adrpy says to remove, and a failure to run or read says nothing about
+    the file's content."""
+    app = AdrpyTui(tmp_path, client=FakeClient(answers={"config": {"success": False, "code": code, "detail": "d"}}),
+                   user_state=user_state)
+
+    async def scenario(pilot):
+        assert (app.texts("menu.repo_problem_fix") in _all_text(app.screen)) is advised
+
+    run_app(app, scenario)
+
+
+def test_an_install_level_config_adrpy_cannot_read_can_be_replaced(tmp_path, user_state):
+    """--seed and --language replace the file without reading it, so the
+    editor offers them next to adrpy's refusal."""
+    client = FakeClient(answers={"installconfig": {"success": False, "code": "config-invalid-json", "detail": "broken"}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "install", "installconfig")
+        assert "broken" in _all_text(app.screen)
+        assert app.screen.query("#create")
+
+    run_app(app, scenario)
+
+
+def test_a_failure_s_paths_show_as_adrpy_wrote_them(tmp_path, user_state):
+    """A list of paths, or of records, reads as the paths themselves: never
+    with every Windows backslash doubled."""
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    first, second = r"C:\repo\doc\adr\0001-x.md", r"C:\repo\other\a.md"
+    result = Result((), 1, False, code="migration-write-failed", detail="1 of 1 file(s) failed to migrate.",
+                    data={"results": [{"file": first, "error": "denied"}], "adopted_files": [second]})
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("migrate", result))
+        await settle(pilot)
+        text = _all_text(app.screen)
+        assert first in text and second in text
+        assert "\\\\" not in text
+
+    run_app(app, scenario)
+
+
+def test_the_result_preview_opens_a_bare_file_name_in_the_decisions_folder(tmp_path, user_state, monkeypatch):
+    """Some codes name a file by its name only (file-already-exists): the
+    preview opens it where adrpy looked, not in the TUI's working folder."""
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.ui import result as result_module
+
+    folder = tmp_path / "doc" / "adr"
+    folder.mkdir(parents=True)
+    (folder / "ADR001V01-x.md").write_text("# x\n", encoding="utf-8")
+    opened = []
+    monkeypatch.setattr(result_module, "open_preview", lambda app, path: opened.append(path))
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("new", Result((), 1, False, code="file-already-exists", data={"file": "ADR001V01-x.md"})))
+        await settle(pilot)
+        app.screen.action_preview()
+        assert [Path(p) for p in opened] == [folder / "ADR001V01-x.md"]
+
+    run_app(app, scenario)
+
+
+
+def test_the_install_editor_offers_no_replacement_when_adrpy_could_not_even_run(tmp_path, user_state):
+    """A timeout says nothing of the file: a valid config must not sit next
+    to a button that replaces it whole."""
+    client = FakeClient(answers={"installconfig": {"success": False, "code": "tui-timeout", "detail": "t"}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "install", "installconfig")
+        assert not app.screen.query("#create")
+
+    run_app(app, scenario)
+
+
+def test_empty_values_and_nulls_in_data_still_show(tmp_path, user_state):
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    result = Result((), 1, False, code="interrupted", detail="d",
+                    data={"pending": [], "repair": {}, "applied": [{"file": "a.md", "note": None}]})
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("supersede", result))
+        await settle(pilot)
+        text = _all_text(app.screen)
+        assert "pending: []" in text and "repair: {}" in text and "note: null" in text
+
+    run_app(app, scenario)
+
+
+def test_a_log_code_s_bare_file_name_is_previewed_in_the_log_folder(tmp_path, user_state, monkeypatch):
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.ui import result as result_module
+
+    opened = []
+    monkeypatch.setattr(result_module, "open_preview", lambda app, path: opened.append(path))
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("log", Result((), 1, False, code="log-entry-already-exists", data={"file": "x.md"})))
+        await settle(pilot)
+        app.screen.action_preview()
+        assert [Path(p) for p in opened] == [tmp_path / "doc" / "decision-log" / "x.md"]
+
+    run_app(app, scenario)
