@@ -88,7 +88,7 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 ## Explore and validate (`sample`, `broken`)
 
 - [ ] Explore: the columns line up, in every language; the folder column
-      and the folder select show ADR003, which lives in `backend/`; a
+      and the folder select show ADR0003, which lives in `backend/`; a
       decision's detail shows its content and the actions its state allows,
       each opening its form with the decision chosen.
 - [ ] After an action, the detail and the list show the change.
