@@ -234,7 +234,8 @@ Main menu
 - The main menu names what it found at start-up and set aside: an adrpy-ai
   outside the range this adrpy-tui was validated with (ADR0003V01), a
   repository configuration that could not be read (with the advice to
-  repair `.adrpy.json` by hand), the warnings reading it raised, a saved key or
+  repair `.adrpy.json` by hand when adrpy refused its content), the
+  warnings reading it raised, a saved key or
   color that could not be used.
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
@@ -309,7 +310,8 @@ warning color; failure shows `detail` in the error color and, when present,
 `data.errors` in the `ErrorList` with its repair hints, and the rest of
 `data` (the files a count in the detail is about), a list item by item
 and a record field by field. The preview key opens the file the command
-wrote, or a file a failure names by its name only, where adrpy looked.
+wrote, the highlighted error's file, or a file a failure names by its
+name only, where adrpy looked.
 `Esc` goes back to where the form was opened from -- after a successful
 `init`, `config` or `migrate`, which change what the menus offer, to the
 main menu, rebuilt once the repository is read again.
