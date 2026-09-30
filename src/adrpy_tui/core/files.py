@@ -16,6 +16,12 @@ from pathlib import Path, PurePath
 _LINK_TAGS = (0xA000000C, 0xA0000003, 0xA000001D)
 
 
+
+def same_name(name, *names):
+    """Whether `name` is one of `names` as this system compares file names
+    (case-blind on Windows), as adrpy compares them."""
+    return os.path.normcase(name) in {os.path.normcase(other) for other in names}
+
 def _is_link(status):
     if stat.S_ISLNK(status.st_mode):
         return True

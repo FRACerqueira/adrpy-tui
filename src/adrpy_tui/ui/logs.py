@@ -1,5 +1,5 @@
 """The decision log, browsed: every entry under the decision-log folder
-(subfolders too, as adrpy reads them; the generated INDEX.md left out),
+(subfolders too, as adrpy reads them; its INDEX.md and CYCLES.md left out),
 with its date, classification, scope and slug read from its name; Enter or
 the preview key opens it."""
 
@@ -9,7 +9,7 @@ from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, Select, Static
 
-from adrpy_tui.core.files import inside_repository, markdown_files
+from adrpy_tui.core.files import inside_repository, markdown_files, same_name
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
 from adrpy_tui.ui.explore import _cells
@@ -56,7 +56,9 @@ class LogScreen(AdrpyScreen):
         # A configuration naming a folder outside the repository (adrpy reads
         # one back from a hand-edited file) lists nothing there.
         inside = inside_repository(self.app.repo, folder)
-        self._entries = [path for path in markdown_files(folder) if path.name != "INDEX.md"] if inside else []
+        # The log's own pages, as adrpy leaves them out.
+        self._entries = [path for path in markdown_files(folder)
+                         if not same_name(path.name, "INDEX.md", "CYCLES.md")] if inside else []
         classifications = sorted({entry_parts(path.name)[1] for path in self._entries} - {""})
         self.query_one("#logs-classification", Select).set_options(
             [(self.app.texts("logs.all_classifications"), ALL), *((Text(visible(c)), c) for c in classifications)])

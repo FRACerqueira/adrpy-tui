@@ -4,6 +4,7 @@ showing what it reads; a preview of what adrpy reads from every file; then
 `config --migrationpattern` and `migrate`, the second only once the first
 succeeded."""
 
+import os
 from pathlib import Path
 
 from textual.binding import Binding
@@ -13,7 +14,7 @@ from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Swi
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import listed, repository_config, setting
-from adrpy_tui.core.files import inside_repository, markdown_files
+from adrpy_tui.core.files import inside_repository, markdown_files, same_name
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
@@ -63,21 +64,24 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         texts, body = self.app.texts, self.query_one("#body")
         await body.remove_children()
         await body.mount(Static(texts("form.migrate"), classes="title"))
+        for warning in dict.fromkeys([*config.warnings, *explore.warnings]):
+            await body.mount(Static(visible(str(warning)), classes="warning", markup=False))
         failed = next((result for result in (config, explore) if not result.success), None)
         if failed:
             await body.mount(Static(visible(failed.detail or failed.code or ""), classes="error", markup=False))
             return
         settings = repository_config(config.data)
         self._current = setting(settings, "migrationpattern", "")
-        folder = self.app.repo / setting(settings, "folderadr", "doc/adr")
+        # Normalized like explore's paths: adrpy accepts a folderadr with . and .. segments.
+        folder = Path(os.path.normpath(self.app.repo / setting(settings, "folderadr", "doc/adr")))
         if not inside_repository(self.app.repo, folder):
             await body.mount(Static(texts("preview.outside", path=visible(setting(settings, "folderadr", ""))),
                                     classes="error", markup=False))
             return
         with_header = {d["path"] for d in listed(explore.data) if d["header"]["is_valid"]}
-        # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R01).
+        # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R02).
         self._files = [p for p in markdown_files(folder, recursive=False)
-                       if str(p) not in with_header and p.name != "INDEX.md"]
+                       if str(p) not in with_header and not same_name(p.name, "INDEX.md")]
         if not self._files:
             await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))
             return

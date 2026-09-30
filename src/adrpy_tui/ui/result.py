@@ -35,6 +35,10 @@ def result_widgets(texts, result, success_text=None):
         errors = result.data.get("errors")
         if isinstance(errors, list) and errors and all(isinstance(error, dict) for error in errors):
             yield ErrorList(errors)
+        # The rest of `data` is what names the files a failure is about (the detail may give only a count).
+        for key, value in result.data.items():
+            if key not in ("errors", "warnings"):
+                yield Static(f"{key}: {_text(value)}", classes="error", markup=False)
     if result.warnings:
         yield Static(texts("result.warnings"), classes="warning title")
         for warning in result.warnings:

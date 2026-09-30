@@ -3815,7 +3815,7 @@ def test_the_config_editor_marks_as_guarded_the_fields_adrpy_guards():
 
 
 def test_migrate_never_offers_the_decisions_index(tmp_path, user_state):
-    """adrpy writes an INDEX.md in the decisions folder (its ADR0013V01R01):
+    """adrpy writes an INDEX.md in the decisions folder (its ADR0013V01R02):
     a page it generates, never a file to migrate."""
     folder = tmp_path / "doc" / "adr"
     folder.mkdir(parents=True)
@@ -3831,3 +3831,159 @@ def test_migrate_never_offers_the_decisions_index(tmp_path, user_state):
         assert [path.name for path in app.screen._files] == ["0001-legacy.md"]
 
     run_app(app, scenario)
+
+
+
+def _all_text(screen):
+    return " ".join(str(static.render()) for static in screen.query(Static).results(Static))
+
+
+RETIRED = "activeplugins, disableplugins: no longer config field(s); ignored"
+
+
+def test_a_failure_shows_the_data_that_names_its_files(tmp_path, user_state):
+    """A failure's `data` beyond `errors` is what names its files: the
+    detail often gives only a count."""
+    from adrpy_tui.core.client import Result
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    result = Result((), 1, False, code="folderadr-change-would-adopt-unrelated-files",
+                    detail="2 file(s) already there would silently become recognized decisions.",
+                    data={"adopted_files": ["other/ADR0001V01R01-x.md", "other/ADR0002V01R01-y.md"]})
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("config", result))
+        await settle(pilot)
+        assert "other/ADR0001V01R01-x.md" in _all_text(app.screen)
+
+    run_app(app, scenario)
+
+
+def test_the_config_read_warning_is_on_the_main_menu(tmp_path, user_state):
+    client = FakeClient(answers={"config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": [RETIRED]}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        assert RETIRED in _all_text(app.screen)
+
+    run_app(app, scenario)
+
+
+def test_the_config_read_warning_is_on_the_config_editor(tmp_path, user_state):
+    client = FakeClient(answers={"config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": [RETIRED]}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_config(pilot)
+        assert RETIRED in _all_text(app.screen)
+
+    run_app(app, scenario)
+
+
+def test_the_config_and_explore_warnings_are_on_the_migrate_screen(tmp_path, user_state):
+    folder = tmp_path / "doc" / "adr"
+    folder.mkdir(parents=True)
+    (folder / "0001-legacy.md").write_text("# x\n", encoding="utf-8")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": [RETIRED]}},
+        "explore": {"success": True, "data": {"decisions": [], "warnings": ["1 .md file(s) are not recognized"]}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        text = _all_text(app.screen)
+        assert RETIRED in text and "are not recognized" in text
+
+    run_app(app, scenario)
+
+
+def test_migrate_compares_a_folderadr_with_dot_segments_normalized(tmp_path, user_state):
+    """A folderadr adrpy accepts (`doc/./x/../adr`) names the same folder as
+    explore's paths: a decision with a header is never offered."""
+    folder = tmp_path / "doc" / "adr"
+    folder.mkdir(parents=True)
+    (tmp_path / "doc" / "x").mkdir()
+    (folder / "0007-legacy.md").write_text("# x\n", encoding="utf-8")
+    decision = folder / "ADR0001V01R01-t.md"
+    decision.write_text("# t\n", encoding="utf-8")
+    config = {**REPO_CONFIG, "folderadr": "doc/./x/../adr"}
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": config, "warnings": []}},
+        "explore": {"success": True, "data": {"warnings": [], "decisions": [
+            {"filename": decision.name, "path": str(decision), "header": {"is_valid": True}}]}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert [path.name for path in app.screen._files] == ["0007-legacy.md"]
+
+    run_app(app, scenario)
+
+
+def test_the_log_browser_lists_neither_generated_page_whatever_its_case(tmp_path, user_state):
+    """INDEX.md and CYCLES.md are the log's own pages (adrpy leaves both
+    out), and on Windows a name differing only in case is the same file."""
+    folder = tmp_path / "doc" / "decision-log"
+    folder.mkdir(parents=True)
+    (folder / "2026-09-18--scope-note--lock--a-note.md").write_text("# A note\n", encoding="utf-8")
+    (folder / "CYCLES.md").write_text("# Cycles\n", encoding="utf-8")
+    (folder / ("index.md" if __import__("sys").platform == "win32" else "INDEX.md")).write_text("# Index\n", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(LogScreen())
+        await settle(pilot)
+        assert [path.name for path in app.screen._entries] == ["2026-09-18--scope-note--lock--a-note.md"]
+
+    run_app(app, scenario)
+
+
+def test_the_install_level_editor_marks_no_field_guarded(tmp_path, user_state):
+    """installconfig guards nothing: only the repository's own editor says
+    a field is guarded."""
+    client = FakeClient(answers={"installconfig": {"success": True, "data": {
+        "configured": True, "config": REPO_CONFIG, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_group_item(pilot, "install", "installconfig")
+        fields = app.screen.query_one("#fields", OptionList)
+        fields.highlighted = fields.get_option_index("statusnew")
+        await pilot.pause()
+        assert "Guarded" not in _text(app.screen, "#field-description")
+
+    run_app(app, scenario)
+
+
+def test_a_config_that_cannot_be_read_says_to_fix_it_by_hand(tmp_path, user_state):
+    """Every item that needs a repository is off, the config editor too: the
+    menu says the file has to be repaired by hand."""
+    answers = {"config": {"success": False, "code": "config-folderadr-not-relative", "detail": "folderadr must be relative"}}
+    app = AdrpyTui(tmp_path, client=FakeClient(answers=answers), user_state=user_state)
+
+    async def scenario(pilot):
+        assert app.texts("menu.repo_problem_fix") in _all_text(app.screen)
+
+    run_app(app, scenario)
+
+
+def test_the_config_editor_fields_are_adrpy_s_own():
+    """Every field, choice and length limit the editor offers is adrpy's
+    own schema: none missing, none retired, none drifted. The editor only
+    guides; adrpy's refusal stays the final word."""
+    from adrpy.core import config as schema
+
+    from adrpy_tui.core.config_fields import CONFIG_FIELDS
+
+    by_flag = {field.flag: field for field in CONFIG_FIELDS}
+    assert set(by_flag) == set(schema.ALL_FIELDS)
+    for flag, (low, high) in schema.INT_FIELD_BOUNDS.items():
+        assert by_flag[flag].choices == tuple(str(n) for n in range(low, high + 1)), flag
+    assert by_flag["separator"].choices == schema.VALID_SEPARATORS
+    assert by_flag["casetransform"].choices == schema.VALID_CASE_TRANSFORMS
+    limits = {"folderadr": schema.FOLDERADR_MAX_LENGTH, "folderlog": schema.FOLDERLOG_MAX_LENGTH,
+              "prefix": schema.PREFIX_MAX_LENGTH, "headerdisclaimer": schema.HEADER_DISCLAIMER_MAX_LENGTH,
+              "template": schema.TEMPLATE_MAX_LENGTH,
+              **{flag: schema.STATUS_LABEL_MAX_LENGTH for flag in ("statusnew", "statusacc", "statusrej", "statussup")},
+              **{flag: schema.HEADER_LABEL_MAX_LENGTH for flag in schema._HEADER_LABEL_FIELDS_MAX_40}}
+    assert {flag: by_flag[flag].max_length for flag in limits} == limits

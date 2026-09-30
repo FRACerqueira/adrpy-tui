@@ -127,6 +127,8 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         await body.remove_children()
         texts = self.app.texts
         await body.mount(Static(texts(f"config.title.{self.command}"), classes="title"))
+        for warning in result.warnings:
+            await body.mount(Static(visible(str(warning)), classes="warning", markup=False))
         if not result.success:
             await body.mount(Static(visible(result.detail or result.code or ""), classes="error", markup=False))
             return
@@ -158,7 +160,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
 
     def _description(self, field):
         description = visible(self._descriptions.get(field.flag, ""))
-        if field.guarded:
+        if field.guarded and not self._is_install:  # installconfig guards nothing
             description = f"{description}\n{self.app.texts('config.guarded')}".strip()
         return description
 

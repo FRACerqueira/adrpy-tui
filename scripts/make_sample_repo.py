@@ -89,7 +89,7 @@ def build_sample(client, repo, language):
     # ^ Superseded, and its successor Proposed
     revised = _new(client, repo, "Registrar em JSON", "backend", "observabilidade", "2026-01-09")
     _run(client, "approve", "--file", revised, "--refdate", "2026-01-13")
-    _run(client, "revise", "--file", revised, "--refdate", "2026-02-02")                            # R01 Proposed
+    _run(client, "revise", "--file", revised, "--refdate", "2026-02-02")                            # R02 Proposed
     versioned = _new(client, repo, "Publicar no PyPI", "packaging", "distribuicao", "2026-01-10")
     _run(client, "approve", "--file", versioned, "--refdate", "2026-01-14")
     _run(client, "version", "--file", versioned, "--refdate", "2026-02-03")                         # V02 Proposed
