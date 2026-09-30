@@ -307,11 +307,12 @@ decision renamed or deleted meanwhile is said to be gone.
 Success shows what adrpy did in the result color and any `warnings` in the
 warning color; failure shows `detail` in the error color and, when present,
 `data.errors` in the `ErrorList` with its repair hints, and the rest of
-`data` (the files a count in the detail is about). The preview key
-opens the file the command wrote; `Esc` goes back to the screen the
-command ran from -- after a successful `init`, `config` or `migrate`,
-which change what the menus offer, the repository is read again and the
-menus rebuilt.
+`data` (the files a count in the detail is about), a list item by item
+and a record field by field. The preview key opens the file the command
+wrote, or a file a failure names by its name only, where adrpy looked.
+`Esc` goes back to where the form was opened from -- after a successful
+`init`, `config` or `migrate`, which change what the menus offer, to the
+main menu, rebuilt once the repository is read again.
 
 ---
 
