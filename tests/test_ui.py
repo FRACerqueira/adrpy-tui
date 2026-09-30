@@ -3987,3 +3987,104 @@ def test_the_config_editor_fields_are_adrpy_s_own():
               **{flag: schema.STATUS_LABEL_MAX_LENGTH for flag in ("statusnew", "statusacc", "statusrej", "statussup")},
               **{flag: schema.HEADER_LABEL_MAX_LENGTH for flag in schema._HEADER_LABEL_FIELDS_MAX_40}}
     assert {flag: by_flag[flag].max_length for flag in limits} == limits
+
+
+def test_migrate_offers_legacy_files_in_subfolders(tmp_path, user_state):
+    """adrpy's migrate reads the whole decisions folder: the screen lists
+    what it would rewrite, subfolders too, by their path in the folder."""
+    folder = tmp_path / "doc" / "adr"
+    (folder / "sub").mkdir(parents=True)
+    (folder / "0001-top.md").write_text("# x\n", encoding="utf-8")
+    (folder / "sub" / "0002-nested.md").write_text("# y\n", encoding="utf-8")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [], "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert sorted(path.name for path in app.screen._files) == ["0001-top.md", "0002-nested.md"]
+        assert "sub/0002-nested.md" in _rows(app.screen.query_one("#files", OptionList))
+
+    run_app(app, scenario)
+
+
+@pytest.mark.skipif(__import__("sys").platform != "win32", reason="case-blind and trailing-dot names are Windows'")
+@pytest.mark.parametrize("folderadr", ["Doc/ADR", "doc/adr."])
+def test_migrate_compares_the_folder_as_adrpy_resolves_it(tmp_path, user_state, folderadr):
+    """adrpy reports resolved paths: a folderadr naming the same folder by
+    another case, or with a trailing dot, still matches them."""
+    folder = tmp_path / "doc" / "adr"
+    folder.mkdir(parents=True)
+    (folder / "0007-legacy.md").write_text("# x\n", encoding="utf-8")
+    decision = folder / "ADR0001V01R01-t.md"
+    decision.write_text("# t\n", encoding="utf-8")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": {**REPO_CONFIG, "folderadr": folderadr}, "warnings": []}},
+        "explore": {"success": True, "data": {"warnings": [], "decisions": [
+            {"filename": decision.name, "path": str(decision.resolve()), "header": {"is_valid": True}}]}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert [path.name for path in app.screen._files] == ["0007-legacy.md"]
+
+    run_app(app, scenario)
+
+
+def test_the_log_browser_shows_the_files_adrpy_counts_as_strays(tmp_path, user_state):
+    """adrpy leaves out only its own pages: INDEX.md at the log's root
+    (case-blind where names are), and INDEX.md or CYCLES.md by their exact
+    name anywhere. A cycles.md or a sub/index.md is a file that blocks
+    `adrpy log`, so the browser must show it."""
+    folder = tmp_path / "doc" / "decision-log"
+    (folder / "sub").mkdir(parents=True)
+    (folder / "INDEX.md").write_text("# Index\n", encoding="utf-8")
+    (folder / "sub" / "CYCLES.md").write_text("# Cycles\n", encoding="utf-8")
+    (folder / "cycles.md").write_text("# lower\n", encoding="utf-8")
+    (folder / "sub" / "index.md").write_text("# lower\n", encoding="utf-8")
+    app = AdrpyTui(tmp_path, client=_config_client(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(LogScreen())
+        await settle(pilot)
+        assert sorted(path.relative_to(folder).as_posix() for path in app.screen._entries) == ["cycles.md", "sub/index.md"]
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("linked", ["doc/adr", "doc"])
+def test_migrate_never_follows_a_folderadr_that_is_or_sits_under_a_folder_link(tmp_path, user_state, linked):
+    """ADR0006V02: a folder link on the way is not followed, and the path is
+    never resolved first (resolving opens the target): the screen says the
+    folder is outside and lists nothing."""
+    repo = tmp_path / "repo"
+    real = repo / "real"  # inside the repository: resolving would hide the link and pass
+    (real / "adr").mkdir(parents=True)
+    (real / "adr" / "0001-a.md").write_text("# a\n", encoding="utf-8")
+    if linked == "doc/adr":
+        (repo / "doc").mkdir(parents=True)
+        _link_folder(repo / "doc" / "adr", real / "adr")
+    else:
+        _link_folder(repo / "doc", real)
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": REPO_CONFIG, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": [], "warnings": []}}})
+    app = AdrpyTui(repo, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["repository", "repository.migrate"])
+        assert app.screen._files == []
+
+    run_app(app, scenario)
+
+
+def test_the_migrate_preview_names_a_file_by_its_path_in_the_folder(tmp_path, user_state):
+    """Two files of the same name in two subfolders are two rows."""
+    from adrpy_tui.ui.migrate import MigrateScreen
+
+    screen = MigrateScreen()
+    screen._folder = tmp_path / "doc" / "adr"
+    row_a = screen._preview_row({"file": str(tmp_path / "doc" / "adr" / "a" / "0001-x.md"), "number": 1, "version": 1, "title": "x"})
+    row_b = screen._preview_row({"file": str(tmp_path / "doc" / "adr" / "b" / "0001-x.md"), "number": 1, "version": 1, "title": "x"})
+    assert row_a != row_b and "a/0001-x.md" in row_a

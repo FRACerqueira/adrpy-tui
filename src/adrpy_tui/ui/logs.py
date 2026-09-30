@@ -56,9 +56,11 @@ class LogScreen(AdrpyScreen):
         # A configuration naming a folder outside the repository (adrpy reads
         # one back from a hand-edited file) lists nothing there.
         inside = inside_repository(self.app.repo, folder)
-        # The log's own pages, as adrpy leaves them out.
+        # adrpy's own pages only: INDEX.md at the root as its scan compares names, and INDEX.md or
+        # CYCLES.md by their exact name anywhere. Any other file blocks `adrpy log`, so it is shown.
         self._entries = [path for path in markdown_files(folder)
-                         if not same_name(path.name, "INDEX.md", "CYCLES.md")] if inside else []
+                         if path.name not in ("INDEX.md", "CYCLES.md")
+                         and not (path.parent == folder and same_name(path.name, "INDEX.md"))] if inside else []
         classifications = sorted({entry_parts(path.name)[1] for path in self._entries} - {""})
         self.query_one("#logs-classification", Select).set_options(
             [(self.app.texts("logs.all_classifications"), ALL), *((Text(visible(c)), c) for c in classifications)])

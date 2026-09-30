@@ -39,6 +39,7 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
     def __init__(self):
         super().__init__("migrate")
         self._files = []
+        self._folder = None
         self._sample = ""
         self._current = ""  # the repository's own migrationpattern
 
@@ -72,21 +73,27 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
             return
         settings = repository_config(config.data)
         self._current = setting(settings, "migrationpattern", "")
-        # Normalized like explore's paths: adrpy accepts a folderadr with . and .. segments.
-        folder = Path(os.path.normpath(self.app.repo / setting(settings, "folderadr", "doc/adr")))
+        # Spelled as inside_repository reads it (abspath), so what is checked is what gets resolved.
+        folder = Path(os.path.abspath(os.path.normpath(self.app.repo / setting(settings, "folderadr", "doc/adr"))))
         if not inside_repository(self.app.repo, folder):
             await body.mount(Static(texts("preview.outside", path=visible(setting(settings, "folderadr", ""))),
                                     classes="error", markup=False))
             return
+        # No folder link on the way (checked above, ADR0006V02), so resolving opens nothing
+        # else: it only spells the folder as adrpy spells explore's paths (case, trailing dots).
+        folder = folder.resolve()
+        self._folder = folder
         with_header = {d["path"] for d in listed(explore.data) if d["header"]["is_valid"]}
         # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R02).
-        self._files = [p for p in markdown_files(folder, recursive=False)
-                       if str(p) not in with_header and not same_name(p.name, "INDEX.md")]
+        # The whole folder, as adrpy's migrate reads it; only the root INDEX.md is its own page.
+        self._files = [p for p in markdown_files(folder)
+                       if str(p) not in with_header and not (p.parent == folder and same_name(p.name, "INDEX.md"))]
         if not self._files:
             await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))
             return
         await body.mount(Static(texts("migrate.files"), classes="title"))
-        await body.mount(PagedList(*(row(visible(p.name), id=str(i)) for i, p in enumerate(self._files)),
+        await body.mount(PagedList(*(row(visible(p.relative_to(folder).as_posix()), id=str(i))
+                                     for i, p in enumerate(self._files)),
                                    list_id="files"))
         await body.mount(Static("", id="sample", classes="info", markup=False))
         await body.mount_all(self._part_rows())
@@ -196,9 +203,12 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         for warning in result.warnings:
             await area.mount(Static(visible(str(warning)), classes="warning", markup=False))
 
-    @staticmethod
-    def _preview_row(entry):
-        name = Path(str(entry.get("file", "")).replace("\\", "/")).name
+    def _preview_row(self, entry):
+        path = Path(str(entry.get("file", "")))
+        try:
+            name = path.relative_to(self._folder).as_posix()  # two subfolders may hold the same name
+        except (TypeError, ValueError):
+            name = path.name
         return visible(f"{name}  ·  N {entry.get('number')}  ·  V {entry.get('version')}  ·  {entry.get('title')}")
 
     def _commands(self):
