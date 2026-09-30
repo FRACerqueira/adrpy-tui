@@ -55,6 +55,7 @@ class AdrpyTui(App):
         # A failed read of the repository's config other than "there is
         # none", shown on the main menu.
         self.repo_problem = None
+        self.repo_warnings = []
         # An adrpy-ai outside the range this adrpy-tui was validated with,
         # (found, range), shown on the main menu (ADR0003V01).
         self.adrpy_outside_range = versions.adrpy_outside_range()
@@ -227,6 +228,7 @@ class AdrpyTui(App):
         self.folderadr = decisions.setting(config, "folderadr", "doc/adr")
         self.folderlog = decisions.setting(config, "folderlog", "doc/decision-log")
         self.repo_problem = None if result.success or result.code == "config-not-found" else result
+        self.repo_warnings = list(result.warnings)
         self.switch_screen(MenuScreen())
 
     def open_item(self, item):

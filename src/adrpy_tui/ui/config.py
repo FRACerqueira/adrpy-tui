@@ -127,8 +127,14 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         await body.remove_children()
         texts = self.app.texts
         await body.mount(Static(texts(f"config.title.{self.command}"), classes="title"))
+        for warning in result.warnings:
+            await body.mount(Static(visible(str(warning)), classes="warning", markup=False))
         if not result.success:
             await body.mount(Static(visible(result.detail or result.code or ""), classes="error", markup=False))
+            # --seed and --language replace the file without reading it: offered only when
+            # adrpy refused its content, never after a failure to run or to read.
+            if self._is_install and str(result.code or "").startswith("config-"):
+                await body.mount_all(self._create_widgets(missing=False))
             return
         if self._is_install and not result.data.get("configured"):
             await body.mount_all(self._create_widgets())
@@ -158,7 +164,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
 
     def _description(self, field):
         description = visible(self._descriptions.get(field.flag, ""))
-        if field.guarded:
+        if field.guarded and not self._is_install:  # installconfig guards nothing
             description = f"{description}\n{self.app.texts('config.guarded')}".strip()
         return description
 
@@ -223,9 +229,10 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
 
     # An install-level config that does not exist yet --------------------
 
-    def _create_widgets(self):
+    def _create_widgets(self, missing=True):
         texts = self.app.texts
-        yield Static(texts("config.install_missing"), id="install-missing", classes="info")
+        if missing:
+            yield Static(texts("config.install_missing"), id="install-missing", classes="info")
         yield RadioSet(RadioButton(texts("choice.source.language"), value=True, id="create-language"),
                        RadioButton(texts("choice.source.seed"), id="create-seed"), id="create-source")
         yield Select([(i18n.load(code)("language.name"), code) for code in i18n.LANGUAGES],

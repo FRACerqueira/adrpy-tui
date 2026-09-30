@@ -2,6 +2,7 @@
 adrpy's own explanation, shown as adrpy sent it (ADR0005V01)."""
 
 import json
+from pathlib import Path
 
 from textual.binding import Binding
 from textual.widgets import Button, Static
@@ -15,8 +16,20 @@ from adrpy_tui.ui.errors import ErrorList
 from adrpy_tui.ui.preview import open_preview
 
 
+def _plain(value):
+    """A value as a person reads it: a list item by item, a record field by
+    field, so a Windows path keeps its single backslashes; JSON below that."""
+    if isinstance(value, str):
+        return value
+    if value and isinstance(value, list) and all(isinstance(item, (str, dict)) for item in value):
+        return "; ".join(_plain(item) for item in value)
+    if value and isinstance(value, dict) and all(isinstance(item, str) or item is None for item in value.values()):
+        return ", ".join(f"{key}: {'null' if item is None else item}" for key, item in value.items())
+    return json.dumps(value, ensure_ascii=False)  # an empty list or record reads as [] or {}
+
+
 def _text(value):
-    return visible(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False))
+    return visible(_plain(value))
 
 
 def result_widgets(texts, result, success_text=None):
@@ -35,6 +48,10 @@ def result_widgets(texts, result, success_text=None):
         errors = result.data.get("errors")
         if isinstance(errors, list) and errors and all(isinstance(error, dict) for error in errors):
             yield ErrorList(errors)
+        # The rest of `data` is what names the files a failure is about (the detail may give only a count).
+        for key, value in result.data.items():
+            if key not in ("errors", "warnings"):
+                yield Static(f"{key}: {_text(value)}", classes="error", markup=False)
     if result.warnings:
         yield Static(texts("result.warnings"), classes="warning title")
         for warning in result.warnings:
@@ -68,7 +85,20 @@ class ResultScreen(AdrpyScreen):
         errors = list(self.query(ErrorList).results(ErrorList))
         path = errors[0].highlighted_path() if errors else written
         if isinstance(path, str):
-            open_preview(self.app, path)
+            open_preview(self.app, self._where(path))
+
+    def _where(self, path):
+        """A log code names a file by its path in the log folder; another code
+        by its name only in the decisions folder, else by a path in the
+        repository. Decided without touching the disk: open_preview's guard
+        is the first to look."""
+        if Path(path).is_absolute():
+            return path
+        if str(self.result.code or "").startswith("log-"):
+            return str(self.app.repo / self.app.folderlog / path)
+        if len(Path(path).parts) > 1:
+            return str(self.app.repo / path)
+        return str(self.app.repo / self.app.folderadr / path)
 
     def action_back(self):
         form = FORMS.get(self.command)

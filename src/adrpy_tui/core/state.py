@@ -1,5 +1,5 @@
 """Per-user state: the interface language, the appearance preset, the
-colors customized on top of it, and the last item selected in each menu.
+colors customized on top of it, the changed keys, and the last item selected in each menu.
 
 A file that can't be read starts empty, and one that can't be written is
 skipped, without interrupting the person: losing it only means choosing the

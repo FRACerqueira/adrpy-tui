@@ -13,11 +13,11 @@ from textual.widgets import Button, Label, LoadingIndicator, Select, Static, Swi
 from adrpy_tui.core.text import printable, visible
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import listed, repository_config, setting
-from adrpy_tui.core.files import inside_repository, markdown_files
+from adrpy_tui.core.files import markdown_files, repository_folder, same_name
 from adrpy_tui.core.migration import PARTS, REQUIRED, Part, build, parse, propose, read
 from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
-from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
+from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview, refusal
 from adrpy_tui.ui.running import CommandRunner
 
 
@@ -38,6 +38,7 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
     def __init__(self):
         super().__init__("migrate")
         self._files = []
+        self._folder = None
         self._sample = ""
         self._current = ""  # the repository's own migrationpattern
 
@@ -63,26 +64,32 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         texts, body = self.app.texts, self.query_one("#body")
         await body.remove_children()
         await body.mount(Static(texts("form.migrate"), classes="title"))
+        for warning in dict.fromkeys([*config.warnings, *explore.warnings]):
+            await body.mount(Static(visible(str(warning)), classes="warning", markup=False))
         failed = next((result for result in (config, explore) if not result.success), None)
         if failed:
             await body.mount(Static(visible(failed.detail or failed.code or ""), classes="error", markup=False))
             return
         settings = repository_config(config.data)
         self._current = setting(settings, "migrationpattern", "")
-        folder = self.app.repo / setting(settings, "folderadr", "doc/adr")
-        if not inside_repository(self.app.repo, folder):
-            await body.mount(Static(texts("preview.outside", path=visible(setting(settings, "folderadr", ""))),
+        # Spelled as adrpy spells explore's paths (case, trailing dots), never through a folder link.
+        folder, reason = repository_folder(self.app.repo, setting(settings, "folderadr", "doc/adr"))
+        if reason:
+            await body.mount(Static(refusal(self.app, reason, setting(settings, "folderadr", "")),
                                     classes="error", markup=False))
             return
+        self._folder = folder
         with_header = {d["path"] for d in listed(explore.data) if d["header"]["is_valid"]}
-        # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R01).
-        self._files = [p for p in markdown_files(folder, recursive=False)
-                       if str(p) not in with_header and p.name != "INDEX.md"]
+        # INDEX.md is the page adrpy generates in the decisions folder (adrpy-ai ADR0013V01R02).
+        # The whole folder, as adrpy's migrate reads it; only the root INDEX.md is its own page.
+        self._files = [p for p in markdown_files(folder)
+                       if str(p) not in with_header and not (p.parent == folder and same_name(p.name, "INDEX.md"))]
         if not self._files:
             await body.mount(Static(texts("migrate.none", folder=visible(str(folder))), classes="info", markup=False))
             return
         await body.mount(Static(texts("migrate.files"), classes="title"))
-        await body.mount(PagedList(*(row(visible(p.name), id=str(i)) for i, p in enumerate(self._files)),
+        await body.mount(PagedList(*(row(visible(p.relative_to(folder).as_posix()), id=str(i))
+                                     for i, p in enumerate(self._files)),
                                    list_id="files"))
         await body.mount(Static("", id="sample", classes="info", markup=False))
         await body.mount_all(self._part_rows())
@@ -192,9 +199,12 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         for warning in result.warnings:
             await area.mount(Static(visible(str(warning)), classes="warning", markup=False))
 
-    @staticmethod
-    def _preview_row(entry):
-        name = Path(str(entry.get("file", "")).replace("\\", "/")).name
+    def _preview_row(self, entry):
+        path = Path(str(entry.get("file", "")))
+        try:
+            name = path.relative_to(self._folder).as_posix()  # two subfolders may hold the same name
+        except (TypeError, ValueError):
+            name = path.name
         return visible(f"{name}  ·  N {entry.get('number')}  ·  V {entry.get('version')}  ·  {entry.get('title')}")
 
     def _commands(self):

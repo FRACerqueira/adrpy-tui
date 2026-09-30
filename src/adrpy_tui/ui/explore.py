@@ -11,6 +11,7 @@ from textual.binding import Binding
 from textual.widgets import Input, LoadingIndicator, Markdown, Select, Static
 
 from adrpy_tui.core.decisions import folder_of, listed, state
+from adrpy_tui.core.files import repository_folder
 from adrpy_tui.core.registry import commands_taking
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
@@ -89,7 +90,7 @@ class ExploreScreen(AdrpyScreen):
                  for errors in [_errors_of(result.data.get("consistency"))] if errors]
         notes += [visible(str(warning)) for warning in result.warnings]
         self.query_one("#explore-notes", Static).update("\n".join(notes))
-        root = self.app.repo / self.app.folderadr
+        root = repository_folder(self.app.repo, self.app.folderadr)[0]
         self._folders = {decision["path"]: folder_of(decision["path"], root) for decision in self._decisions}
         chosen = self.query_one("#explore-folder", Select)
         keep = chosen.value

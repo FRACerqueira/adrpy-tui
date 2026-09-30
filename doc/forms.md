@@ -233,8 +233,10 @@ Main menu
 - The last selected item of each menu is remembered across sessions.
 - The main menu names what it found at start-up and set aside: an adrpy-ai
   outside the range this adrpy-tui was validated with (ADR0003V01), a
-  repository configuration that could not be read, a saved key or color
-  that could not be used.
+  repository configuration that could not be read (with the advice to
+  repair `.adrpy.json` by hand when adrpy refused its content), the
+  warnings reading it raised, a saved key or
+  color that could not be used.
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
 - "Change repository" takes a folder's path, typed or chosen in a tree of
@@ -262,8 +264,8 @@ from `explore`.
 | `init` | the current repository only (another folder goes through "Change repository") · the config's source, a `RadioSet`: adrpy's defaults in a language (a `Select`, preselected with the UI language), the default (the install-level config, or English when there is none), or a config file (a path, required and existing while chosen); only the chosen source's field is shown and sent. On an initialized repository a warning says a config file replaces it and the other sources are refused. Once it succeeds the repository is read again and the menus rebuilt |
 | `config` | a list of the fields in groups (folders, names, status labels, header labels, template, migration), each with its current value; `Enter` edits one with the editor of its type (enum → `Select`, integer → `Select` over its range, template → `TextArea`, text → `Input`); changed fields are marked, and saving runs one `config` with only them. Fields adrpy guards once decisions exist say so in their description; adrpy's refusal stays the final word |
 | `installconfig` | the same editor, with no `--path`; while this machine has no install-level config, it offers to create one first, from a language pack or a config file. Its tests use a fake client only: the real adrpy would write the machine's own install-level config |
-| `migrate` | a guided builder: (1) the files to migrate; (2) on a sample file name, the position and length of each part (number, title, optional version, revision, prefix) chosen one by one, each showing what it reads from the sample; (3) a preview of what the pattern reads from every file, through `explore --migrationpattern`; (4) confirm the two commands, `config --migrationpattern` then `migrate` |
-| `log` (browse) | its own screen: every entry under the decision-log folder (subfolders too; the generated `INDEX.md` left out), Date, Classification, Scope, Slug read from its name, a classification `Select` and a filter, with "3 of 12 entries" below; `Enter` or the preview key opens the entry rendered |
+| `migrate` | a guided builder: (1) every `.md` without a valid header in the folder and its subfolders (the root `INDEX.md` aside), one of them the sample -- the preview then shows which of them the pattern reads; (2) on a sample file name, the position and length of each part (number, title, optional version, revision, prefix) chosen one by one, each showing what it reads from the sample; (3) a preview of what the pattern reads from every file, through `explore --migrationpattern`; (4) confirm the two commands, `config --migrationpattern` then `migrate` |
+| `log` (browse) | its own screen: every entry under the decision-log folder (subfolders too; the log's own `INDEX.md` and `CYCLES.md` left out), Date, Classification, Scope, Slug read from its name, a classification `Select` and a filter, with "3 of 12 entries" below; `Enter` or the preview key opens the entry rendered |
 | `log` | classification, severity and resolution `Select` (adrpy's own vocabulary, as is) · scope, slug `Input` that only take kebab-case · summary · body `TextArea` · refdate · front, severity, resolution, round (digits only, empty for the next one) shown only for `audit-finding`/`doc-drift`, reopenwhen only for `deferred`; front and reopenwhen are required while shown |
 | `skills list` | its own screen: skill, provider, scope, state (installed, not installed, changed by hand) and file of every row adrpy-skills reports, in the paged list |
 | `skills install`, `skills remove` | providers and skills, each a `SelectionList` sent comma-separated (nothing chosen: all, adrpy-skills' default) · where, a `RadioSet`: this repository or my user folder (claude only) · force, allow external links `Switch`. Tests only send `global` to a fake client: the real adrpy-skills would write to the user's own home |
@@ -305,11 +307,14 @@ decision renamed or deleted meanwhile is said to be gone.
 
 Success shows what adrpy did in the result color and any `warnings` in the
 warning color; failure shows `detail` in the error color and, when present,
-`data.errors` in the `ErrorList` with its repair hints. The preview key
-opens the file the command wrote; `Esc` goes back to the screen the
-command ran from -- after a successful `init`, `config` or `migrate`,
-which change what the menus offer, the repository is read again and the
-menus rebuilt.
+`data.errors` in the `ErrorList` with its repair hints, and the rest of
+`data` (the files a count in the detail is about), a list item by item
+and a record field by field. The preview key opens the file the command
+wrote, the highlighted error's file, or a file a failure names by its
+name only, where adrpy looked.
+`Esc` goes back to where the form was opened from -- after a successful
+`init`, `config` or `migrate`, which change what the menus offer, to the
+main menu, rebuilt once the repository is read again.
 
 ---
 
