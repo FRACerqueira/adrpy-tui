@@ -20,7 +20,7 @@ from adrpy_tui.ui.repository import RepositoryScreen
 from adrpy_tui.ui.result import ResultScreen
 
 from conftest import FakeClient, command_of, run_app, settle
-from test_ui import _focus_client, _walk
+from test_ui import _cut_off, _focus_client, _walk
 
 
 class _Ended:
@@ -178,6 +178,28 @@ def test_a_write_past_its_time_can_be_left_and_check_is_offered(tmp_path, user_s
         client.release.set()
 
     run_app(app, scenario)
+
+
+def test_the_still_running_panel_fits_80_by_24(tmp_path, user_state, monkeypatch):
+    """The panel is mounted on the screen beside the scrolling body, not in
+    it: its note and Leave stay whole on screen."""
+    monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.3)
+    client = _holding(tmp_path, "approve")
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _approve_and_run(app, pilot)
+        assert await _held(pilot, client)
+        await pilot.pause(0.8)
+        assert app.screen.query("#still-running")
+        assert _cut_off(app) == []
+        leave = app.screen.query_one("#leave-running", Button)
+        assert 0 <= leave.region.y and leave.region.bottom <= app.size.height
+        assert leave.variant == "warning"  # the write goes on, its result unknown
+        client.release.set()
+        await settle(pilot)
+
+    run_app(app, scenario, size=(80, 24))
 
 
 def test_a_decision_without_a_name_is_left_out_not_fatal(tmp_path, user_state):

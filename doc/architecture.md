@@ -87,7 +87,7 @@ graph TD
 
 | Module | Concern |
 |---|---|
-| `core/client.py` | The only module that runs a subprocess (read timeout, a write that can be left: ADR0006V02); returns `Result(argv, exit_code, success, data, code, detail, warnings)`, every string of it without control characters. A stdout that is not one JSON object is a contract violation, reported as such. |
+| `core/client.py` | The only module that runs a subprocess (read timeout, a write that can be left: ADR0006V02; an editor waited for as a write, ADR0007V01); returns `Result(argv, exit_code, success, data, code, detail, warnings)`, every string of it without control characters. A stdout that is not one JSON object is a contract violation, reported as such. |
 | `core/registry.py` | Maps each command to its form module (as adrpy-ai's `core/registry.py` maps verbs to `cli/` modules), lays out the menus, and gives the commands a decision's state allows. |
 | `forms/<command>.py` | One per command: the fields, their component, choices, ranges, conditions and suggestion sources (ADR0004V01). A command with a screen of its own says so (`VIEW`: explore, check, config, installconfig, migrate, skills list); flags a screen deliberately does not offer are listed with the reason (`NOT_OFFERED`). |
 | `core/fields.py` | The field kinds, their checks before running, which are shown (`shown_when`) and which are the screen's own (`local`), and the translation of values into flags. |
@@ -100,17 +100,20 @@ graph TD
 | `core/keys.py` | The actions whose key can be changed, their defaults, the keys that never change, and how a key is named on screen. |
 | `core/i18n.py` | The language packs, the language list and the operating system's language (ADR0005V01). |
 | `core/themes.py` | The appearance presets: the color of each screen role on top of a Textual base theme. |
-| `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it, the changed keys and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
+| `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it, the changed keys, the editor chosen and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
 | `core/suggest.py` | Suggestions from the values a repository already uses. |
+| `core/editors.py` | The editors a Proposed decision opens in (ADR0007V01): the closed list, each found on PATH's absolute entries only (never the current folder, the repository), and the command that starts it -- a `.cmd` launcher through cmd.exe with the paths in environment variables. |
 | `core/versions.py` | The installed versions of adrpy-tui and adrpy-ai, for the header and `--version`, and the check of adrpy-ai against the declared range. |
 | `ui/app.py`, `ui/base.py`, `ui/header.py` | The Textual app (navigation, repository, language, theme), the screen every other one extends -- with `read`, the one way a screen reads through adrpy: in a thread, its answer applied only to that screen while it is open and only if it is the latest, any failure shown there -- and the header they share. |
 | `ui/paged.py`, `ui/picker.py`, `ui/errors.py` | The interface's paged list (`row` makes every option, as plain text), the decision picker and the list of a repository's inconsistencies (each error's fields read as text, whatever type they came in). |
 | `ui/inputs.py` | The text field and text area every screen uses: whatever is typed, pasted or filled in passes through `field_text`. |
+| `ui/toggles.py` | The multi-select and the radio button every form uses, a choice marked `[x]` or `(●)`, not by its color alone. |
 | `ui/running.py` | Confirming and running a screen's commands, then the result; nothing leaves the screen or runs again meanwhile. Forms, the config editors and migrate go through it. |
 | `ui/form.py`, `ui/config.py`, `ui/migrate.py` | A command's form; the config and install-level config editor; the guided migrate builder. |
 | `ui/explore.py`, `ui/check.py`, `ui/skills.py`, `ui/help.py` | The screens that read: explore and a decision's detail, check, the skills list, a command's help. |
 | `ui/preview.py`, `ui/logs.py` | A decision's or log entry's content rendered, its links to other `.md` files followed; the decision-log browser. |
 | `ui/keys.py` | The keys of the configurable actions, and the capture of a new one. |
+| `ui/editor.py`, `ui/editing.py` | The editor's choice; a decision opened in it -- the terminal handed over, or a window editor waited for in a dialog that can be left -- then Check. |
 | `ui/menu.py`, `ui/language.py`, `ui/appearance.py`, `ui/repository.py`, `ui/startup.py`, `ui/confirm.py`, `ui/result.py` | The menus, the language choice, the appearance and colors, change repository, the first read of the repository, the confirmation and the result. |
 
 ## Languages

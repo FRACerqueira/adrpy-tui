@@ -10,6 +10,7 @@ from textual.widgets import Button, Input, OptionList, Static
 
 from adrpy_tui.core import contrast, themes
 from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
+from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.inputs import SafeInput
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
@@ -97,6 +98,10 @@ class ColorsScreen(AdrpyScreen):
         options.highlighted = 1
         options.focus()
 
+    def _reset_all(self):
+        self.app.reset_colors()
+        self._refresh()
+
     def _refresh(self):
         options = self.query_one("#roles", OptionList)
         for role in themes.ROLES:
@@ -108,8 +113,8 @@ class ColorsScreen(AdrpyScreen):
         if event.option.id == BACK:
             self.action_back()
         elif event.option.id == RESET_ALL:
-            self.app.reset_colors()
-            self._refresh()
+            self.app.push_screen(ConfirmScreen("", question=self.app.texts("appearance.reset_all_confirm"), danger=True),
+                                 lambda yes: yes and self._reset_all())
         else:
             role = event.option.id
             self.app.push_screen(ColorEditScreen(role), lambda value: self._edited(role, value))

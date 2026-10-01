@@ -77,6 +77,8 @@ adrpy-tui
 
 It installs adrpy-ai with it (see [Versions and compatibility](#versions-and-compatibility)), so the same environment also has adrpy-ai's `adrpy` and `adrpy-skills` commands. As a command-line tool in its own environment, with [pipx](https://pipx.pypa.io/): `pipx install adrpy-tui` -- pipx puts only `adrpy-tui` on your PATH (the interface runs its own adrpy either way); for the `adrpy` command as well, also run `pipx install adrpy-ai`. Straight from GitHub, a branch or a commit, without cloning: `pip install git+https://github.com/FRACerqueira/adrpy-tui.git`.
 
+Whether `adrpy-tui` then runs from any folder depends on where it was installed. Into a Python whose `Scripts` folder (Windows) or `bin` folder (macOS, Linux) is on your PATH, it does. With `pip install --user`, that folder is often not on PATH, and pip says so ("... which is not on PATH"): add the folder it names to PATH. Into a virtual environment, only while that environment is activated. pipx puts its commands on PATH; if it warns that its folder is not, run `pipx ensurepath` once and open a new terminal. To check, run `where adrpy-tui` on Windows (`where.exe adrpy-tui` in PowerShell) or `command -v adrpy-tui` on macOS and Linux. Run from any folder, `adrpy-tui` opens the repository in that folder (see [Quick start](#quick-start)).
+
 adrpy-ai's package is `adrpy-ai`; `ADRpy` on PyPI is an unrelated project. Don't install it in the same environment as adrpy-tui: on Windows and macOS their import folders (`adrpy` and `ADRpy`) are the same folder, and their files mix.
 
 To install from a clone instead:
@@ -94,7 +96,7 @@ To work on adrpy-tui itself (running the test suite), see [Contributing](https:/
 
 ## Terminal requirements
 
-- **About 100 columns by 40 rows, or more.** In a shorter terminal (around 33 rows), a form's list of decisions can be squeezed until none of its rows shows, so there is nothing to choose.
+- **At least 80 columns by 24 rows.** Every screen is built for it: what does not fit scrolls, and the tests open every screen and dialog at 80×24. A larger terminal shows more at once (the header alone takes 11 rows). Below 80 columns, a dialog's button can be cut.
 - **A font for the interface's languages.** The language list, and the interface once translated, show Japanese, Korean, Chinese and Russian text: a terminal whose font (or the fonts it falls back to) lacks those scripts draws them as boxes. A font family such as Noto CJK covers them.
 - **When Ctrl+R runs nothing**, a required field (marked `*`) is empty or not valid: a notification names it and why ("Not run: Decision — Required."), its message shows under it, and the focus moves there. In a list, Enter moves from the filter to the list, and Enter again chooses the highlighted decision.
 
@@ -123,13 +125,14 @@ Main menu
 ├─ AI skills             List · Install · Remove (adrpy-skills)
 ├─ Command help          the full contract of every adrpy and adrpy-skills command
 ├─ Change repository
-├─ Language · Appearance · Keys
+├─ Language · Appearance · Keys · Editor
 └─ Exit
 ```
 
 - **Choosing a decision** is picking it from a list, filtered by name, showing only the ones the command can take (F2 shows them all).
 - **Every list** shows eight rows a page, with where you are when there are more.
 - **Any decision or log entry** can be read rendered from any list of them (F3), following its links to other decisions.
+- **A Proposed decision's text in your own editor.** Choose it under **Editor**: vim, nvim, nano, micro, hx, VS Code, VSCodium, Sublime Text, Kate, gedit, gVim or Notepad, as found on your PATH; None is the default, and then you edit the file yourself, its text being the template. With one chosen, a new decision, version, revision or successor can open in it once created, and a Proposed decision's detail offers Edit. The TUI waits while the file is open -- a terminal editor takes the terminal, a window one can be left with Stop waiting -- and runs Check once it is closed; while a command or an editor you left still runs, Edit waits for it. The TUI never writes the file itself ([ADR0007V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0007V01R02-a-proposed-decision%27s-text-is-edited-in-the-editor-the-person-chose,-never-by-the-tui,-and-adrpy-check-validates-the-file-afterwards.md)). An Accepted decision's text changes through New revision or New version.
 
 Every screen, form and component is described in [Screens and forms](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/forms.md).
 

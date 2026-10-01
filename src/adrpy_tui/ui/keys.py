@@ -10,6 +10,7 @@ from textual.widgets import OptionList, Static
 
 from adrpy_tui.core import keys
 from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
+from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -39,6 +40,10 @@ class KeysScreen(AdrpyScreen):
         options.highlighted = 1
         options.focus()
 
+    def _reset_all(self):
+        self.app.reset_keys()
+        self._refresh()
+
     def _refresh(self):
         options = self.query_one("#actions", OptionList)
         for action in keys.ACTIONS:
@@ -50,8 +55,8 @@ class KeysScreen(AdrpyScreen):
         if event.option.id == BACK:
             self.action_back()
         elif event.option.id == RESET_ALL:
-            self.app.reset_keys()
-            self._refresh()
+            self.app.push_screen(ConfirmScreen("", question=self.app.texts("keys.reset_all_confirm"), danger=True),
+                                 lambda yes: yes and self._reset_all())
         else:
             action = event.option.id
             self.app.push_screen(KeyCaptureScreen(action), lambda key: self._captured(action, key))

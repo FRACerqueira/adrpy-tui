@@ -8,6 +8,7 @@ from pathlib import Path
 
 from textual.widgets import DataTable, Markdown, OptionList, Static
 
+from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState
 from adrpy_tui.ui.app import AdrpyTui
 from adrpy_tui.ui.appearance import AppearanceScreen, ColorEditScreen, ColorsScreen
@@ -286,8 +287,9 @@ def _component(widget, component):
 def test_every_kind_of_field_meets_wcag_contrast(tmp_path, user_state, preset):
     """Text at 4.5:1 (WCAG AA), a switch's slider -- a component, not
     text -- at 3:1 (WCAG 1.4.11), on or off: the selects and their open
-    list, the text area with its cursor and selection, the multi-selects,
-    the radio buttons, the switches and the folders tree."""
+    list, the text area with its cursor and selection, the multi-selects
+    and the radio buttons with their marks, the switches and the folders tree."""
+    from textual.color import Color
     from textual.widgets import DirectoryTree, RadioButton, Select, SelectionList, Switch, TextArea
 
     user_state.set_appearance(preset)
@@ -323,8 +325,14 @@ def test_every_kind_of_field_meets_wcag_contrast(tmp_path, user_state, preset):
         choices.highlighted = 0
         await pilot.pause()
         text["multi-select's cursor"] = _component(choices, "option-list--option-highlighted")
+        choices.select("claude")
+        choices.select("cursor")
+        await pilot.pause()
+        for name, line in (("highlighted", 0), ("not highlighted", 1)):
+            mark = next(segment.style for segment in choices.render_line(line) if "[x]" in segment.text)
+            text[f"multi-select's mark, {name}"] = (Color.from_rich_color(mark.color), Color.from_rich_color(mark.bgcolor))
         radio = app.screen.query_one("#target-project", RadioButton)
-        text["radio button"] = (radio.styles.color, radio.background_colors[1])
+        text["radio button"] = (radio.styles.color, radio.background_colors[1])  # its mark too
         switch = app.screen.query_one("#field-force", Switch)
         components["switch off"] = _component(switch, "switch--slider")
         switch.value = True
@@ -838,7 +846,7 @@ def test_a_remembered_item_past_the_first_page_opens_on_its_page(tmp_path, user_
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
     async def scenario(pilot):
-        assert _page_text(app.screen, "options") == "Items 9–12 of 12 · page 2 of 2 · PgUp/PgDn"
+        assert _page_text(app.screen, "options") == "Items 9–13 of 13 · page 2 of 2 · PgUp/PgDn"
 
     run_app(app, scenario)
 
@@ -1799,6 +1807,107 @@ def test_skills_install_globally_is_only_sent_to_a_fake_here(tmp_path, user_stat
     run_app(app, scenario)
 
 
+@pytest.mark.parametrize("commands, variant", [
+    ([("reject", ["--file", "x.md"])], "error"),
+    ([("config", ["--path", ".", "--migrationpattern", "N00:04T05"]), ("migrate", ["--path", "."])], "error"),
+    ([("skills:install", ["--path", ".", "--force"])], "error"),
+    ([("new", ["--path", ".", "--title", "x"])], "primary"),
+    ([("skills:install", ["--path", "."])], "primary"),
+])
+def test_the_confirmation_s_yes_is_red_for_a_command_that_destroys(tmp_path, user_state, commands, variant):
+    from textual.color import Color
+    from textual.widgets import Button
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("new"))  # any screen that runs commands asks the same way
+        await settle(pilot)
+        app.screen.confirm_and_run(commands)
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen)
+        yes = app.screen.query_one("#yes", Button)
+        assert yes.variant == variant
+        assert app.screen.query_one("#no", Button).variant == "default"
+        # Drawn so: the app's rules restate each variant's color over Textual's.
+        assert yes.styles.background.hex == Color.parse(app.get_css_variables()[variant]).hex
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("command", sorted(c for c, form in FORMS.items() if not getattr(form, "VIEW", None)))
+def test_a_form_in_a_short_terminal_scrolls_instead_of_squeezing_its_fields(tmp_path, user_state, command):
+    """A field row takes its content's height, so a body taller than the
+    terminal scrolls: Textual's Vertical is 1fr, a share of the visible body."""
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen(command))
+        await settle(pilot)
+        for row in app.screen.query(".field-row"):
+            if row.display:
+                shown = [child.outer_size.height for child in row.children if child.display]
+                assert row.size.height >= sum(shown), row.id
+
+    run_app(app, scenario, size=(80, 24))
+
+
+@pytest.mark.parametrize("size", [(80, 24), (120, 60)])
+def test_a_multiline_field_keeps_its_height_whatever_the_terminal(tmp_path, user_state, size):
+    """Textual's TextArea is 1fr: in a scrolling body that is a whole
+    screen, which pushes the fields after it out of sight."""
+    from textual.widgets import TextArea
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("log"))
+        await settle(pilot)
+        assert app.screen.query_one("#field-body", TextArea).size.height == 8
+
+    run_app(app, scenario, size=size)
+
+
+def test_a_multi_select_says_with_a_mark_which_choices_are_chosen(tmp_path, user_state):
+    """[x] or [ ], not a colour alone (WCAG 1.4.1); Space marks and unmarks."""
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        screen = await _open_skills(pilot, "install")
+        providers = screen.query_one("#field-provider")
+        providers.focus()
+        providers.highlighted = 0
+        await pilot.pause()
+        assert providers.render_line(0).text.startswith("[ ] claude")
+        await pilot.press("space")
+        await pilot.pause()
+        assert providers.selected == ["claude"]
+        assert providers.render_line(0).text.startswith("[x] claude")
+        assert providers.render_line(1).text.startswith("[ ] cursor")
+        await pilot.press("space")
+        await pilot.pause()
+        assert providers.render_line(0).text.startswith("[ ] claude")
+
+    run_app(app, scenario)
+
+
+def test_a_radio_button_says_with_a_mark_which_one_is_chosen(tmp_path, user_state):
+    """(●) or ( ), not a colour alone (WCAG 1.4.1)."""
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        screen = await _open_skills(pilot, "install")
+        project, user = screen.query_one("#target-project"), screen.query_one("#target-global")
+        assert project.render().plain.startswith("(●) ")
+        assert user.render().plain.startswith("( ) ")
+        user.value = True
+        await pilot.pause()
+        assert project.render().plain.startswith("( ) ")
+        assert user.render().plain.startswith("(●) ")
+
+    run_app(app, scenario)
+
+
 def test_skills_install_list_and_remove_through_adrpy_skills(repo, user_state, client):
     app = AdrpyTui(repo, user_state=user_state)
 
@@ -1944,6 +2053,76 @@ def test_a_customized_color_stays_on_top_of_another_preset(tmp_path, user_state)
     run_app(app, scenario)
 
 
+async def _asked_in_red(pilot):
+    """Enter on a "Restore every ..." row asks first, Yes in red: what was
+    customized is gone once confirmed."""
+    from textual.widgets import Button
+
+    await pilot.press("enter")
+    await settle(pilot)
+    assert isinstance(pilot.app.screen, ConfirmScreen)
+    assert pilot.app.screen.query_one("#yes", Button).variant == "error"
+
+
+def _only_on_path(monkeypatch, *programs):
+    """A PATH holding only `programs`, for the editors alone."""
+    from adrpy_tui.core import editors
+
+    monkeypatch.setattr(editors, "located",
+                        lambda editor, which=None: f"/bin/{editor.program}" if editor.program in programs else None)
+
+
+async def _open_editors(pilot):
+    options = _options(pilot.app.screen)
+    options.highlighted = options.get_option_index("editor")
+    await pilot.press("enter")
+    await settle(pilot)
+    return pilot.app.screen.query_one("#editors", OptionList)
+
+
+def test_the_editor_is_chosen_from_the_list_none_first(tmp_path, user_state, monkeypatch):
+    """ADR0007V01: None is the default; an editor not on this system's
+    PATH is listed with the reason, not offered."""
+    from adrpy_tui.core import editors
+    from adrpy_tui.ui.editor import EditorScreen
+
+    _only_on_path(monkeypatch, "nano")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        main = [option.id for option in _options(app.screen)._options]
+        assert main.index("editor") == main.index("keys") + 1
+        choices = await _open_editors(pilot)
+        assert isinstance(app.screen, EditorScreen)
+        ids = [choices.get_option_at_index(i).id for i in range(choices.option_count)]
+        assert ids[:2] == ["back", "none"] and ids[2:] == [editor.name for editor in editors.EDITORS]
+        assert choices.get_option_at_index(choices.highlighted).id == "none"
+        vim = choices.get_option(("vim"))
+        assert vim.disabled and "not found" in str(vim.prompt)
+        assert not choices.get_option("nano").disabled
+        choices.highlighted = choices.get_option_index("nano")
+        await pilot.press("enter")
+        await settle(pilot)
+        assert user_state.editor == "nano" and app.editor.name == "nano"
+        choices = await _open_editors(pilot)
+        assert choices.get_option_at_index(choices.highlighted).id == "nano"
+        choices.highlighted = choices.get_option_index("none")
+        await pilot.press("enter")
+        await settle(pilot)
+        assert user_state.editor is None and app.editor is None
+
+    run_app(app, scenario)
+
+
+def test_an_editor_kept_that_is_gone_or_unknown_is_none(tmp_path, user_state, monkeypatch):
+    _only_on_path(monkeypatch)  # nano no longer on PATH
+    user_state.set_editor("nano")
+    assert AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state).editor is None
+    _only_on_path(monkeypatch, "nano")
+    user_state.set_editor("devenv")
+    assert AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state).editor is None
+
+
 def test_back_to_the_preset_and_restore_every_color(tmp_path, user_state):
     user_state.set_color("tui-banner", "#FFA500")
     user_state.set_color("tui-info", "#999999")
@@ -1954,7 +2133,12 @@ def test_back_to_the_preset_and_restore_every_color(tmp_path, user_state):
         await _edit_color(pilot, roles, "tui-banner", "ignored", button="reset")
         assert _banner_color(app) == "#FF8C00" and user_state.colors == {"tui-info": "#999999"}
         roles.highlighted = roles.get_option_index("reset-all")
-        await pilot.press("enter")
+        await _asked_in_red(pilot)
+        await pilot.press("escape")  # No: every color kept
+        await pilot.pause()
+        assert user_state.colors == {"tui-info": "#999999"}
+        await _asked_in_red(pilot)
+        await pilot.press("enter")  # Yes
         await pilot.pause()
         assert user_state.colors == {}
 
@@ -2199,7 +2383,12 @@ def test_backspace_and_restore_every_key_go_back_to_the_defaults(tmp_path, user_
         await _capture(pilot, actions, "run", "backspace")
         assert user_state.keys == {"toggle": "f7"} and app.key_of("run") == "ctrl+r"
         actions.highlighted = actions.get_option_index("reset-all")
-        await pilot.press("enter")
+        await _asked_in_red(pilot)
+        await pilot.press("escape")  # No: every key kept
+        await pilot.pause()
+        assert user_state.keys == {"toggle": "f7"}
+        await _asked_in_red(pilot)
+        await pilot.press("enter")  # Yes
         await pilot.pause()
         assert user_state.keys == {} and app.key_of("toggle") == "f2"
 
@@ -2651,6 +2840,7 @@ FOCUS_SCREENS = {
     "language": (["language"], "list"),
     "appearance": (["appearance"], "list"),
     "keys": (["keys"], "list"),
+    "editor": (["editor"], "list"),
     "help": (["help", "help.new"], "text"),
     "preview": (["explore", "explore.explore", ":preview"], "text"),
 }
@@ -2697,6 +2887,8 @@ async def _walk(app, pilot, path):
         else:
             options = _options(app.screen)
             options.highlighted = options.get_option_index(step)
+            # Enter on a disabled item does nothing: the tests would measure the menu.
+            assert not options.get_option(step).disabled, step
             await pilot.press("enter")
         await settle(pilot)
 
@@ -2756,9 +2948,9 @@ CONTRAST_STATES = {
     "a select open": (["repository", "repository.init"], _open_a_select),
     "notifications": ([], _notify),
 }
-# What tells a control's state apart, WCAG's 3:1 for a component: a radio
-# button or checkbox (checked or not) and a select's arrow.
-_INDICATORS = {"●", "X", "▼", "▲"}
+# What tells a control's state apart, WCAG's 3:1 for a component: a select's
+# arrow. A choice's mark ([x], (●)) is text, measured as text.
+_INDICATORS = {"▼", "▲"}
 
 
 def _drawn_segments(app):
@@ -2828,6 +3020,209 @@ def test_every_screen_meets_wcag_contrast_in_every_preset(tmp_path, user_state, 
 
     run_app(app, scenario)
     assert too_low == {}
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_every_kind_of_button_stands_out_and_reads(tmp_path, user_state, preset):
+    """A button's own background at 3:1 from what is behind it (WCAG 1.4.11),
+    its text at 4.5:1 on it: Textual's plain button is the dialog's own
+    surface, 1:1, a word rather than a button. Blue, red, yellow and plain,
+    the plain and the yellow drawn in their roles, customizable."""
+    from textual.color import Color
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    found = {}
+
+    faces = {}
+
+    def measure(name):
+        variables = app.get_css_variables()
+        for button in app.screen.query(Button):
+            for role in ("tui-info", "tui-warning"):
+                if button.styles.background.hex == Color.parse(variables[role]).hex:
+                    faces[f"#{button.id}"] = role
+            behind, own = button.background_colors
+            text = button.visual_style.foreground  # "auto" resolved, as drawn
+            found[f"{name} #{button.id} ({button.variant})"] = (
+                round(_contrast(own, behind), 2), round(_contrast(text, own), 2))
+
+    async def scenario(pilot):
+        for command, flags in (("reject", ["--file", "x.md"]), ("new", ["--path", "."])):
+            app.push_screen(FormScreen(command))
+            await settle(pilot)
+            measure(f"{command} form")
+            app.screen.confirm_and_run([(command, flags)])
+            await settle(pilot)
+            measure(f"{command} confirmation")
+            app.screen.dismiss(False)
+            await settle(pilot)
+            await pilot.press("escape")
+            await settle(pilot)
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True  # as a write past its time
+        app.screen._say_still_running()
+        await settle(pilot)
+        measure("still running")
+        app.screen._command_running = False
+
+    run_app(app, scenario)
+    assert {"(error)", "(primary)", "(default)", "(warning)"} <= {key[key.rindex("("):] for key in found}
+    assert faces == {"#no": "tui-info", "#leave-running": "tui-warning"}
+    assert {key: pair for key, pair in found.items() if pair[0] < 3 or pair[1] < 4.5} == {}
+
+
+@pytest.mark.parametrize("preset", ["default", "high-contrast"])
+def test_a_customized_role_keeps_the_buttons_drawn_on_it_readable(tmp_path, user_state, preset):
+    """A plain button is the info role, Leave the warnings role: a color
+    customized for either still gets text that reads on it, black or white
+    by contrast (Textual's "auto" goes by brightness: 3.48:1 on #00A000)."""
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    user_state.set_color("tui-info", "#00A000")
+    user_state.set_color("tui-warning", "#00A000")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    found = {}
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True  # as a write past its time
+        app.screen._say_still_running()
+        app.push_screen(ConfirmScreen("adrpy x"))
+        await settle(pilot)
+        for screen in app.screen_stack[-2:]:
+            for button in screen.query(Button):
+                if button.variant in ("default", "warning"):
+                    found[button.id] = round(_contrast(button.visual_style.foreground, button.background_colors[1]), 2)
+        app.screen_stack[-2]._command_running = False
+
+    run_app(app, scenario)
+    assert set(found) == {"no", "leave-running"}
+    assert {name: ratio for name, ratio in found.items() if ratio < 4.5} == {}
+
+
+def _cut_off(app):
+    """Every widget its container cuts: drawn past the container's edge on
+    a side the container does not scroll."""
+    from textual.widget import Widget
+
+    found = []
+    for widget in app.screen.query("*"):
+        parent = widget.parent
+        if not isinstance(parent, Widget) or widget.styles.overlay == "screen":
+            continue
+        if not all(node.display for node in (widget, *widget.ancestors) if isinstance(node, Widget)):
+            continue
+        outer, inner = parent.content_region, widget.region
+        across = not parent.allow_vertical_scroll and (inner.y < outer.y or inner.bottom > outer.bottom)
+        along = not parent.allow_horizontal_scroll and (inner.x < outer.x or inner.right > outer.right)
+        if across or along:
+            found.append(f"{type(widget).__name__}#{widget.id} in {type(parent).__name__}#{parent.id}")
+    return found
+
+
+async def _preview_the_migration(app, pilot):
+    app.screen.query_one("#preview").press()
+
+
+def _layout_client(tmp_path):
+    client = _focus_client(tmp_path)
+    # migrate's sample: a title long enough that what it reads must wrap.
+    (tmp_path / "doc" / "adr" / f"0000-{'a-title-long-enough-to-wrap-' * 3}.md").write_text("# x\n", encoding="utf-8")
+    client.answers["explore"]["data"]["migrationpattern_preview"] = [
+        {"file": f"/r/{n:04}-legacy.md", "number": n, "version": 0, "title": "legacy"} for n in range(1, 12)]
+    return client
+
+
+def _dialogs():
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.core.config_fields import CONFIG_FIELDS
+
+    error = {"code": "no-header", "file": "/r/0001-x.md", "hint": "Run migrate. " * 8, "detail": "d " * 40,
+             "related_files": ["/r/a.md", "/r/b.md"]}
+    template = next(field for field in CONFIG_FIELDS if field.flag == "template")
+    return {
+        "confirmation": lambda: ConfirmScreen("adrpy new --path C:/r --title x"),
+        "confirmation of a long command, with a note": lambda: ConfirmScreen(
+            "adrpy log --path C:/r --body " + chr(10).join(f"line {n}" for n in range(60)), note="A note. " * 10),
+        "result with warnings": lambda: ResultScreen("new", Result((), 0, True, data={"created": "C:/r/x.md"},
+                                                                   warnings=["A warning. " * 12, "w"])),
+        "result with errors": lambda: ResultScreen("approve", Result((), 1, False, code="repository-inconsistent",
+                                                                     detail="d " * 40, data={"errors": [error] * 3})),
+        "a config field to edit": lambda: FieldEditScreen(template, "x\n" * 40, "A description. " * 12),
+        "colors": lambda: ColorsScreen(),
+        "a color to edit": lambda: ColorEditScreen("tui-banner"),
+        "a key to capture": lambda: KeyCaptureScreen("run"),
+    }
+
+
+LAYOUT_STATES = ["first run", *FOCUS_SCREENS, "migrate preview", *_dialogs()]
+
+
+def _squeezed_lists(app):
+    """Every list showing fewer rows than it has, short of a page."""
+    from adrpy_tui.ui.paged import PAGE_SIZE
+
+    return [f"#{options.id} {options.content_size.height} of {options.option_count}"
+            for options in app.screen.query(OptionList)
+            if options.display and type(options).__name__ != "SelectOverlay"
+            and options.content_size.height < min(options.option_count, PAGE_SIZE)]
+
+
+@pytest.mark.parametrize("state", LAYOUT_STATES)
+def test_every_screen_fits_80_by_24_without_cutting_a_widget(tmp_path, user_state, state):
+    """80x24 is the smallest terminal the interface is built for (README):
+    what does not fit scrolls, nothing is cut by its container, and a list
+    shows its rows -- one that scrolls itself is not cut, but could shrink."""
+    if state == "first run":
+        user_state = UserState(tmp_path / "first-run" / "state.json")
+    app = AdrpyTui(tmp_path, client=_layout_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        if state == "first run":
+            assert isinstance(app.screen, LanguageScreen)
+        elif state in FOCUS_SCREENS:
+            await _walk(app, pilot, FOCUS_SCREENS[state][0])
+        elif state == "migrate preview":
+            await _walk(app, pilot, FOCUS_SCREENS["migrate"][0])
+            await _preview_the_migration(app, pilot)
+        else:
+            app.push_screen(_dialogs()[state]())
+        await settle(pilot)
+        assert _cut_off(app) == []
+        assert _squeezed_lists(app) == []
+
+    run_app(app, scenario, size=(80, 24))
+
+
+def test_a_decision_list_keeps_its_page_at_80_by_24(tmp_path, user_state):
+    """Investigated, not reproduced headless: the README once said a form's
+    decision list could be squeezed to no row below about 33 rows, as a
+    recording in a real terminal showed. Twenty decisions show their first
+    page of eight at 97x33 and at 80x24, in approve, supersede, version and
+    revise, before the field rows took their own height as after; kept so
+    the suspicion is not chased again."""
+    (tmp_path / "doc" / "adr").mkdir(parents=True)
+    decisions = [_decision(f"ADR{n:03}V01-p.md") for n in range(1, 21)]
+    for decision in decisions:
+        decision["path"] = str(tmp_path / "doc" / "adr" / decision["filename"])
+        pathlib.Path(decision["path"]).write_text("# p\n", encoding="utf-8")
+    client = FakeClient(answers={
+        "config": {"success": True, "data": {"config": {**REPO_CONFIG, "migrationpattern": ""}, "warnings": []}},
+        "explore": {"success": True, "data": {"decisions": decisions, "warnings": []}},
+    })
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, ["decisions", "decisions.approve"])
+        options = app.screen.query_one("#field-file-options", OptionList)
+        assert (options.content_size.height, options.option_count) == (8, 20)
+
+    run_app(app, scenario, size=(80, 24))
 
 
 def test_a_long_command_fits_the_confirmation_and_scrolls_by_keyboard(tmp_path, user_state):

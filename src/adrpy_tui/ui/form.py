@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.suggester import Suggester
 from textual.widgets import (
-    Button, Input, Label, MaskedInput, RadioButton, RadioSet, Select, SelectionList, Static, Switch, TextArea,
+    Button, Input, Label, MaskedInput, RadioSet, Select, Static, Switch, TextArea,
 )
 
 from adrpy_tui.core import i18n, keys
@@ -18,11 +18,13 @@ from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
 from adrpy_tui.core.text import field_text, visible
 from adrpy_tui.ui.base import HINTS_FORM, HINTS_PICKER_FORM, AdrpyScreen, on_top
+from adrpy_tui.ui.editing import edit_decision
 from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PAGE_SIZE
 from adrpy_tui.ui.picker import AdrPicker
 from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 from adrpy_tui.ui.running import CommandRunner
+from adrpy_tui.ui.toggles import CheckList, ChoiceButton
 
 _SIMILAR_SHOWN = 8
 
@@ -83,7 +85,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
         if field.kind == "choice":
             texts = self.app.texts
             return RadioSet(
-                *(RadioButton(texts(f"choice.{field.flag}.{choice}"), value=index == 0, id=f"{field.flag}-{choice}")
+                *(ChoiceButton(texts(f"choice.{field.flag}.{choice}"), value=index == 0, id=f"{field.flag}-{choice}")
                   for index, choice in enumerate(field.choices)),
                 id=widget_id,
             )
@@ -99,7 +101,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
         if field.kind == "multi":
             # A short, fixed list of choices: never more than a page
             # (doc/forms.md, "Lists").
-            choices = SelectionList(*((choice, choice) for choice in field.choices), id=widget_id)
+            choices = CheckList(*((choice, choice) for choice in field.choices), id=widget_id)
             choices.styles.max_height = PAGE_SIZE + 2
             return choices
         restrict = field.restrict or (f"[^{re.escape(field.forbidden)}]*" if field.forbidden else None)
@@ -124,7 +126,8 @@ class FormScreen(CommandRunner, AdrpyScreen):
         """Shows each field only while its condition holds."""
         values = self._values()
         for field in self.form.FIELDS:
-            self.query_one(f"#row-{field.flag}").display = shown(field, values)
+            self.query_one(f"#row-{field.flag}").display = shown(field, values) and (
+                not field.needs_editor or self.app.editor is not None)
 
     def on_radio_set_changed(self, event):
         self._show_rows()
@@ -229,7 +232,20 @@ class FormScreen(CommandRunner, AdrpyScreen):
             self.app.notify(self.app.texts("form.not_run", field=self.app.texts(f"field.{first_problem.flag}"),
                                            problem=first_message), severity="warning", markup=False)
             return
-        self.confirm_and_run([(self.command, build_flags(self.form, self.app.repo, values))])
+        commands = [(self.command, build_flags(self.form, self.app.repo, values))]
+        editor = self.app.editor
+        if editor and values.get("edit") and self.query("#row-edit") and self.query_one("#row-edit").display:
+            self.confirm_and_run(commands, then=self._edit_created,
+                                 also=self.app.texts("editing.then", editor=editor.name))
+        else:
+            self.confirm_and_run(commands)
+
+    def _edit_created(self, result):
+        """The decision the command created, opened in the editor: `created`
+        -- for supersede, the successor, not the predecessor."""
+        created = result.data.get("created")
+        if isinstance(created, str):
+            edit_decision(self.app, created)
 
     def action_toggle_available(self):
         if self.command_running:

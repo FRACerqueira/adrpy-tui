@@ -32,7 +32,8 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
     MigrateScreen .part { height: auto; }
     MigrateScreen .part > Label { width: 12; padding: 1 1; }
     MigrateScreen .part > Select { width: 16; }
-    MigrateScreen .part > Static { padding: 1 1; }
+    MigrateScreen .part > Static { width: 1fr; padding: 1 1; }
+    MigrateScreen #preview-area { height: auto; }
     """
 
     def __init__(self):

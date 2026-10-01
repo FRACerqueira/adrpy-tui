@@ -17,11 +17,14 @@ class ConfirmScreen(ModalScreen[bool]):
                     ("up", "up"), ("down", "down"), ("pageup", "page_up"), ("pagedown", "page_down"),
                     ("home", "home"), ("end", "end")))]
 
-    def __init__(self, command_line, question=None, note=None):
+    def __init__(self, command_line, question=None, note=None, danger=False):
+        """`danger`: the command destroys something or is hard to undo, and
+        Yes is red (core/registry.py `destroys`)."""
         super().__init__()
         self._command_line = command_line
         self._question = question
         self._note = note
+        self._danger = danger
 
     def compose(self):
         texts = self.app.texts
@@ -32,7 +35,7 @@ class ConfirmScreen(ModalScreen[bool]):
             if self._note:
                 yield Static(self._note, id="crlf-note", classes="info", markup=False)
             with Horizontal(id="buttons"):
-                yield Button(texts("confirm.yes"), id="yes", variant="primary")
+                yield Button(texts("confirm.yes"), id="yes", variant="error" if self._danger else "primary")
                 yield Button(texts("confirm.no"), id="no")
 
     def on_mount(self):

@@ -65,3 +65,23 @@ def test_every_form_has_the_same_flags_as_its_command(command, contracts):
     # default is the current folder).
     if form.PATH_FLAG and not command.startswith("skills:"):
         assert arguments[form.PATH_FLAG]["required"]
+
+
+@pytest.mark.parametrize("command, flags, configured, destroys", [
+    ("reject", ["--file", "x.md"], True, True),
+    ("supersede", ["--file", "x.md"], True, True),
+    ("skills:remove", ["--path", "."], True, True),
+    ("migrate", ["--path", "."], True, True),  # rewrites every hand-written decision; no adrpy undo
+    ("init", ["--path", ".", "--seed", "c.json"], True, True),  # replaces the repository's config
+    ("init", ["--path", "."], True, False),  # adrpy refuses: nothing replaced
+    ("init", ["--path", ".", "--seed", "c.json"], False, False),
+    ("skills:install", ["--path", ".", "--force"], True, True),  # overwrites files changed by hand
+    ("skills:install", ["--path", "."], True, False),
+    ("new", ["--path", ".", "--title", "x"], True, False),
+    ("approve", ["--file", "x.md"], True, False),
+    ("undo", ["--file", "x.md"], True, False),
+])
+def test_a_command_that_destroys_is_told_apart(command, flags, configured, destroys):
+    from adrpy_tui.core.registry import destroys as destroys_
+
+    assert destroys_(command, flags, configured) is destroys

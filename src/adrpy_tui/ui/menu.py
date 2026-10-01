@@ -14,7 +14,7 @@ from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
 
 # Items that open no form but are available.
-_ACTIONS = ("log.browse", "change-repository", "language", "appearance", "keys", "exit")
+_ACTIONS = ("log.browse", "change-repository", "language", "appearance", "keys", "editor", "exit")
 # The first option of every submenu: back to the menu it was opened from.
 BACK = "back"
 

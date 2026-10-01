@@ -8,4 +8,6 @@ PATH_FLAG = None
 FIELDS = (
     Field("file", "decision", required=True, eligible=(ACCEPTED, REJECTED, MIGRATED)),
     Field("refdate", "date", not_before=("date_update", "date_create")),
+    # The decision created opens in the editor once the command succeeds (ADR0007V01).
+    Field("edit", "switch", local=True, needs_editor=True),
 )

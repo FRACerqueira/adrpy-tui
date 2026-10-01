@@ -8,7 +8,7 @@ from pathlib import Path
 from textual.app import App
 from textual.color import Color, ColorParseError
 
-from adrpy_tui.core import decisions, i18n, keys, themes, versions
+from adrpy_tui.core import contrast, decisions, editors, i18n, keys, themes, versions
 from adrpy_tui.core.client import Client
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
@@ -16,6 +16,7 @@ from adrpy_tui.core.text import visible
 from adrpy_tui.ui.appearance import AppearanceScreen
 from adrpy_tui.ui.check import CheckScreen
 from adrpy_tui.ui.config import ConfigScreen
+from adrpy_tui.ui.editor import EditorScreen
 from adrpy_tui.ui.explore import ExploreScreen
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.help import HelpScreen
@@ -115,8 +116,12 @@ class AdrpyTui(App):
         # has would not repaint it.
         self._themes_built += 1
         name = f"{themes.theme_name(preset)}-{self._themes_built}"
+        # The text of the buttons drawn on a role (resources/app.tcss), customized or not.
+        on_roles = {f"{role}-text": contrast.readable_on(Color.parse(colors[role]).rgb)
+                    for role in ("tui-info", "tui-warning")}
         self.register_theme(replace(base, name=name, primary=spec.get("primary", base.primary),
-                                    variables={**base.variables, **colors, **cursor, **headings, **quieter}))
+                                    variables={**base.variables, **colors, **cursor, **headings, **quieter,
+                                               **on_roles}))
         return name
 
     def set_color(self, role, color):
@@ -149,6 +154,16 @@ class AdrpyTui(App):
         self.chosen_keys = {}
         self.user_state.reset_keys()
         self.set_keymap({})
+
+    @property
+    def editor(self):
+        """The editor a Proposed decision opens in (ADR0007V01): the one
+        chosen while it is still on PATH, else None."""
+        editor = editors.find(self.user_state.editor) if self.user_state.editor else None
+        return editor if editor and editors.located(editor) else None
+
+    def choose_editor(self, name):
+        self.user_state.set_editor(name)
 
     def key_of(self, action):
         """The key an action has now: the person's, else its default."""
@@ -242,6 +257,8 @@ class AdrpyTui(App):
             self.push_screen(LogScreen())
         elif item.id == "keys":
             self.push_screen(KeysScreen())
+        elif item.id == "editor":
+            self.push_screen(EditorScreen())
         elif item.id == "change-repository":
             self.push_screen(RepositoryScreen())
         elif item.submenu:

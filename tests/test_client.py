@@ -432,3 +432,86 @@ def test_a_left_write_is_drained_on_every_system(monkeypatch):
 
 
 _drain_original = client_module._drain
+
+
+def _editor(*lines):
+    """An editor that runs `lines` of Python, then closes."""
+    return [sys.executable, "-c", "\n".join(lines)]
+
+
+def test_an_editor_is_waited_for_and_its_exit_code_returned():
+    """ADR0007V01: an editor with a window is waited for until it closes."""
+    assert Client().edit(_editor("import time", "time.sleep(0.3)", "raise SystemExit(3)"), None) == 3
+
+
+def test_an_editor_gets_nothing_of_the_tui_s_terminal(tmp_path):
+    """A window editor would read keys meant for the TUI (on Windows they
+    share the console's input) and draw over its screen."""
+    seen = tmp_path / "seen"
+    command = _editor("import sys", f"open({str(seen)!r}, 'w').write(repr(sys.stdin.read()))", "print('over the TUI')")
+    assert Client().edit(command, None) == 0
+    assert seen.read_text() == "''"
+
+
+def test_leaving_an_editor_refuses_a_write_until_it_closes(tmp_path):
+    """The editor stays open once the person stops waiting: a write meanwhile
+    would be undone when the file is saved there."""
+    client = Client()
+    leave = threading.Event()
+    threading.Timer(0.3, leave.set).start()
+    started = time.monotonic()
+    assert client.edit(_editor("import time", "time.sleep(1.5)"), None, leave) is None
+    assert time.monotonic() - started < 1.2
+    assert client.still_writing()
+    time.sleep(2)
+    assert not client.still_writing()
+
+
+def test_quitting_leaves_an_editor_open(tmp_path):
+    marker = tmp_path / "saved"
+    client = Client()
+    threading.Timer(0.3, client.shutdown).start()
+    assert client.edit(_editor("import time", "time.sleep(1.5)", f"open({str(marker)!r}, 'w').write('x')"), None) is None
+    time.sleep(2.5)
+    assert marker.exists()  # never stopped: the person's work
+
+
+def test_an_editor_that_cannot_start_raises(tmp_path):
+    with pytest.raises(OSError):
+        Client().edit([str(tmp_path / "no-such-editor")], None)
+
+
+def test_ctrl_c_during_a_terminal_editor_does_not_kill_it(monkeypatch):
+    """subprocess.run kills its child on KeyboardInterrupt: Ctrl+C reaching
+    the TUI while vim has the terminal lost the unsaved text."""
+    import subprocess
+
+    waits = []
+
+    class Started:
+        def __init__(self, command, **options):
+            pass
+
+        returncode = 0
+
+        def wait(self, timeout=None):
+            waits.append(1)
+            if len(waits) == 1:
+                raise KeyboardInterrupt
+            return 0
+
+        def communicate(self, input=None, timeout=None):  # as subprocess.run waits
+            return self.wait(), None
+
+        def kill(self):
+            raise AssertionError("the editor was killed")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    monkeypatch.setattr(subprocess, "Popen", Started)
+    assert Client().edit_in_terminal(["vim", "x.md"], None) == 0
+    assert len(waits) == 2

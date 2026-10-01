@@ -55,9 +55,9 @@ and of a preview are the theme's text in bold, not Textual's primary color
 -- a button's background, too dark as text on a dark screen. So is every
 other color Textual draws that no preset sets for it: a placeholder, a
 disabled option (a group's title, a decision the command cannot take)
-and a select's arrow read at 4.5:1, an unchecked radio button or checkbox
-and the focused widget's border -- in the highlight role -- at WCAG's 3:1
-for a component. `tests/test_ui.py` measures everything drawn on every
+and a select's arrow read at 4.5:1, and the focused widget's border -- in
+the highlight role -- at WCAG's 3:1 for a component. A choice's mark
+(`[x]`, `(●)`) is drawn in its row's own text color, so it reads as that text does. `tests/test_ui.py` measures everything drawn on every
 screen, in every preset; a field's or a button's edges and the scrollbars
 are decoration no state depends on, and are not measured. Default is the default
 because it already does while keeping each kind of text distinct, and High
@@ -65,7 +65,7 @@ contrast is one choice away. Textual honors `NO_COLOR`. "Customize colors" sets 
 (`#RRGGBB` or a CSS name) on top of the chosen preset, shown at once and
 kept with the language; a color below 4.5:1 on its background is warned
 about, not refused; "Back to the preset" and "Restore every color" undo
-them. A saved color that can't be read is ignored and named on the main
+them, the latter once confirmed (Yes in red), as "Restore every key" is. A saved color that can't be read is ignored and named on the main
 menu.
 
 The Default preset:
@@ -81,7 +81,9 @@ The Default preset:
 | Result | white `#FFFFFF` |
 | Typed value | cyan `#00FFFF` (approximate, to validate) |
 | Highlighted item | green `#00FF00` on `#303030` |
-| Buttons | white on `#00509E` |
+| Buttons | white on `#1F6FC5` (the action); white on red (Yes to a command that destroys); the warnings role (Leave); the info role (No, Cancel) -- each with black or white text, whichever reads better on it |
+
+A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. A plain button takes the info role and Leave the warnings role, so "Customize colors" changes them too.
 
 ## Lists
 
@@ -193,13 +195,35 @@ every list (`decisions.listed`).
 | Small integer range | lenseq/lenversion/lenrevision | `Select` over the allowed range |
 | Date | refdate | `MaskedInput` `9999-99-99`, defaults to today |
 | On/off | `--empty`, booleans | `Switch` |
-| Several of a list | explore columns, migrate list | `SelectionList` |
+| Several of a list | the skills forms' providers and skills | `CheckList` (`ui/toggles.py`), a `SelectionList` that marks each choice `[x]` or `[ ]`, not by its color alone; Space or Enter marks and unmarks the highlighted one |
+| One of a few | the init form's config source, the skills forms' where, the source of an install-level config not created yet | `RadioSet` of `ChoiceButton` (`ui/toggles.py`), marked `(●)` or `( )` |
 | Rows with columns | explore | `PagedList` rows whose columns are padded by terminal cells (a CJK label takes two), the last never cut, under a header line; a filter `Input`; below the list, the highlighted row's values whole (explore) or the entry's whole file name and folder (the log browser), since every other column is cut to its width |
 | Errors | check, a failed command | `ErrorList`: a `PagedList` row per error (file · code), the highlighted one's detail, hint and related files below, in adrpy's words -- a hint is too long for a table cell |
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
+| One of a list, chosen | the editor (main menu) | a `PagedList`: None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
 | Decision content | detail view, previews, help | `Markdown`, read-only, links never opened in a browser |
+
+## Editing a decision
+
+A Proposed decision opens in the editor chosen under Editor (ADR0007V01):
+from a decision's detail (Edit, its first action, offered only for a
+Proposed decision while an editor is chosen) and once `new`, `version`,
+`revise` or `supersede` created one with "Open in the editor once created"
+on. Only a file of the decisions folder is opened, by its absolute path. A
+terminal editor (vim, nvim, nano, micro, hx) gets the terminal while the
+TUI is suspended; a terminal that cannot be handed over (a web terminal)
+is said. An editor with a window gets nothing of the TUI's terminal and
+is waited for in a dialog whose Stop waiting (not Esc) leaves it open:
+from then on what is saved there is not checked, and a command that
+writes is refused until it closes, since saving there would undo it -- and
+so is Edit, while a left command or editor still runs. Ctrl+C belongs to a
+terminal editor: the TUI never stops it. Once
+the editor returns, Check runs and shows the repository's state; a code
+other than 0 and a file not saved as UTF-8 (adrpy approve would replace
+its other characters with U+FFFD) are said. An editor that cannot start
+is said, and nothing is checked. The TUI repairs nothing.
 
 ## Menus
 
@@ -216,6 +240,7 @@ Main menu
 ├─ Language
 ├─ Appearance
 ├─ Keys
+├─ Editor
 └─ Exit
 ```
 
@@ -255,18 +280,18 @@ A required field is marked `*`. Ctrl+R with one empty or not valid runs
 nothing: the field's message shows under it, the focus moves there, and a
 notification names the first such field and why (`form.not_run`), seen even
 when the field's message is off screen. A
-decision list takes its rows from the room left on screen: in a terminal
-shorter than about 40 rows they can all be squeezed out (README, Terminal
+field takes its own height and a form taller than the terminal scrolls, so
+a decision list keeps its eight rows down to 80×24 (README, Terminal
 requirements).
 
 | Command | Fields → component |
 |---|---|
-| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate |
+| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
 | `approve`, `reject` | `AdrPicker` (`Proposed`, or a migrated placeholder) · refdate, not before the decision's creation |
 | `undo` | `AdrPicker` (`Accepted`/`Rejected`) |
-| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` |
-| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` |
-| `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) |
+| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
 | `explore` | its own screen: File, Folder (relative to the decisions folder, `.` straight in it: adrpy finds decisions in subfolders too), Status (the repository's label), Scope, Domain for every decision, a folder `Select` and a filter by name or folder, with "12 of 49 decisions" below, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
 | `check` | its own screen, run as it opens and again when it comes back to the top: "No inconsistencies in N decisions", or the `ErrorList` |
 | `init` | the current repository only (another folder goes through "Change repository") · the config's source, a `RadioSet`: adrpy's defaults in a language (a `Select`, preselected with the UI language), the default (the install-level config, or English when there is none), or a config file (a path, required and existing while chosen); only the chosen source's field is shown and sent. On an initialized repository a warning says a config file replaces it and the other sources are refused. Once it succeeds the repository is read again and the menus rebuilt |

@@ -10,11 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **A first-run preview** in the README (an animated GIF, kept out of the sdist), and the terminal it needs: about 100×40 and a font for the interface's languages.
+- **A Proposed decision's text in your own editor** (ADR0007V01): choose it under Editor -- vim, nvim, nano, micro, hx, VS Code, VSCodium, Sublime Text, Kate, gedit, gVim or Notepad, found on your PATH, None by default. A new decision, version, revision or successor can open in it once created, and a Proposed decision's detail offers Edit; the TUI waits as for a write (a window editor can be left, and a write, or another Edit, is then refused until it closes; Check's warning names it) and runs Check once the file is closed, saying when it was not saved as UTF-8. The TUI never writes the file.
+- **A first-run preview** in the README (an animated GIF, kept out of the sdist), and the terminal it needs: at least 80×24 and a font for the interface's languages.
 
 ### Changed
 
 - **Ctrl+R that runs nothing says why** in a notification naming the field and its problem, since the field's own message can be off screen in a short terminal.
+- **Buttons say what they do by color too**: Yes is red where the command destroys something or is hard to undo (reject, supersede, migrate, skills remove, init replacing an existing config from a seed file, skills install overwriting files changed by hand) and where "Restore every color" or "Restore every key" now asks first, Leave is yellow, and No, Cancel and the other plain buttons are gray -- Textual drew them on the dialog's own surface, 1:1, a word rather than a button. Every button stands at 3:1 from what is behind it and its text at 4.5:1, in every preset; the blue is lighter on the dark presets (`#1F6FC5`) to get there.
+- **A choice is marked, not only colored**: a multi-select shows `[x]` or `[ ]`, a radio button `(●)` or `( )`, where Textual drew the same X or ● either way.
+
+### Fixed
+
+- **A form in a short terminal scrolls** instead of squeezing its fields: each field's row shared out the visible height and was cut to its share, so a list's choices (the skills form's providers and skills) showed only in a tall terminal.
+- **Every screen fits 80×24**, checked by a test that opens each screen and dialog at that size: migrate's preview is no longer squeezed to one row, what migrate reads from each part of the name wraps within its row instead of running past it, and a long command's confirmation keeps its Yes and No buttons whole.
 
 ## [0.1.0] - 2026-10-01
 

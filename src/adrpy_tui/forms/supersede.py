@@ -11,4 +11,6 @@ FIELDS = (
     Field("domain", "text", forbidden=HEADER_FORBIDDEN, suggest_from="domain", prefill_from="domain"),
     Field("scope", "text", forbidden=HEADER_FORBIDDEN, suggest_from="scope", prefill_from="scope"),
     Field("refdate", "date", not_before=("date_update", "date_create")),
+    # The decision created opens in the editor once the command succeeds (ADR0007V01).
+    Field("edit", "switch", local=True, needs_editor=True),
 )

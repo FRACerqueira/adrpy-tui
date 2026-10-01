@@ -45,6 +45,19 @@ FORMS = {
 }
 
 
+def destroys(command, flags, configured):
+    """Whether running `command` with `flags` destroys something or is hard
+    to undo -- its confirmation's Yes is red: a decision rejected or
+    superseded, every hand-written decision rewritten by migrate (no adrpy
+    command undoes it), skills removed, a repository's config replaced, a
+    skill's file changed by hand overwritten."""
+    if command in ("reject", "supersede", "migrate", "skills:remove"):
+        return True
+    if command == "init":  # adrpy replaces an existing config only from a seed file
+        return configured and "--seed" in flags
+    return command == "skills:install" and "--force" in flags
+
+
 def commands_taking(decision_state):
     """The commands whose decision field takes a decision in this state, in
     menu order: the actions a decision's detail offers."""
@@ -106,6 +119,7 @@ MAIN_MENU = Item("main", submenu=(
     Item("language"),
     Item("appearance"),
     Item("keys"),
+    Item("editor"),
     Item("exit"),
 ))
 
