@@ -22,10 +22,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # adrpy-ai is not on PyPI yet (ADR0003V01).
-      - name: Install adrpy-ai from git
-        run: pip install "git+https://github.com/FRACerqueira/adrpy-ai.git@develop"
-
+      # adrpy-ai comes from PyPI, within the declared range (ADR0003V01).
       - name: Install adrpy-tui (dev)
         run: pip install -e ".[dev]"
 

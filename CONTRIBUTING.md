@@ -22,18 +22,17 @@ This project follows the [Code of Conduct](CODE_OF_CONDUCT.md). Participation im
 
 ## Development Setup
 
-Requires Python 3.11+. Development works against adrpy-ai's `develop` branch, so install it from git first ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)):
+Requires Python 3.11+. adrpy-ai comes from PyPI, within the declared range ([ADR0003V01](doc/adr/ADR0003V01R02-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)):
 
 ```bash
 git clone https://github.com/FRACerqueira/adrpy-tui.git
 cd adrpy-tui
 python -m venv .venv
-.venv/bin/pip install git+https://github.com/FRACerqueira/adrpy-ai.git@develop   # .venv\Scripts\pip on Windows
-.venv/bin/pip install -e ".[dev]"
+.venv/bin/pip install -e ".[dev]"   # .venv\Scripts\pip on Windows
 .venv/bin/adrpy-tui
 ```
 
-To work against your own copy of adrpy-ai instead, install it editable first (`pip install -e <path to adrpy-ai>`). Its version comes from git too (`0.1.devN`), which the declared range `adrpy-ai>=0.1.dev0,<0.2` takes ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)); an editable install keeps the version it had when installed.
+To work against an adrpy-ai not released yet, install it first, from git (`pip install git+https://github.com/FRACerqueira/adrpy-ai.git@develop`) or as your own copy, editable (`pip install -e <path to adrpy-ai>`). Its version comes from git too (`0.1.devN`), which the declared range `adrpy-ai>=0.1.dev0,<0.2` takes ([ADR0003V01](doc/adr/ADR0003V01R02-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)); an editable install keeps the version it had when installed.
 
 The version comes from git (hatch-vcs), so build from a git checkout. After changing `dependencies` in `pyproject.toml`, reinstall (`pip install -e ".[dev]"`): the start-up check reads the range from the installed metadata, and a test fails while the two disagree.
 

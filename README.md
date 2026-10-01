@@ -45,7 +45,7 @@ They are two packages by the same author, with one clear split:
 | Writes decision, config and decision-log files | Yes | Never -- it runs an `adrpy` command, shown to you first ([ADR0001V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)) |
 | Runtime dependencies | None | adrpy-ai and Textual |
 
-adrpy-tui runs the adrpy installed next to it, through its own Python interpreter (`python -m adrpy`), never whichever `adrpy` comes first on `PATH` ([ADR0003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)). A repository managed with adrpy-tui is an ordinary adrpy repository: you can switch between the two, or use both, at any time.
+adrpy-tui runs the adrpy installed next to it, through its own Python interpreter (`python -m adrpy`), never whichever `adrpy` comes first on `PATH` ([ADR0003V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0003V01R02-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)). A repository managed with adrpy-tui is an ordinary adrpy repository: you can switch between the two, or use both, at any time.
 
 ## Versions and compatibility
 
