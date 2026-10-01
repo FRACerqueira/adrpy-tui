@@ -3,11 +3,13 @@
 # adrpy-tui
 
 [![CI](https://github.com/FRACerqueira/adrpy-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/FRACerqueira/adrpy-tui/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/adrpy-tui)](https://pypi.org/project/adrpy-tui/)
+[![Downloads](https://static.pepy.tech/badge/adrpy-tui)](https://pepy.tech/projects/adrpy-tui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/FRACerqueira/adrpy-tui/blob/main/LICENSE)
 
 **A rich terminal interface for [adrpy-ai](https://github.com/FRACerqueira/adrpy-ai): guided, human-friendly management of Architecture Decision Records.**
 
-adrpy-tui puts menus, forms, lists and previews on top of adrpy-ai, the JSON-only ADR lifecycle CLI. Installing adrpy-tui installs adrpy-ai with it (the 0.1 series), so one install gives you both: the screens to work in, and the `adrpy` command they drive. Every change still goes through adrpy -- the interface shows you the exact command before it runs, and adrpy's rules are the only ones that apply.
+adrpy-tui puts menus, forms, lists and previews on top of adrpy-ai, the JSON-only ADR lifecycle CLI. Installing adrpy-tui with pip installs adrpy-ai with it (the 0.1 series), so one install gives you both: the screens to work in, and the `adrpy` command they drive. Every change still goes through adrpy -- the interface shows you the exact command before it runs, and adrpy's rules are the only ones that apply.
 
 ## Table of Contents
 
@@ -68,7 +70,22 @@ pip install adrpy-tui
 adrpy-tui
 ```
 
-It installs adrpy-ai with it. As a command-line tool in its own environment, with [pipx](https://pipx.pypa.io/): `pipx install adrpy-tui`. Straight from GitHub, a branch or a commit, without cloning: `pip install git+https://github.com/FRACerqueira/adrpy-tui.git`. To work on adrpy-tui itself, see [Contributing](https://github.com/FRACerqueira/adrpy-tui/blob/main/CONTRIBUTING.md).
+It installs adrpy-ai with it (see [Versions and compatibility](#versions-and-compatibility)), so the same environment also has adrpy-ai's `adrpy` and `adrpy-skills` commands. As a command-line tool in its own environment, with [pipx](https://pipx.pypa.io/): `pipx install adrpy-tui` -- pipx puts only `adrpy-tui` on your PATH (the interface runs its own adrpy either way); for the `adrpy` command as well, also run `pipx install adrpy-ai`. Straight from GitHub, a branch or a commit, without cloning: `pip install git+https://github.com/FRACerqueira/adrpy-tui.git`.
+
+adrpy-ai's package is `adrpy-ai`; `ADRpy` on PyPI is an unrelated project. Don't install it in the same environment as adrpy-tui: on Windows and macOS their import folders (`adrpy` and `ADRpy`) are the same folder, and their files mix.
+
+To install from a clone instead:
+
+```bash
+git clone https://github.com/FRACerqueira/adrpy-tui.git
+cd adrpy-tui
+pip install .
+adrpy-tui
+```
+
+The source install needs a git clone: the version is read from git, so a folder from GitHub's "Download ZIP" does not install. On Windows, some file names under `doc/` are long; if `git clone` reports "Filename too long", clone with `git clone -c core.longpaths=true https://github.com/FRACerqueira/adrpy-tui.git`.
+
+To work on adrpy-tui itself (running the test suite), see [Contributing](https://github.com/FRACerqueira/adrpy-tui/blob/main/CONTRIBUTING.md).
 
 ## Quick start
 
