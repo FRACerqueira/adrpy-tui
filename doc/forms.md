@@ -120,7 +120,14 @@ defaults. The keys are kept with the language; a saved key that can't be
 used is ignored and named on the main menu. Esc, Enter, Tab, the arrows,
 `PgUp`/`PgDn`/`Home`/`End`, and Textual's own `Ctrl+C`/`Ctrl+Q`/`Ctrl+P`
 never change. The key line under every screen is built from the keys in
-use, so it always names the key that works.
+use and from what the screen shows now (`hints()`): it names a key only
+where it acts -- the arrows where there is a list or text to scroll, F3
+where there is a file to show, Enter where there is something to choose
+or a button to press, Space while a multi-select, radio button or switch
+has the focus -- and every key that acts. A dialog (the confirmation, a
+field's or a color's edit, the wait for an editor) has a key line of its
+own. `tests/test_hints.py` checks each key named has somewhere to act, on
+every screen and dialog.
 
 ## Previews
 
@@ -220,7 +227,9 @@ from then on what is saved there is not checked, and a command that
 writes is refused until it closes, since saving there would undo it -- and
 so is Edit, while a left command or editor still runs. Ctrl+C belongs to a
 terminal editor: the TUI never stops it. Once
-the editor returns, Check runs and shows the repository's state; a code
+the editor returns, Check runs and shows the repository's state, naming
+the file and what comes next; Esc then goes to the decision's detail, read
+again, instead of the screen it was opened from. A code
 other than 0 and a file not saved as UTF-8 (adrpy approve would replace
 its other characters with U+FFFD) are said. An editor that cannot start
 is said, and nothing is checked. The TUI repairs nothing.

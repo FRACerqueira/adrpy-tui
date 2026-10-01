@@ -53,12 +53,17 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
 
         self.read(work, lambda both: self._show(*both))
 
+    def hints(self):
+        # The builder's keys only once it shows files to migrate.
+        return self.HINTS if self.query("#files") else (("escape", "back"),)
+
     async def _show(self, config, explore):
         if not self.is_attached:
             return
         try:
             await self._mount_builder(config, explore)
         finally:
+            self.refresh_hints()
             self.focus_first()
 
     async def _mount_builder(self, config, explore):

@@ -13,7 +13,7 @@ from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
 from adrpy_tui.core.decisions import repository_config
 from adrpy_tui.core.text import field_text, visible
-from adrpy_tui.ui.base import AdrpyScreen, on_top
+from adrpy_tui.ui.base import AdrpyScreen, dialog_keys, on_top
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PagedList, row
@@ -63,6 +63,12 @@ class FieldEditScreen(ModalScreen):
             with Horizontal(id="buttons"):
                 yield Button(texts("edit.ok"), id="ok", variant="primary")
                 yield Button(texts("edit.cancel"), id="cancel")
+            yield dialog_keys(self.app, self.hints())
+
+    def hints(self):
+        # Enter keeps a one-line value; in a text area or a select it is the field's own.
+        submits = self._field.kind not in ("select", "multiline")
+        return (("enter", "ok"),) * submits + (("tab", "next"), ("escape", "cancel"))
 
     def on_mount(self):
         self.query_one("#editor").focus()
@@ -88,6 +94,13 @@ class FieldEditScreen(ModalScreen):
 class ConfigScreen(CommandRunner, AdrpyScreen):
     HINTS = (("arrows", "move"), ("enter", "edit"), ("@run", "save"), ("escape", "back"))
     BINDINGS = [Binding("escape", "back", show=False), Binding(keys.ACTIONS["run"], "save", id=keys.binding_id("run"), show=False)]
+
+    def hints(self):
+        if self.query("#fields"):
+            return self.HINTS
+        if self.query("#create-source"):  # created by its button: Ctrl+R saves an existing one
+            return (("tab", "next"), ("enter", "choose"), ("escape", "back"))
+        return (("escape", "back"),)
 
     def __init__(self, command):
         super().__init__(command)
@@ -120,6 +133,10 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
             self.focus_first()
 
     async def _mount_editor(self, result, contract):
+        await self._mount_body(result, contract)
+        self.refresh_hints()
+
+    async def _mount_body(self, result, contract):
         commands = contract.data.get("commands") if contract.success else None
         arguments = commands[0].get("arguments", []) if commands else []
         self._descriptions = {argument["name"]: " ".join(argument.get("description", "").split())

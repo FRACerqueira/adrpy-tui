@@ -5,7 +5,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
-from adrpy_tui.ui.base import on_top
+from adrpy_tui.ui.base import dialog_keys, key_line, on_top
 
 
 class ConfirmScreen(ModalScreen[bool]):
@@ -37,9 +37,23 @@ class ConfirmScreen(ModalScreen[bool]):
             with Horizontal(id="buttons"):
                 yield Button(texts("confirm.yes"), id="yes", variant="error" if self._danger else "primary")
                 yield Button(texts("confirm.no"), id="no")
+            yield dialog_keys(self.app, self.hints())
+
+    _scrolls = False
+
+    def hints(self):
+        hints = (("arrows", "scroll"),) if self._scrolls else ()
+        return (*hints, ("tab", "other_button"), ("enter", "choose"), ("escape", "answer_no"))
 
     def on_mount(self):
         self.query_one("#yes", Button).focus()
+        # Whether the command line scrolls is known once it is laid out.
+        self.call_after_refresh(self._name_the_scroll)
+
+    def _name_the_scroll(self):
+        if self.is_attached and self.query_one("#command-scroll").max_scroll_y > 0:
+            self._scrolls = True
+            self.query_one("#dialog-keys", Static).update(key_line(self.app, self.hints()))
 
     def on_button_pressed(self, event):
         if not on_top(self):

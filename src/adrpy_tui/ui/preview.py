@@ -11,7 +11,7 @@ from textual.widgets import Markdown, Static
 from adrpy_tui.core import keys
 from adrpy_tui.core.files import is_file, outside_reason, read_start
 from adrpy_tui.core.text import printable, visible
-from adrpy_tui.ui.base import AdrpyScreen, on_top
+from adrpy_tui.ui.base import AdrpyScreen, HINTS_READ, on_top
 
 PREVIEW_BINDING = Binding(keys.ACTIONS["preview"], "preview", id=keys.binding_id("preview"), show=False)
 # The lines of a file a preview renders: past them the rest is left out and
@@ -79,7 +79,7 @@ def follow_link(app, source, href):
 
 class PreviewScreen(AdrpyScreen):
     READS = True
-    HINTS = (("escape", "back"),)
+    HINTS = HINTS_READ
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def __init__(self, path):

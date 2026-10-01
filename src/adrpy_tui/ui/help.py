@@ -6,7 +6,7 @@ from textual.widgets import LoadingIndicator, Markdown, Static
 
 from adrpy_tui.core.registry import command_name
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import AdrpyScreen, on_top
+from adrpy_tui.ui.base import AdrpyScreen, HINTS_READ, on_top
 
 
 def _cell(text):
@@ -39,6 +39,7 @@ def contract_markdown(texts, command, contract):
 
 class HelpScreen(AdrpyScreen):
     READS = True
+    HINTS = HINTS_READ
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def compose_body(self):

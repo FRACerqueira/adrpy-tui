@@ -11,7 +11,7 @@ from textual.binding import Binding
 from textual.widgets import Input, LoadingIndicator, Markdown, Select, Static
 
 from adrpy_tui.core.decisions import PROPOSED, folder_of, listed, state
-from adrpy_tui.core.files import repository_folder
+from adrpy_tui.core.files import repository_folder, same_path
 from adrpy_tui.core.registry import commands_taking
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
@@ -105,6 +105,10 @@ class ExploreScreen(AdrpyScreen):
         chosen.value = keep if keep in folders else ALL_FOLDERS
         self._fill()
 
+    def hints(self):
+        options = self.query("#decisions")
+        return self.HINTS if options and options.first().option_count else (("escape", "back"),)
+
     def _fill(self):
         """The decisions of the chosen folder whose name or folder holds the
         filter's text."""
@@ -130,6 +134,7 @@ class ExploreScreen(AdrpyScreen):
         self._show_current()
         self.query_one("#explore-count", Static).update(
             self.app.texts("explore.count", shown=options.option_count, total=len(self._decisions)))
+        self.refresh_hints()
 
     def on_select_changed(self, event):
         if event.select.id == "explore-folder" and self._decisions:
@@ -183,6 +188,13 @@ class DetailScreen(AdrpyScreen):
     def compose_body(self):
         yield LoadingIndicator()
 
+    def hints(self):
+        if self.query("#actions"):
+            return HINTS_LIST
+        if self.query(Markdown):
+            return (("arrows", "scroll"), ("@preview", "preview"), ("escape", "back"))
+        return (("escape", "back"),)
+
     def on_screen_resume(self):
         # Also sent when the screen first opens: read again, since a command
         # run from here may have changed this decision. Meanwhile its actions
@@ -196,13 +208,14 @@ class DetailScreen(AdrpyScreen):
             return
         gone = False
         if result.success:
-            again = [d for d in listed(result.data) if d["path"] == self.decision["path"]]
+            again = [d for d in listed(result.data) if same_path(d["path"], self.decision["path"])]
             if again:
                 self.decision = again[0]
             gone = not again  # renamed, deleted, or moved behind a link: nothing of it to offer
         body = self.query_one("#body")
         await body.remove_children()
         if gone:
+            self.refresh_hints()
             await body.mount(Static(self.app.texts("detail.gone"), id="read-failed", classes="error", markup=False))
             return
         if not result.success:
@@ -210,6 +223,7 @@ class DetailScreen(AdrpyScreen):
             await body.mount(Static(self.app.texts("detail.read_failed", detail=visible(result.detail or result.code or "")),
                                     id="read-failed", classes="error", markup=False))
         await body.mount_all(self._widgets(actions=result.success))
+        self.refresh_hints()
         actions = self.query("#actions")
         if actions:
             actions.first().focus()

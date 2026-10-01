@@ -9,7 +9,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, OptionList, Static
 
 from adrpy_tui.core import contrast, themes
-from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
+from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, dialog_keys, on_top
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.inputs import SafeInput
 from adrpy_tui.ui.menu import BACK
@@ -149,6 +149,10 @@ class ColorEditScreen(ModalScreen):
                 yield Button(texts("edit.ok"), id="ok", variant="primary")
                 yield Button(texts("color.reset"), id="reset")
                 yield Button(texts("edit.cancel"), id="cancel")
+            yield dialog_keys(self.app, self.hints())
+
+    def hints(self):
+        return (("enter", "ok"), ("tab", "next"), ("escape", "cancel"))
 
     def on_mount(self):
         self.query_one("#color", Input).focus()

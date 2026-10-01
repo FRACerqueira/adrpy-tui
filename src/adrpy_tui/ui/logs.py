@@ -83,6 +83,10 @@ class LogScreen(AdrpyScreen):
         self._fill()
         self.query_one("#entries").focus()
 
+    def hints(self):
+        options = self.query("#entries")
+        return self.HINTS if options and options.first().option_count else (("escape", "back"),)
+
     def _fill(self):
         options = self.query_one("#entries")
         folded = self.query_one("#logs-filter", Input).value.casefold()
@@ -99,6 +103,7 @@ class LogScreen(AdrpyScreen):
         self._show_current()
         self.query_one("#logs-count", Static).update(
             self.app.texts("logs.count", shown=options.option_count, total=len(self._entries)))
+        self.refresh_hints()
 
     def on_input_changed(self, event):
         self._fill()

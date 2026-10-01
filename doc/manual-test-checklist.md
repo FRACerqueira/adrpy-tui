@@ -23,7 +23,9 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 ## Every screen
 
 - [ ] The banner's double rules and letters are whole, in the banner color.
-- [ ] The key line at the bottom matches the keys that work.
+- [ ] The key line at the bottom names only keys that act there, and the
+      ones that do: check with and without errors, a result with and
+      without a file, Space on the skills form's choices, every dialog.
 - [ ] `Esc` goes back one level; on the main menu it leaves.
 - [ ] A list longer than eight rows shows "Items … · page … · PgUp/PgDn";
       `PgUp`, `PgDn`, `Home` and `End` move as it says.

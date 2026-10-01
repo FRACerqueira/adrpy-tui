@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.suggester import Suggester
 from textual.widgets import (
-    Button, Input, Label, MaskedInput, RadioSet, Select, Static, Switch, TextArea,
+    Button, Input, Label, MaskedInput, OptionList, RadioSet, Select, Static, Switch, TextArea,
 )
 
 from adrpy_tui.core import i18n, keys
@@ -17,7 +17,7 @@ from adrpy_tui.core.fields import build_flags, problem, shown
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.suggest import prefix_suggestion, similar
 from adrpy_tui.core.text import field_text, visible
-from adrpy_tui.ui.base import HINTS_FORM, HINTS_PICKER_FORM, AdrpyScreen, on_top
+from adrpy_tui.ui.base import AdrpyScreen, on_top
 from adrpy_tui.ui.editing import edit_decision
 from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PAGE_SIZE
@@ -41,7 +41,6 @@ class RepositorySuggester(Suggester):
 
 
 class FormScreen(CommandRunner, AdrpyScreen):
-    HINTS = HINTS_FORM
     BINDINGS = [
         Binding("escape", "back", show=False),
         Binding(keys.ACTIONS["run"], "run", id=keys.binding_id("run"), show=False),
@@ -53,11 +52,23 @@ class FormScreen(CommandRunner, AdrpyScreen):
         super().__init__(command)
         self._prefilled = {}  # flag -> the value a chosen decision filled in
         self.form = FORMS[command]
-        if any(field.kind == "decision" for field in self.form.FIELDS):
-            self.HINTS = HINTS_PICKER_FORM
         # The path of a decision to choose once the decisions are read.
         self._preselected = decision
         self._candidates = {}
+
+    def hints(self):
+        fields = self.form.FIELDS
+        hints = [("tab", "next_field")]
+        if any(field.suggest_from for field in fields):
+            hints.append(("right", "accept_suggestion"))
+        if any(field.kind == "decision" for field in fields):
+            listed = any(picker.query(OptionList).first().option_count for picker in self.query(AdrPicker))
+            hints += [("@preview", "preview")] * listed + [("@toggle", "show_all")]
+        if isinstance(self.focused, (CheckList, RadioSet)):
+            hints += [("arrows", "move"), ("space", "mark")]
+        elif isinstance(self.focused, Switch):
+            hints.append(("space", "mark"))
+        return (*hints, ("@run", "run"), ("escape", "back"))
 
     def compose_body(self):
         texts = self.app.texts
@@ -169,6 +180,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
                 picker.set_decisions(decisions, self.app.labels)
                 if self._preselected:
                     picker.choose(self._preselected)
+        self.refresh_hints()
         for flag, candidates in self._candidates.items():
             editor = self.query_one(f"#field-{flag}", Input)
             editor.suggester.candidates = candidates
@@ -252,6 +264,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
             return
         for picker in self.query(AdrPicker).results(AdrPicker):
             picker.toggle_available()
+        self.refresh_hints()
 
     def action_preview(self):
         if self.command_running:
