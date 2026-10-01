@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **Published on PyPI**, as adrpy-ai is since its 0.1.0: CI installs adrpy-ai from PyPI, and a tag `vX.Y.Z` on main publishes adrpy-tui to TestPyPI, then to PyPI after the owner's review ([ADR0003V01R02](doc/adr/ADR0003V01R02-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)).
+
 - **The first screens.** The header, the language choice on first run, the main menu with every adrpy and adrpy-skills command grouped by use, the `new`, `approve`, `reject`, `undo`, `version`, `revise`, `supersede` and `init` forms, the config and install-level config editors, the guided migrate builder, the `log` form, the AI skills screens (list, install, remove), change repository, the explore screen (every decision, then one decision's detail with the commands its state allows) and the check screen (a decision picker lists every decision with its label, the ones the command cannot take disabled), the confirmation screen showing the exact command line about to run, the result screen and the help of every command. Every command of adrpy and adrpy-skills has its screen.
 - **Keys that can be changed** (run, preview, show all), kept per user; the key line always names the key that works.
 - **Previews** (F3) of any decision or log entry from every list of them, with links between `.md` files followed; explore shows each decision's folder and filters by it; a decision-log browser.
