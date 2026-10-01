@@ -77,6 +77,8 @@ adrpy-tui
 
 It installs adrpy-ai with it (see [Versions and compatibility](#versions-and-compatibility)), so the same environment also has adrpy-ai's `adrpy` and `adrpy-skills` commands. As a command-line tool in its own environment, with [pipx](https://pipx.pypa.io/): `pipx install adrpy-tui` -- pipx puts only `adrpy-tui` on your PATH (the interface runs its own adrpy either way); for the `adrpy` command as well, also run `pipx install adrpy-ai`. Straight from GitHub, a branch or a commit, without cloning: `pip install git+https://github.com/FRACerqueira/adrpy-tui.git`.
 
+Whether `adrpy-tui` then runs from any folder depends on where it was installed. Into a Python whose `Scripts` folder (Windows) or `bin` folder (macOS, Linux) is on your PATH, it does. With `pip install --user`, that folder is often not on PATH, and pip says so ("... which is not on PATH"): add the folder it names to PATH. Into a virtual environment, only while that environment is activated. pipx puts its commands on PATH; if it warns that its folder is not, run `pipx ensurepath` once and open a new terminal. To check, run `where adrpy-tui` on Windows (`where.exe adrpy-tui` in PowerShell) or `command -v adrpy-tui` on macOS and Linux. Run from any folder, `adrpy-tui` opens the repository in that folder (see [Quick start](#quick-start)).
+
 adrpy-ai's package is `adrpy-ai`; `ADRpy` on PyPI is an unrelated project. Don't install it in the same environment as adrpy-tui: on Windows and macOS their import folders (`adrpy` and `ADRpy`) are the same folder, and their files mix.
 
 To install from a clone instead:
