@@ -1809,6 +1809,7 @@ def test_skills_install_globally_is_only_sent_to_a_fake_here(tmp_path, user_stat
 
 @pytest.mark.parametrize("commands, variant", [
     ([("reject", ["--file", "x.md"])], "error"),
+    ([("config", ["--path", ".", "--migrationpattern", "N00:04T05"]), ("migrate", ["--path", "."])], "error"),
     ([("skills:install", ["--path", ".", "--force"])], "error"),
     ([("new", ["--path", ".", "--title", "x"])], "primary"),
     ([("skills:install", ["--path", "."])], "primary"),
@@ -1820,7 +1821,7 @@ def test_the_confirmation_s_yes_is_red_for_a_command_that_destroys(tmp_path, use
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
     async def scenario(pilot):
-        app.push_screen(FormScreen(commands[0][0]))
+        app.push_screen(FormScreen("new"))  # any screen that runs commands asks the same way
         await settle(pilot)
         app.screen.confirm_and_run(commands)
         await settle(pilot)

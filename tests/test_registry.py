@@ -71,6 +71,7 @@ def test_every_form_has_the_same_flags_as_its_command(command, contracts):
     ("reject", ["--file", "x.md"], True, True),
     ("supersede", ["--file", "x.md"], True, True),
     ("skills:remove", ["--path", "."], True, True),
+    ("migrate", ["--path", "."], True, True),  # rewrites every hand-written decision; no adrpy undo
     ("init", ["--path", ".", "--seed", "c.json"], True, True),  # replaces the repository's config
     ("init", ["--path", "."], True, False),  # adrpy refuses: nothing replaced
     ("init", ["--path", ".", "--seed", "c.json"], False, False),

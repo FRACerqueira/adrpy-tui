@@ -48,9 +48,10 @@ FORMS = {
 def destroys(command, flags, configured):
     """Whether running `command` with `flags` destroys something or is hard
     to undo -- its confirmation's Yes is red: a decision rejected or
-    superseded, skills removed, a repository's config replaced, a skill's
-    file changed by hand overwritten."""
-    if command in ("reject", "supersede", "skills:remove"):
+    superseded, every hand-written decision rewritten by migrate (no adrpy
+    command undoes it), skills removed, a repository's config replaced, a
+    skill's file changed by hand overwritten."""
+    if command in ("reject", "supersede", "migrate", "skills:remove"):
         return True
     if command == "init":  # adrpy replaces an existing config only from a seed file
         return configured and "--seed" in flags
