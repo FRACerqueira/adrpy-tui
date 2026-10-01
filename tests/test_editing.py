@@ -80,7 +80,10 @@ def test_stopping_the_wait_says_the_editor_is_still_open(tmp_path, user_state, m
     run_app(app, scenario)
 
 
-def test_esc_stops_waiting_too(tmp_path, user_state, monkeypatch):
+def test_esc_does_not_stop_waiting(tmp_path, user_state, monkeypatch):
+    """Esc pressed by habit -- to leave the result the dialog opened over --
+    left the editor open and refused every write until it closed: only Stop
+    waiting, chosen, ends the wait."""
     _with_editor(monkeypatch, user_state, "code")
     client = FakeClient()
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
@@ -90,9 +93,10 @@ def test_esc_stops_waiting_too(tmp_path, user_state, monkeypatch):
         await _shown(pilot)
         await pilot.press("escape")
         await _shown(pilot)
+        assert isinstance(app.screen, EditorWaitScreen) and not client.still_writing()
+        client.editor_closed.set()
         await settle(pilot)
         assert isinstance(app.screen, CheckScreen)
-        client.editor_closed.set()
 
     run_app(app, scenario)
 
@@ -596,7 +600,7 @@ def test_the_encoding_is_said_once_closed_whatever_its_code_not_while_left_open(
         edit_decision(app, str(path))
         await _shown(pilot)
         if code is None:
-            await pilot.press("escape")  # left open: what it holds now is not the end of it
+            app.screen.query_one("#stop-waiting").press()  # left open: what it holds now is not the end of it
         else:
             client.editor_closed.set()
         await _shown(pilot)

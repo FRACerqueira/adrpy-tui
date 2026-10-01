@@ -7,7 +7,6 @@ import threading
 from pathlib import Path
 
 from textual.app import SuspendNotSupported
-from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
@@ -101,9 +100,8 @@ def _utf8(path):
 class EditorWaitScreen(ModalScreen):
     """While an editor with a window is open on the decision: as a write
     runs, nothing else does (the screen below takes no key), and the person
-    may stop waiting (ADR0007V01)."""
-
-    BINDINGS = [Binding("escape", "stop_waiting", show=False)]
+    may stop waiting (ADR0007V01) -- with its button only: Esc, pressed by
+    habit to leave the result below, would leave the editor open."""
 
     def __init__(self, editor, path, command, env):
         super().__init__()

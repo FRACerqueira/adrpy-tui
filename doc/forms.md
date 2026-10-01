@@ -215,7 +215,7 @@ on. Only a file of the decisions folder is opened, by its absolute path. A
 terminal editor (vim, nvim, nano, micro, hx) gets the terminal while the
 TUI is suspended; a terminal that cannot be handed over (a web terminal)
 is said. An editor with a window gets nothing of the TUI's terminal and
-is waited for in a dialog whose Stop waiting (or Esc) leaves it open:
+is waited for in a dialog whose Stop waiting (not Esc) leaves it open:
 from then on what is saved there is not checked, and a command that
 writes is refused until it closes, since saving there would undo it -- and
 so is Edit, while a left command or editor still runs. Ctrl+C belongs to a
