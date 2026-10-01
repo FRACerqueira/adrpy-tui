@@ -53,8 +53,10 @@ class Field:
     # Required while shown, though adrpy itself takes the flag as optional.
     required_if_shown: bool = False
     # A field of the screen only, never sent as a flag (it chooses which
-    # other fields are shown).
+    # other fields are shown, or what the screen does once the command ran).
     local: bool = False
+    # Shown only while an editor is chosen (ADR0007V01).
+    needs_editor: bool = False
     # The config editors (core/config_fields.py): the field's group, its
     # longest value, and whether adrpy refuses changing it once decisions
     # exist.

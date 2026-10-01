@@ -23,20 +23,24 @@ from adrpy_tui.ui.result import ResultScreen
 
 class CommandRunner:
     _command_running = False
+    _then = None
 
     @property
     def command_running(self):
         return self._command_running
 
-    def confirm_and_run(self, commands):
+    def confirm_and_run(self, commands, then=None, also=None):
         """Asks with every command line, then runs them in order, stopping at
-        the first that fails; the result shown is the last one run."""
+        the first that fails; the result shown is the last one run. `then`
+        gets a success's result once it is shown, and `also` says on the
+        confirmation what it will do."""
         if self._command_running:
             return
         lines = "\n".join(visible(display_command(command, flags)) for command, flags in commands)
         # A CR cannot be drawn: a value keeping CRLF line endings is said so.
         crlf = any("\r\n" in str(flag) for _, flags in commands for flag in flags)
-        note = self.app.texts("confirm.crlf") if crlf else None
+        note = "\n".join(text for text in (self.app.texts("confirm.crlf") if crlf else None, also) if text) or None
+        self._then = then
         danger = any(destroys(command, flags, self.app.configured) for command, flags in commands)
         self.app.push_screen(ConfirmScreen(lines, note=note, danger=danger), lambda yes: yes and self._run(commands))
 
@@ -75,6 +79,10 @@ class CommandRunner:
         while app.screen is not self and self in app.screen_stack:
             await app.pop_screen()
         await app.switch_screen(ResultScreen(command, result))
+        if result.success and self._then:
+            # From the event loop, as an Edit chosen on screen: not inside this
+            # finish, which the write's worker is still waiting on.
+            app.call_later(self._then, result)
 
     def _say_still_running(self):
         if not self.is_attached or not self._command_running or self.query("#still-running"):

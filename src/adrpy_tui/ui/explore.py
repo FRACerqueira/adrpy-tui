@@ -10,11 +10,12 @@ from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, LoadingIndicator, Markdown, Select, Static
 
-from adrpy_tui.core.decisions import folder_of, listed, state
+from adrpy_tui.core.decisions import PROPOSED, folder_of, listed, state
 from adrpy_tui.core.files import repository_folder
 from adrpy_tui.core.registry import commands_taking
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_LIST, AdrpyScreen, on_top
+from adrpy_tui.ui.editing import edit_decision
 from adrpy_tui.ui.form import FormScreen
 from adrpy_tui.ui.preview import PREVIEW_BINDING, excerpt, follow_link, open_preview
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
@@ -47,6 +48,9 @@ def _errors_of(consistency):
 
 def _read_explore(app):
     return app.client.run("explore", ("--path", str(app.repo)))
+
+
+EDIT = "edit"  # the detail's action opening the decision in the editor
 
 
 class ExploreScreen(AdrpyScreen):
@@ -229,9 +233,14 @@ class DetailScreen(AdrpyScreen):
             if value:
                 yield Static(f"{texts(key)}: {visible(str(value))}", classes="info", markup=False)
         commands = commands_taking(decision_state) if actions else []
-        if commands:
+        editor = self.app.editor
+        # Only a Proposed decision's text is edited; an Accepted one's changes
+        # through revise or version (ADR0007V01).
+        edit = [row(texts("detail.edit", editor=editor.name), id=EDIT)] if (
+            actions and editor and decision_state == PROPOSED) else []
+        if commands or edit:
             yield Static(texts("detail.actions"), classes="title")
-            yield PagedList(*(row(texts(f"menu.decisions.{command}"), id=command) for command in commands),
+            yield PagedList(*edit, *(row(texts(f"menu.decisions.{command}"), id=command) for command in commands),
                             list_id="actions")
         content, note = excerpt(self.app, self.decision["path"])
         if note:
@@ -241,7 +250,10 @@ class DetailScreen(AdrpyScreen):
     def on_option_list_option_selected(self, event):
         if not on_top(self):
             return
-        self.app.push_screen(FormScreen(event.option.id, decision=self.decision["path"]))
+        if event.option.id == EDIT:
+            edit_decision(self.app, self.decision["path"])
+        else:
+            self.app.push_screen(FormScreen(event.option.id, decision=self.decision["path"]))
 
     def action_preview(self):
         open_preview(self.app, self.decision["path"])

@@ -51,6 +51,24 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 - [ ] Keys: give Run another key; the key line of a form names it and it
       runs; a key another action has is refused.
 
+## Editing a decision (`sample`)
+
+- [ ] Editor lists None first; an editor not installed shows why. Choose
+      one; New decision with "Open in the editor once created" on: the
+      confirmation says it opens, then it does, on the new file.
+- [ ] Notepad (Windows) and `code --wait`: the TUI waits until the file's
+      window or tab is closed, also with Notepad or VS Code already open
+      with other tabs; Stop waiting leaves it open and says so, and
+      Approve and another Edit are refused until it closes.
+- [ ] A terminal editor (vim or nano) takes the terminal and gives it back,
+      the screen drawn again: in Windows Terminal, the classic console,
+      macOS Terminal, a Linux terminal, and inside WSL (its own PATH) --
+      opened from a decision's detail and once New decision created one.
+      Ctrl+C inside it is the editor's: the TUI and the editor stay.
+- [ ] Save the file as ANSI/Windows-1252 in Notepad: the TUI says it is not
+      UTF-8. Break a header line: Check shows the error and its hint.
+- [ ] A Proposed decision's detail offers Edit first; an Accepted one does not.
+
 ## First run and appearance (`empty`)
 
 - [ ] With no state file (`%APPDATA%\adrpy-tui\state.json` removed on

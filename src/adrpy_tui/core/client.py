@@ -202,8 +202,8 @@ class Client:
         try:
             if write and self.still_writing():
                 return Result(argv, -1, False, code=WRITE_STILL_RUNNING,
-                              detail="A command you left is still running: wait for it to end, then run check "
-                              "to see the repository's state.")
+                              detail="A command you left, or an editor you stopped waiting for, is still "
+                              "running: wait for it to end, then run check to see the repository's state.")
             try:
                 completed = self._runner(list(argv), timeout=None if write else READ_TIMEOUT, leave=stop)
             except _TimedOut:
@@ -226,6 +226,40 @@ class Client:
         finally:
             self._lock.release()
         return _parse(argv, completed)
+
+    def edit(self, command, env, leave=None):
+        """Starts an editor with a window on a decision and waits for it to
+        close the file (ADR0007V01), as for a write: never stopped. Once
+        `leave` is set or the TUI quits, the waiting ends and the editor stays
+        open; a write is refused until it closes, since saving there would
+        undo it. The exit code, or None once left; OSError when it cannot be
+        started. `command`, `env`: core/editors.py `command`."""
+        # Nothing of the TUI's terminal: on Windows the editor would share the
+        # console's input and take keys meant for the TUI; its output would
+        # draw over the screen.
+        process = subprocess.Popen(command, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL)
+        stop = _Either(leave, self._closing)
+        while True:
+            try:
+                return process.wait(timeout=0.1)
+            except subprocess.TimeoutExpired:
+                if stop.is_set():
+                    self._left.append(process)
+                    return None
+
+    def edit_in_terminal(self, command, env):
+        """A terminal editor, given the terminal while the TUI is suspended,
+        waited for to its end. Its exit code; OSError when it cannot be
+        started."""
+        process = subprocess.Popen(command, env=env)
+        while True:
+            try:
+                return process.wait()
+            except KeyboardInterrupt:
+                # Ctrl+C is the editor's key: subprocess.run would kill it, the
+                # unsaved text lost.
+                continue
 
     def help(self, command):
         """`help <verb>` of the program the command belongs to."""

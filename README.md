@@ -125,13 +125,14 @@ Main menu
 ├─ AI skills             List · Install · Remove (adrpy-skills)
 ├─ Command help          the full contract of every adrpy and adrpy-skills command
 ├─ Change repository
-├─ Language · Appearance · Keys
+├─ Language · Appearance · Keys · Editor
 └─ Exit
 ```
 
 - **Choosing a decision** is picking it from a list, filtered by name, showing only the ones the command can take (F2 shows them all).
 - **Every list** shows eight rows a page, with where you are when there are more.
 - **Any decision or log entry** can be read rendered from any list of them (F3), following its links to other decisions.
+- **A Proposed decision's text in your own editor.** Choose it under **Editor**: vim, nvim, nano, micro, hx, VS Code, VSCodium, Sublime Text, Kate, gedit, gVim or Notepad, as found on your PATH; None is the default, and then you edit the file yourself, its text being the template. With one chosen, a new decision, version, revision or successor can open in it once created, and a Proposed decision's detail offers Edit. The TUI waits while the file is open -- a terminal editor takes the terminal, a window one can be left with Stop waiting -- and runs Check once it is closed; while a command or an editor you left still runs, Edit waits for it. The TUI never writes the file itself ([ADR0007V01](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/adr/ADR0007V01R02-a-proposed-decision%27s-text-is-edited-in-the-editor-the-person-chose,-never-by-the-tui,-and-adrpy-check-validates-the-file-afterwards.md)). An Accepted decision's text changes through New revision or New version.
 
 Every screen, form and component is described in [Screens and forms](https://github.com/FRACerqueira/adrpy-tui/blob/main/doc/forms.md).
 

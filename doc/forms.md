@@ -202,7 +202,28 @@ every list (`decisions.listed`).
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
+| One of a list, chosen | the editor (main menu) | a `PagedList`: None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
 | Decision content | detail view, previews, help | `Markdown`, read-only, links never opened in a browser |
+
+## Editing a decision
+
+A Proposed decision opens in the editor chosen under Editor (ADR0007V01):
+from a decision's detail (Edit, its first action, offered only for a
+Proposed decision while an editor is chosen) and once `new`, `version`,
+`revise` or `supersede` created one with "Open in the editor once created"
+on. Only a file of the decisions folder is opened, by its absolute path. A
+terminal editor (vim, nvim, nano, micro, hx) gets the terminal while the
+TUI is suspended; a terminal that cannot be handed over (a web terminal)
+is said. An editor with a window gets nothing of the TUI's terminal and
+is waited for in a dialog whose Stop waiting (or Esc) leaves it open:
+from then on what is saved there is not checked, and a command that
+writes is refused until it closes, since saving there would undo it -- and
+so is Edit, while a left command or editor still runs. Ctrl+C belongs to a
+terminal editor: the TUI never stops it. Once
+the editor returns, Check runs and shows the repository's state; a code
+other than 0 and a file not saved as UTF-8 (adrpy approve would replace
+its other characters with U+FFFD) are said. An editor that cannot start
+is said, and nothing is checked. The TUI repairs nothing.
 
 ## Menus
 
@@ -219,6 +240,7 @@ Main menu
 ├─ Language
 ├─ Appearance
 ├─ Keys
+├─ Editor
 └─ Exit
 ```
 
@@ -264,12 +286,12 @@ requirements).
 
 | Command | Fields → component |
 |---|---|
-| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate |
+| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
 | `approve`, `reject` | `AdrPicker` (`Proposed`, or a migrated placeholder) · refdate, not before the decision's creation |
 | `undo` | `AdrPicker` (`Accepted`/`Rejected`) |
-| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` |
-| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` |
-| `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) |
+| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
 | `explore` | its own screen: File, Folder (relative to the decisions folder, `.` straight in it: adrpy finds decisions in subfolders too), Status (the repository's label), Scope, Domain for every decision, a folder `Select` and a filter by name or folder, with "12 of 49 decisions" below, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
 | `check` | its own screen, run as it opens and again when it comes back to the top: "No inconsistencies in N decisions", or the `ErrorList` |
 | `init` | the current repository only (another folder goes through "Change repository") · the config's source, a `RadioSet`: adrpy's defaults in a language (a `Select`, preselected with the UI language), the default (the install-level config, or English when there is none), or a config file (a path, required and existing while chosen); only the chosen source's field is shown and sent. On an initialized repository a warning says a config file replaces it and the other sources are refused. Once it succeeds the repository is read again and the menus rebuilt |
