@@ -251,6 +251,14 @@ Eligibility compares against the canonical status `explore` reports
 where the command says so, never before the decision's own relevant date
 from `explore`.
 
+A required field is marked `*`. Ctrl+R with one empty or not valid runs
+nothing: the field's message shows under it, the focus moves there, and a
+notification names the first such field and why (`form.not_run`), seen even
+when the field's message is off screen. A
+decision list takes its rows from the room left on screen: in a terminal
+shorter than about 40 rows they can all be squeezed out (README, Terminal
+requirements).
+
 | Command | Fields → component |
 |---|---|
 | `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate |

@@ -221,9 +221,13 @@ class FormScreen(CommandRunner, AdrpyScreen):
             if found:
                 key, params = found
                 self.query_one(f"#problem-{field.flag}", Static).update(self.app.texts(key, **params))
-                first_problem = first_problem or field
+                if first_problem is None:
+                    first_problem, first_message = field, self.app.texts(key, **params)
         if first_problem:
             self.query_one(f"#field-{first_problem.flag}").focus()
+            # The field's own message can be off screen in a short terminal: this one is always seen.
+            self.app.notify(self.app.texts("form.not_run", field=self.app.texts(f"field.{first_problem.flag}"),
+                                           problem=first_message), severity="warning", markup=False)
             return
         self.confirm_and_run([(self.command, build_flags(self.form, self.app.repo, values))])
 

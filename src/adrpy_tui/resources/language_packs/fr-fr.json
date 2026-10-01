@@ -106,6 +106,7 @@
   "field.refdate": "Date de référence (AAAA-MM-JJ)",
   "field.empty": "Partir du modèle par défaut, sans le contenu d'origine",
   "problem.required": "Obligatoire.",
+  "form.not_run": "Non exécuté : {field} — {problem}",
   "problem.blank": "Ne peut pas être vide : effacez-le ou saisissez une valeur.",
   "problem.forbidden": "Ne peut pas contenir {char}.",
   "problem.date_format": "Utilisez AAAA-MM-JJ.",

@@ -106,6 +106,7 @@
   "field.refdate": "Reference date (YYYY-MM-DD)",
   "field.empty": "Start from the default template, not the source's content",
   "problem.required": "Required.",
+  "form.not_run": "Not run: {field} — {problem}",
   "problem.blank": "Cannot be blank: clear it or type a value.",
   "problem.forbidden": "Cannot contain {char}.",
   "problem.date_format": "Use YYYY-MM-DD.",

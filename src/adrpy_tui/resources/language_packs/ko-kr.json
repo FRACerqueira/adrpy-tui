@@ -106,6 +106,7 @@
   "field.refdate": "기준 날짜 (YYYY-MM-DD)",
   "field.empty": "원본 내용 없이 기본 템플릿에서 시작",
   "problem.required": "필수 항목입니다.",
+  "form.not_run": "실행되지 않음: {field} — {problem}",
   "problem.blank": "공백일 수 없습니다. 지우거나 값을 입력하세요.",
   "problem.forbidden": "{char}은(는) 사용할 수 없습니다.",
   "problem.date_format": "YYYY-MM-DD 형식을 사용하세요.",
