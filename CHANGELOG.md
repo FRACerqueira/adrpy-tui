@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-01
+
+The first release of adrpy-tui.
+
 ### Added
 
 - **Published on PyPI**, as adrpy-ai is since its 0.1.0: CI installs adrpy-ai from PyPI, and a tag `vX.Y.Z` on main publishes adrpy-tui to TestPyPI, then to PyPI after the owner's review ([ADR0003V01R02](doc/adr/ADR0003V01R02-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)).
@@ -35,3 +39,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **adrpy-ai's validated range**: adrpy-tui requires `adrpy-ai>=0.1.dev0,<0.2` (the 0.1 series, development builds included) and, when an adrpy-ai outside it is installed later, says so on the main menu ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)).
 - **Every change goes through adrpy** ([ADR0001V01](doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)), run from the TUI's own interpreter ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)).
 - **The UI speaks the eleven languages adrpy supports** ([ADR0005V01](doc/adr/ADR0005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md)). adrpy's own messages stay in English. The ten non-English packs have not been reviewed by native speakers yet.
+
+[Unreleased]: https://github.com/FRACerqueira/adrpy-tui/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/FRACerqueira/adrpy-tui/releases/tag/v0.1.0
