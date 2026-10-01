@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.suggester import Suggester
 from textual.widgets import (
-    Button, Input, Label, MaskedInput, RadioButton, RadioSet, Select, SelectionList, Static, Switch, TextArea,
+    Button, Input, Label, MaskedInput, RadioSet, Select, Static, Switch, TextArea,
 )
 
 from adrpy_tui.core import i18n, keys
@@ -23,6 +23,7 @@ from adrpy_tui.ui.paged import PAGE_SIZE
 from adrpy_tui.ui.picker import AdrPicker
 from adrpy_tui.ui.preview import PREVIEW_BINDING, open_preview
 from adrpy_tui.ui.running import CommandRunner
+from adrpy_tui.ui.toggles import CheckList, ChoiceButton
 
 _SIMILAR_SHOWN = 8
 
@@ -83,7 +84,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
         if field.kind == "choice":
             texts = self.app.texts
             return RadioSet(
-                *(RadioButton(texts(f"choice.{field.flag}.{choice}"), value=index == 0, id=f"{field.flag}-{choice}")
+                *(ChoiceButton(texts(f"choice.{field.flag}.{choice}"), value=index == 0, id=f"{field.flag}-{choice}")
                   for index, choice in enumerate(field.choices)),
                 id=widget_id,
             )
@@ -99,7 +100,7 @@ class FormScreen(CommandRunner, AdrpyScreen):
         if field.kind == "multi":
             # A short, fixed list of choices: never more than a page
             # (doc/forms.md, "Lists").
-            choices = SelectionList(*((choice, choice) for choice in field.choices), id=widget_id)
+            choices = CheckList(*((choice, choice) for choice in field.choices), id=widget_id)
             choices.styles.max_height = PAGE_SIZE + 2
             return choices
         restrict = field.restrict or (f"[^{re.escape(field.forbidden)}]*" if field.forbidden else None)

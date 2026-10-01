@@ -7,7 +7,7 @@ created first, from a language pack or a config file."""
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, LoadingIndicator, RadioButton, RadioSet, Select, Static, TextArea
+from textual.widgets import Button, Input, LoadingIndicator, RadioSet, Select, Static, TextArea
 
 from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
@@ -18,6 +18,7 @@ from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PagedList, row
 from adrpy_tui.ui.running import CommandRunner
+from adrpy_tui.ui.toggles import ChoiceButton
 
 CHANGED = "•"
 
@@ -233,8 +234,8 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         texts = self.app.texts
         if missing:
             yield Static(texts("config.install_missing"), id="install-missing", classes="info")
-        yield RadioSet(RadioButton(texts("choice.source.language"), value=True, id="create-language"),
-                       RadioButton(texts("choice.source.seed"), id="create-seed"), id="create-source")
+        yield RadioSet(ChoiceButton(texts("choice.source.language"), value=True, id="create-language"),
+                       ChoiceButton(texts("choice.source.seed"), id="create-seed"), id="create-source")
         yield Select([(i18n.load(code)("language.name"), code) for code in i18n.LANGUAGES],
                      value=self.app.texts.language, allow_blank=False, id="create-language-value")
         yield SafeInput(placeholder=texts("field.seed"), id="create-seed-value")

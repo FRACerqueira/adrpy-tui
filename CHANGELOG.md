@@ -10,11 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **A first-run preview** in the README (an animated GIF, kept out of the sdist), and the terminal it needs: about 100×40 and a font for the interface's languages.
+- **A first-run preview** in the README (an animated GIF, kept out of the sdist), and the terminal it needs: at least 80×24 and a font for the interface's languages.
 
 ### Changed
 
 - **Ctrl+R that runs nothing says why** in a notification naming the field and its problem, since the field's own message can be off screen in a short terminal.
+- **A choice is marked, not only colored**: a multi-select shows `[x]` or `[ ]`, a radio button `(●)` or `( )`, where Textual drew the same X or ● either way.
+
+### Fixed
+
+- **A form in a short terminal scrolls** instead of squeezing its fields: each field's row shared out the visible height and was cut to its share, so a list's choices (the skills form's providers and skills) showed only in a tall terminal.
+- **Every screen fits 80×24**, checked by a test that opens each screen and dialog at that size: migrate's preview is no longer squeezed to one row, what migrate reads from each part of the name wraps within its row instead of running past it, and a long command's confirmation keeps its Yes and No buttons whole.
 
 ## [0.1.0] - 2026-10-01
 

@@ -55,9 +55,9 @@ and of a preview are the theme's text in bold, not Textual's primary color
 -- a button's background, too dark as text on a dark screen. So is every
 other color Textual draws that no preset sets for it: a placeholder, a
 disabled option (a group's title, a decision the command cannot take)
-and a select's arrow read at 4.5:1, an unchecked radio button or checkbox
-and the focused widget's border -- in the highlight role -- at WCAG's 3:1
-for a component. `tests/test_ui.py` measures everything drawn on every
+and a select's arrow read at 4.5:1, and the focused widget's border -- in
+the highlight role -- at WCAG's 3:1 for a component. A choice's mark
+(`[x]`, `(●)`) is drawn in its row's own text color, so it reads as that text does. `tests/test_ui.py` measures everything drawn on every
 screen, in every preset; a field's or a button's edges and the scrollbars
 are decoration no state depends on, and are not measured. Default is the default
 because it already does while keeping each kind of text distinct, and High
@@ -193,7 +193,8 @@ every list (`decisions.listed`).
 | Small integer range | lenseq/lenversion/lenrevision | `Select` over the allowed range |
 | Date | refdate | `MaskedInput` `9999-99-99`, defaults to today |
 | On/off | `--empty`, booleans | `Switch` |
-| Several of a list | explore columns, migrate list | `SelectionList` |
+| Several of a list | the skills forms' providers and skills | `CheckList` (`ui/toggles.py`), a `SelectionList` that marks each choice `[x]` or `[ ]`, not by its color alone; Space or Enter marks and unmarks the highlighted one |
+| One of a few | the init form's config source, the skills forms' where, the source of an install-level config not created yet | `RadioSet` of `ChoiceButton` (`ui/toggles.py`), marked `(●)` or `( )` |
 | Rows with columns | explore | `PagedList` rows whose columns are padded by terminal cells (a CJK label takes two), the last never cut, under a header line; a filter `Input`; below the list, the highlighted row's values whole (explore) or the entry's whole file name and folder (the log browser), since every other column is cut to its width |
 | Errors | check, a failed command | `ErrorList`: a `PagedList` row per error (file · code), the highlighted one's detail, hint and related files below, in adrpy's words -- a hint is too long for a table cell |
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
@@ -255,8 +256,8 @@ A required field is marked `*`. Ctrl+R with one empty or not valid runs
 nothing: the field's message shows under it, the focus moves there, and a
 notification names the first such field and why (`form.not_run`), seen even
 when the field's message is off screen. A
-decision list takes its rows from the room left on screen: in a terminal
-shorter than about 40 rows they can all be squeezed out (README, Terminal
+field takes its own height and a form taller than the terminal scrolls, so
+a decision list keeps its eight rows down to 80×24 (README, Terminal
 requirements).
 
 | Command | Fields → component |

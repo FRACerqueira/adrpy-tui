@@ -96,7 +96,7 @@ To work on adrpy-tui itself (running the test suite), see [Contributing](https:/
 
 ## Terminal requirements
 
-- **About 100 columns by 40 rows, or more.** In a shorter terminal (around 33 rows), a form's list of decisions can be squeezed until none of its rows shows, so there is nothing to choose.
+- **At least 80 columns by 24 rows.** Every screen is built for it: what does not fit scrolls, and the tests open every screen and dialog at 80×24. A larger terminal shows more at once (the header alone takes 11 rows). Below 80 columns, a dialog's button can be cut.
 - **A font for the interface's languages.** The language list, and the interface once translated, show Japanese, Korean, Chinese and Russian text: a terminal whose font (or the fonts it falls back to) lacks those scripts draws them as boxes. A font family such as Noto CJK covers them.
 - **When Ctrl+R runs nothing**, a required field (marked `*`) is empty or not valid: a notification names it and why ("Not run: Decision — Required."), its message shows under it, and the focus moves there. In a list, Enter moves from the filter to the list, and Enter again chooses the highlighted decision.
 
