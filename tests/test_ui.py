@@ -846,7 +846,7 @@ def test_a_remembered_item_past_the_first_page_opens_on_its_page(tmp_path, user_
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
     async def scenario(pilot):
-        assert _page_text(app.screen, "options") == "Items 9–12 of 12 · page 2 of 2 · PgUp/PgDn"
+        assert _page_text(app.screen, "options") == "Items 9–13 of 13 · page 2 of 2 · PgUp/PgDn"
 
     run_app(app, scenario)
 
@@ -2063,6 +2063,65 @@ async def _asked_in_red(pilot):
     assert pilot.app.screen.query_one("#yes", Button).variant == "error"
 
 
+def _only_on_path(monkeypatch, *programs):
+    """A PATH holding only `programs`, for the editors alone."""
+    from adrpy_tui.core import editors
+
+    monkeypatch.setattr(editors, "located",
+                        lambda editor, which=None: f"/bin/{editor.program}" if editor.program in programs else None)
+
+
+async def _open_editors(pilot):
+    options = _options(pilot.app.screen)
+    options.highlighted = options.get_option_index("editor")
+    await pilot.press("enter")
+    await settle(pilot)
+    return pilot.app.screen.query_one("#editors", OptionList)
+
+
+def test_the_editor_is_chosen_from_the_list_none_first(tmp_path, user_state, monkeypatch):
+    """ADR0007V01: None is the default; an editor not on this system's
+    PATH is listed with the reason, not offered."""
+    from adrpy_tui.core import editors
+    from adrpy_tui.ui.editor import EditorScreen
+
+    _only_on_path(monkeypatch, "nano")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        main = [option.id for option in _options(app.screen)._options]
+        assert main.index("editor") == main.index("keys") + 1
+        choices = await _open_editors(pilot)
+        assert isinstance(app.screen, EditorScreen)
+        ids = [choices.get_option_at_index(i).id for i in range(choices.option_count)]
+        assert ids[:2] == ["back", "none"] and ids[2:] == [editor.name for editor in editors.EDITORS]
+        assert choices.get_option_at_index(choices.highlighted).id == "none"
+        vim = choices.get_option(("vim"))
+        assert vim.disabled and "not found" in str(vim.prompt)
+        assert not choices.get_option("nano").disabled
+        choices.highlighted = choices.get_option_index("nano")
+        await pilot.press("enter")
+        await settle(pilot)
+        assert user_state.editor == "nano" and app.editor.name == "nano"
+        choices = await _open_editors(pilot)
+        assert choices.get_option_at_index(choices.highlighted).id == "nano"
+        choices.highlighted = choices.get_option_index("none")
+        await pilot.press("enter")
+        await settle(pilot)
+        assert user_state.editor is None and app.editor is None
+
+    run_app(app, scenario)
+
+
+def test_an_editor_kept_that_is_gone_or_unknown_is_none(tmp_path, user_state, monkeypatch):
+    _only_on_path(monkeypatch)  # nano no longer on PATH
+    user_state.set_editor("nano")
+    assert AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state).editor is None
+    _only_on_path(monkeypatch, "nano")
+    user_state.set_editor("devenv")
+    assert AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state).editor is None
+
+
 def test_back_to_the_preset_and_restore_every_color(tmp_path, user_state):
     user_state.set_color("tui-banner", "#FFA500")
     user_state.set_color("tui-info", "#999999")
@@ -2780,6 +2839,7 @@ FOCUS_SCREENS = {
     "language": (["language"], "list"),
     "appearance": (["appearance"], "list"),
     "keys": (["keys"], "list"),
+    "editor": (["editor"], "list"),
     "help": (["help", "help.new"], "text"),
     "preview": (["explore", "explore.explore", ":preview"], "text"),
 }
@@ -2826,6 +2886,8 @@ async def _walk(app, pilot, path):
         else:
             options = _options(app.screen)
             options.highlighted = options.get_option_index(step)
+            # Enter on a disabled item does nothing: the tests would measure the menu.
+            assert not options.get_option(step).disabled, step
             await pilot.press("enter")
         await settle(pilot)
 

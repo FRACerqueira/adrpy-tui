@@ -1,5 +1,6 @@
 """Per-user state: the interface language, the appearance preset, the
-colors customized on top of it, the changed keys, and the last item selected in each menu.
+colors customized on top of it, the changed keys, the editor decisions open
+in (ADR0007V01), and the last item selected in each menu.
 
 A file that can't be read starts empty, and one that can't be written is
 skipped, without interrupting the person: losing it only means choosing the
@@ -39,6 +40,9 @@ class UserState:
         # role -> color as typed; checked by the app, which ignores (and
         # reports) one it cannot read.
         self.colors = {k: v for k, v in colors.items() if isinstance(v, str)} if isinstance(colors, dict) else {}
+        editor = data.get("editor")
+        # A name of core/editors.py's list, checked by the app; None: no editor.
+        self.editor = editor if isinstance(editor, str) else None
         items = data.get("last_menu_item")
         self._items = {k: v for k, v in items.items() if isinstance(v, str)} if isinstance(items, dict) else {}
 
@@ -94,9 +98,13 @@ class UserState:
         self.keys = {}
         self._save()
 
+    def set_editor(self, editor):
+        self.editor = editor
+        self._save()
+
     def _save(self):
         data = {"language": self.language, "appearance": self.appearance, "colors": self.colors,
-                "keys": self.keys, "last_menu_item": self._items}
+                "keys": self.keys, "editor": self.editor, "last_menu_item": self._items}
         # Written aside, then put in place: a save that fails half-way (a full
         # disk) leaves the previous file as it was, not a truncated one.
         partial = self._path.with_name(self._path.name + ".partial")
