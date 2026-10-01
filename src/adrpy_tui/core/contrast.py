@@ -15,3 +15,9 @@ def _luminance(rgb):
 def ratio(first, second):
     lighter, darker = sorted((_luminance(first), _luminance(second)), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def readable_on(rgb):
+    """Black or white, whichever reads better on `rgb` -- by contrast, not
+    by brightness as Textual's "auto" picks (3.48:1 white on #00A000)."""
+    return "#000000" if ratio((0, 0, 0), rgb) >= ratio((255, 255, 255), rgb) else "#FFFFFF"

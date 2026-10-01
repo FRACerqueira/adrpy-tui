@@ -95,6 +95,37 @@ ConfirmScreen {
     margin-top: 1;
 }
 
+/* A plain button (No, Cancel): Textual's is the dialog's own surface, 1:1,
+   a word rather than a button. This file's rules always override Textual's
+   own, however specific: each variant's colors are given again here, and
+   the hover its own tint. A plain button is the info role and a yellow one
+   the warnings role, each with the text that reads best on it, customized
+   or not (ui/app.py); a blue or red one has white text, not Textual's 87%
+   white (4:1 on the blue once focused). */
+Button.-style-default {
+    background: $tui-info;
+    color: $tui-info-text;
+}
+
+Button.-style-default.-primary {
+    background: $primary;
+    color: white;
+}
+
+Button.-style-default.-error {
+    background: $error;
+    color: white;
+}
+
+Button.-style-default.-warning {
+    background: $tui-warning;
+    color: $tui-warning-text;
+}
+
+Button.-style-default:hover {
+    background-tint: $foreground 15%;
+}
+
 /* A toggle's label is text: the theme's own foreground, on any preset. */
 RadioButton, Checkbox {
     color: $foreground;

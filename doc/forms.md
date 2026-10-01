@@ -65,7 +65,7 @@ contrast is one choice away. Textual honors `NO_COLOR`. "Customize colors" sets 
 (`#RRGGBB` or a CSS name) on top of the chosen preset, shown at once and
 kept with the language; a color below 4.5:1 on its background is warned
 about, not refused; "Back to the preset" and "Restore every color" undo
-them. A saved color that can't be read is ignored and named on the main
+them, the latter once confirmed (Yes in red), as "Restore every key" is. A saved color that can't be read is ignored and named on the main
 menu.
 
 The Default preset:
@@ -81,7 +81,9 @@ The Default preset:
 | Result | white `#FFFFFF` |
 | Typed value | cyan `#00FFFF` (approximate, to validate) |
 | Highlighted item | green `#00FF00` on `#303030` |
-| Buttons | white on `#00509E` |
+| Buttons | white on `#1F6FC5` (the action); white on red (Yes to a command that destroys); the warnings role (Leave); the info role (No, Cancel) -- each with black or white text, whichever reads better on it |
+
+A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. A plain button takes the info role and Leave the warnings role, so "Customize colors" changes them too.
 
 ## Lists
 

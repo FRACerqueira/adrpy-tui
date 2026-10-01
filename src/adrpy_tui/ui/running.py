@@ -15,6 +15,7 @@ from textual.widgets import Button, Static
 
 from adrpy_tui.core import client as client_module
 from adrpy_tui.core.client import display_command
+from adrpy_tui.core.registry import destroys
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.result import ResultScreen
@@ -36,7 +37,8 @@ class CommandRunner:
         # A CR cannot be drawn: a value keeping CRLF line endings is said so.
         crlf = any("\r\n" in str(flag) for _, flags in commands for flag in flags)
         note = self.app.texts("confirm.crlf") if crlf else None
-        self.app.push_screen(ConfirmScreen(lines, note=note), lambda yes: yes and self._run(commands))
+        danger = any(destroys(command, flags, self.app.configured) for command, flags in commands)
+        self.app.push_screen(ConfirmScreen(lines, note=note, danger=danger), lambda yes: yes and self._run(commands))
 
     def _run(self, commands):
         if self._command_running:
@@ -81,7 +83,7 @@ class CommandRunner:
         self.mount(Vertical(
             Static(texts("running.still", seconds=client_module.READ_TIMEOUT), id="still-running-note",
                    classes="warning", markup=False),
-            Button(texts("running.leave"), id="leave-running", action="screen.leave_running"),
+            Button(texts("running.leave"), id="leave-running", variant="warning", action="screen.leave_running"),
             id="still-running"), before=self.query_one("#hints"))
 
     def action_leave_running(self):

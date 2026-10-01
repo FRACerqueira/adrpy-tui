@@ -19,7 +19,7 @@ DEFAULT_PRESET = "default"
 PRESETS = {
     "default": {
         "base": "textual-dark",
-        "primary": "#00509E",  # buttons: white text at 6.4:1
+        "primary": "#1F6FC5",  # buttons: white text at 5.1:1, the button at 3:1 from the screen
         "colors": {
             "tui-banner": "#FF8C00",
             "tui-info": "#808080",
@@ -50,7 +50,7 @@ PRESETS = {
     },
     "high-contrast": {
         "base": "textual-dark",
-        "primary": "#00509E",
+        "primary": "#1F6FC5",
         "colors": {
             "tui-banner": "#FFAF00",
             "tui-info": "#E0E0E0",

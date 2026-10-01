@@ -1807,6 +1807,33 @@ def test_skills_install_globally_is_only_sent_to_a_fake_here(tmp_path, user_stat
     run_app(app, scenario)
 
 
+@pytest.mark.parametrize("commands, variant", [
+    ([("reject", ["--file", "x.md"])], "error"),
+    ([("skills:install", ["--path", ".", "--force"])], "error"),
+    ([("new", ["--path", ".", "--title", "x"])], "primary"),
+    ([("skills:install", ["--path", "."])], "primary"),
+])
+def test_the_confirmation_s_yes_is_red_for_a_command_that_destroys(tmp_path, user_state, commands, variant):
+    from textual.color import Color
+    from textual.widgets import Button
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen(commands[0][0]))
+        await settle(pilot)
+        app.screen.confirm_and_run(commands)
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen)
+        yes = app.screen.query_one("#yes", Button)
+        assert yes.variant == variant
+        assert app.screen.query_one("#no", Button).variant == "default"
+        # Drawn so: the app's rules restate each variant's color over Textual's.
+        assert yes.styles.background.hex == Color.parse(app.get_css_variables()[variant]).hex
+
+    run_app(app, scenario)
+
+
 @pytest.mark.parametrize("command", sorted(c for c, form in FORMS.items() if not getattr(form, "VIEW", None)))
 def test_a_form_in_a_short_terminal_scrolls_instead_of_squeezing_its_fields(tmp_path, user_state, command):
     """A field row takes its content's height, so a body taller than the
@@ -2025,6 +2052,17 @@ def test_a_customized_color_stays_on_top_of_another_preset(tmp_path, user_state)
     run_app(app, scenario)
 
 
+async def _asked_in_red(pilot):
+    """Enter on a "Restore every ..." row asks first, Yes in red: what was
+    customized is gone once confirmed."""
+    from textual.widgets import Button
+
+    await pilot.press("enter")
+    await settle(pilot)
+    assert isinstance(pilot.app.screen, ConfirmScreen)
+    assert pilot.app.screen.query_one("#yes", Button).variant == "error"
+
+
 def test_back_to_the_preset_and_restore_every_color(tmp_path, user_state):
     user_state.set_color("tui-banner", "#FFA500")
     user_state.set_color("tui-info", "#999999")
@@ -2035,7 +2073,12 @@ def test_back_to_the_preset_and_restore_every_color(tmp_path, user_state):
         await _edit_color(pilot, roles, "tui-banner", "ignored", button="reset")
         assert _banner_color(app) == "#FF8C00" and user_state.colors == {"tui-info": "#999999"}
         roles.highlighted = roles.get_option_index("reset-all")
-        await pilot.press("enter")
+        await _asked_in_red(pilot)
+        await pilot.press("escape")  # No: every color kept
+        await pilot.pause()
+        assert user_state.colors == {"tui-info": "#999999"}
+        await _asked_in_red(pilot)
+        await pilot.press("enter")  # Yes
         await pilot.pause()
         assert user_state.colors == {}
 
@@ -2280,7 +2323,12 @@ def test_backspace_and_restore_every_key_go_back_to_the_defaults(tmp_path, user_
         await _capture(pilot, actions, "run", "backspace")
         assert user_state.keys == {"toggle": "f7"} and app.key_of("run") == "ctrl+r"
         actions.highlighted = actions.get_option_index("reset-all")
-        await pilot.press("enter")
+        await _asked_in_red(pilot)
+        await pilot.press("escape")  # No: every key kept
+        await pilot.pause()
+        assert user_state.keys == {"toggle": "f7"}
+        await _asked_in_red(pilot)
+        await pilot.press("enter")  # Yes
         await pilot.pause()
         assert user_state.keys == {} and app.key_of("toggle") == "f2"
 
@@ -2909,6 +2957,89 @@ def test_every_screen_meets_wcag_contrast_in_every_preset(tmp_path, user_state, 
 
     run_app(app, scenario)
     assert too_low == {}
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_every_kind_of_button_stands_out_and_reads(tmp_path, user_state, preset):
+    """A button's own background at 3:1 from what is behind it (WCAG 1.4.11),
+    its text at 4.5:1 on it: Textual's plain button is the dialog's own
+    surface, 1:1, a word rather than a button. Blue, red, yellow and plain,
+    the plain and the yellow drawn in their roles, customizable."""
+    from textual.color import Color
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    found = {}
+
+    faces = {}
+
+    def measure(name):
+        variables = app.get_css_variables()
+        for button in app.screen.query(Button):
+            for role in ("tui-info", "tui-warning"):
+                if button.styles.background.hex == Color.parse(variables[role]).hex:
+                    faces[f"#{button.id}"] = role
+            behind, own = button.background_colors
+            text = button.visual_style.foreground  # "auto" resolved, as drawn
+            found[f"{name} #{button.id} ({button.variant})"] = (
+                round(_contrast(own, behind), 2), round(_contrast(text, own), 2))
+
+    async def scenario(pilot):
+        for command, flags in (("reject", ["--file", "x.md"]), ("new", ["--path", "."])):
+            app.push_screen(FormScreen(command))
+            await settle(pilot)
+            measure(f"{command} form")
+            app.screen.confirm_and_run([(command, flags)])
+            await settle(pilot)
+            measure(f"{command} confirmation")
+            app.screen.dismiss(False)
+            await settle(pilot)
+            await pilot.press("escape")
+            await settle(pilot)
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True  # as a write past its time
+        app.screen._say_still_running()
+        await settle(pilot)
+        measure("still running")
+        app.screen._command_running = False
+
+    run_app(app, scenario)
+    assert {"(error)", "(primary)", "(default)", "(warning)"} <= {key[key.rindex("("):] for key in found}
+    assert faces == {"#no": "tui-info", "#leave-running": "tui-warning"}
+    assert {key: pair for key, pair in found.items() if pair[0] < 3 or pair[1] < 4.5} == {}
+
+
+@pytest.mark.parametrize("preset", ["default", "high-contrast"])
+def test_a_customized_role_keeps_the_buttons_drawn_on_it_readable(tmp_path, user_state, preset):
+    """A plain button is the info role, Leave the warnings role: a color
+    customized for either still gets text that reads on it, black or white
+    by contrast (Textual's "auto" goes by brightness: 3.48:1 on #00A000)."""
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    user_state.set_color("tui-info", "#00A000")
+    user_state.set_color("tui-warning", "#00A000")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    found = {}
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True  # as a write past its time
+        app.screen._say_still_running()
+        app.push_screen(ConfirmScreen("adrpy x"))
+        await settle(pilot)
+        for screen in app.screen_stack[-2:]:
+            for button in screen.query(Button):
+                if button.variant in ("default", "warning"):
+                    found[button.id] = round(_contrast(button.visual_style.foreground, button.background_colors[1]), 2)
+        app.screen_stack[-2]._command_running = False
+
+    run_app(app, scenario)
+    assert set(found) == {"no", "leave-running"}
+    assert {name: ratio for name, ratio in found.items() if ratio < 4.5} == {}
 
 
 def _cut_off(app):

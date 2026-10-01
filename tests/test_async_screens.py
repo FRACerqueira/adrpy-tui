@@ -195,6 +195,7 @@ def test_the_still_running_panel_fits_80_by_24(tmp_path, user_state, monkeypatch
         assert _cut_off(app) == []
         leave = app.screen.query_one("#leave-running", Button)
         assert 0 <= leave.region.y and leave.region.bottom <= app.size.height
+        assert leave.variant == "warning"  # the write goes on, its result unknown
         client.release.set()
         await settle(pilot)
 

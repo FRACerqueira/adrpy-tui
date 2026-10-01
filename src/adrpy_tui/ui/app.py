@@ -8,7 +8,7 @@ from pathlib import Path
 from textual.app import App
 from textual.color import Color, ColorParseError
 
-from adrpy_tui.core import decisions, i18n, keys, themes, versions
+from adrpy_tui.core import contrast, decisions, i18n, keys, themes, versions
 from adrpy_tui.core.client import Client
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
@@ -115,8 +115,12 @@ class AdrpyTui(App):
         # has would not repaint it.
         self._themes_built += 1
         name = f"{themes.theme_name(preset)}-{self._themes_built}"
+        # The text of the buttons drawn on a role (resources/app.tcss), customized or not.
+        on_roles = {f"{role}-text": contrast.readable_on(Color.parse(colors[role]).rgb)
+                    for role in ("tui-info", "tui-warning")}
         self.register_theme(replace(base, name=name, primary=spec.get("primary", base.primary),
-                                    variables={**base.variables, **colors, **cursor, **headings, **quieter}))
+                                    variables={**base.variables, **colors, **cursor, **headings, **quieter,
+                                               **on_roles}))
         return name
 
     def set_color(self, role, color):
