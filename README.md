@@ -11,12 +11,17 @@
 
 adrpy-tui puts menus, forms, lists and previews on top of adrpy-ai, the JSON-only ADR lifecycle CLI. Installing adrpy-tui with pip installs adrpy-ai with it (the 0.1 series), so one install gives you both: the screens to work in, and the `adrpy` command they drive. Every change still goes through adrpy -- the interface shows you the exact command before it runs, and adrpy's rules are the only ones that apply.
 
+![A first run of adrpy-tui: choosing the language, initializing a repository, creating a decision, approving it and opening it in Explore](https://raw.githubusercontent.com/FRACerqueira/adrpy-tui/main/doc/images/adrpy-tui-first-run.gif)
+
+*A first run: the language, Repository → Initialize, a new decision, Approve, then Explore.*
+
 ## Table of Contents
 
 - [Motivation and Benefits](#motivation-and-benefits)
 - [adrpy-ai and adrpy-tui](#adrpy-ai-and-adrpy-tui)
 - [Versions and compatibility](#versions-and-compatibility)
 - [Installation](#installation)
+- [Terminal requirements](#terminal-requirements)
 - [Quick start](#quick-start)
 - [Features](#features)
 - [Keys](#keys)
@@ -86,6 +91,12 @@ adrpy-tui
 The source install needs a git clone: the version is read from git, so a folder from GitHub's "Download ZIP" does not install. On Windows, some file names under `doc/` are long; if `git clone` reports "Filename too long", clone with `git clone -c core.longpaths=true https://github.com/FRACerqueira/adrpy-tui.git`.
 
 To work on adrpy-tui itself (running the test suite), see [Contributing](https://github.com/FRACerqueira/adrpy-tui/blob/main/CONTRIBUTING.md).
+
+## Terminal requirements
+
+- **About 100 columns by 40 rows, or more.** In a shorter terminal (around 33 rows), a form's list of decisions can be squeezed until none of its rows shows, so there is nothing to choose.
+- **A font for the interface's languages.** The language list, and the interface once translated, show Japanese, Korean, Chinese and Russian text: a terminal whose font (or the fonts it falls back to) lacks those scripts draws them as boxes. A font family such as Noto CJK covers them.
+- **When Ctrl+R runs nothing**, a required field (marked `*`) is empty or not valid: a notification names it and why ("Not run: Decision — Required."), its message shows under it, and the focus moves there. In a list, Enter moves from the filter to the list, and Enter again chooses the highlighted decision.
 
 ## Quick start
 

@@ -54,7 +54,7 @@ exclude = ["src/adrpy_tui/icon.png"]
 [tool.hatch.build.targets.sdist]
 # Repository-only material: the CI workflows, the release's manual checklist and
 # the project's own decision log.
-exclude = [".github/", "doc/manual-test-checklist.md", "doc/decision-log/"]
+exclude = [".github/", "doc/manual-test-checklist.md", "doc/decision-log/", "doc/images/"]
 
 [tool.hatch.version]
 source = "vcs"

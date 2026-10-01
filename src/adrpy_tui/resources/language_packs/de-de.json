@@ -106,6 +106,7 @@
   "field.refdate": "Referenzdatum (JJJJ-MM-TT)",
   "field.empty": "Mit der Standardvorlage beginnen, ohne den Inhalt der Quelle",
   "problem.required": "Pflichtfeld.",
+  "form.not_run": "Nicht ausgeführt: {field} — {problem}",
   "problem.blank": "Darf nicht leer sein: löschen oder einen Wert eingeben.",
   "problem.forbidden": "Darf {char} nicht enthalten.",
   "problem.date_format": "JJJJ-MM-TT verwenden.",

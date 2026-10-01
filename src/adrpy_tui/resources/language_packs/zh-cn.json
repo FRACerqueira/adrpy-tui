@@ -106,6 +106,7 @@
   "field.refdate": "参考日期 (YYYY-MM-DD)",
   "field.empty": "从默认模板开始，不带源决策的内容",
   "problem.required": "必填。",
+  "form.not_run": "未执行：{field} — {problem}",
   "problem.blank": "不能为空白：请清除或输入一个值。",
   "problem.forbidden": "不能包含 {char}。",
   "problem.date_format": "请使用 YYYY-MM-DD。",

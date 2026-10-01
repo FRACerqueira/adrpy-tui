@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **A first-run preview** in the README (an animated GIF, kept out of the sdist), and the terminal it needs: about 100×40 and a font for the interface's languages.
+
+### Changed
+
+- **Ctrl+R that runs nothing says why** in a notification naming the field and its problem, since the field's own message can be off screen in a short terminal.
+
 ## [0.1.0] - 2026-10-01
 
 The first release of adrpy-tui.

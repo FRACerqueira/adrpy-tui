@@ -106,6 +106,7 @@
   "field.refdate": "Fecha de referencia (AAAA-MM-DD)",
   "field.empty": "Empezar con la plantilla predeterminada, sin el contenido de origen",
   "problem.required": "Obligatorio.",
+  "form.not_run": "No se ejecutó: {field} — {problem}",
   "problem.blank": "No puede quedar en blanco: bórrelo o escriba un valor.",
   "problem.forbidden": "No puede contener {char}.",
   "problem.date_format": "Use AAAA-MM-DD.",

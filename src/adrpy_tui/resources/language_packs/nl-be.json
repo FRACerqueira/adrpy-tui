@@ -106,6 +106,7 @@
   "field.refdate": "Referentiedatum (JJJJ-MM-DD)",
   "field.empty": "Beginnen met de standaardsjabloon, zonder de inhoud van de bron",
   "problem.required": "Verplicht.",
+  "form.not_run": "Niet uitgevoerd: {field} — {problem}",
   "problem.blank": "Mag niet leeg zijn: wis het of typ een waarde.",
   "problem.forbidden": "Mag {char} niet bevatten.",
   "problem.date_format": "Gebruik JJJJ-MM-DD.",

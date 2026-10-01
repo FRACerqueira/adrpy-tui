@@ -106,6 +106,7 @@
   "field.refdate": "Data di riferimento (AAAA-MM-GG)",
   "field.empty": "Parti dal modello predefinito, senza il contenuto di origine",
   "problem.required": "Obbligatorio.",
+  "form.not_run": "Non eseguito: {field} — {problem}",
   "problem.blank": "Non può essere vuoto: cancellalo o inserisci un valore.",
   "problem.forbidden": "Non può contenere {char}.",
   "problem.date_format": "Usa AAAA-MM-GG.",

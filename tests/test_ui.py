@@ -4317,3 +4317,55 @@ def test_a_log_folder_not_created_yet_is_no_folder_that_cannot_be_read(tmp_path,
         assert _text(app.screen, "#logs-unreadable") == ""
 
     run_app(app, scenario)
+
+
+
+def _not_run_notices(app):
+    head = app.texts("form.not_run", field="", problem="").split("{")[0][:6]
+    return [n for n in app._notifications if str(n.message).startswith(head)]
+
+
+def test_a_run_a_field_stops_says_so_where_it_is_always_seen(tmp_path, user_state):
+    """The field's own message can be off screen in a short terminal: Ctrl+R
+    then seemed to do nothing. A notification names the field and why."""
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_new_form(pilot)
+        await pilot.press("ctrl+r")  # title left empty
+        await pilot.pause()
+        assert [(str(n.message), n.severity) for n in _not_run_notices(app)] == [
+            (app.texts("form.not_run", field=app.texts("field.title"), problem=app.texts("problem.required")), "warning")]
+
+    run_app(app, scenario)
+    assert "new" not in client.verbs()
+
+
+def test_choosing_no_decision_says_so_where_it_is_always_seen(tmp_path, user_state):
+    client = _client_with(DECISIONS)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open(pilot, "approve")
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        assert [str(n.message) for n in _not_run_notices(app)] == [
+            app.texts("form.not_run", field=app.texts("field.file"), problem=app.texts("problem.required"))]
+
+    run_app(app, scenario)
+
+
+def test_a_form_that_runs_gives_no_not_run_notice(tmp_path, user_state):
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _open_new_form(pilot)
+        await pilot.press(*"Use queues")
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmScreen)
+        assert _not_run_notices(app) == []
+
+    run_app(app, scenario)

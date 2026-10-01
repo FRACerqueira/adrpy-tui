@@ -106,6 +106,7 @@
   "field.refdate": "基準日 (YYYY-MM-DD)",
   "field.empty": "元の内容を使わず、既定のテンプレートから始める",
   "problem.required": "必須です。",
+  "form.not_run": "実行されませんでした: {field} — {problem}",
   "problem.blank": "空白のみにはできません。消去するか値を入力してください。",
   "problem.forbidden": "{char} は使用できません。",
   "problem.date_format": "YYYY-MM-DD 形式で入力してください。",
