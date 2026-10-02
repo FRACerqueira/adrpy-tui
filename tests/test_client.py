@@ -515,3 +515,50 @@ def test_ctrl_c_during_a_terminal_editor_does_not_kill_it(monkeypatch):
     monkeypatch.setattr(subprocess, "Popen", Started)
     assert Client().edit_in_terminal(["vim", "x.md"], None) == 0
     assert len(waits) == 2
+
+
+
+def test_no_editor_starts_once_the_wait_is_left_or_the_tui_quits(monkeypatch):
+    """The window would open after the person left, or after the TUI was gone."""
+    import subprocess
+
+    started = []
+    monkeypatch.setattr(subprocess, "Popen", lambda command, **_: started.append(command))
+    leave = threading.Event()
+    leave.set()
+    assert Client().edit(["editor", "x.md"], None, leave) is None
+    client = Client()
+    client.shutdown()
+    assert client.edit(["editor", "x.md"], None) is None
+    assert started == [] and not client.still_writing()
+
+
+def test_a_left_editor_is_never_lost_to_a_check_reading_the_list_at_once():
+    """still_writing() read, filtered and rebuilt the list unlocked while a
+    worker appended to it: an append landing in between was lost, and a
+    write was allowed while the editor stayed open -- 11 to 15 of 400,000
+    appends lost, in 3 runs of 3, against a thread calling still_writing()
+    with the switch interval at 1e-6. Red is not kept as a test: with the
+    fix, that stress run is quadratic (every check walks the whole list
+    under the lock). The guard is checked instead: both sides hold the lock."""
+
+    class Recording:
+        def __init__(self):
+            self.held, self.uses = False, 0
+
+        def __enter__(self):
+            self.held, self.uses = True, self.uses + 1
+
+        def __exit__(self, *_):
+            self.held = False
+
+    class Process:
+        def poll(self):
+            assert lock.held, "the list was read without the lock"
+            return None
+
+    client = Client()
+    lock = client._left_lock = Recording()
+    client._remember_left(Process())
+    assert lock.uses == 1
+    assert client.still_writing() and lock.uses == 2

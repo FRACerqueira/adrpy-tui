@@ -24,7 +24,7 @@ def test_the_list_is_the_adr_s_and_visual_studio_is_not_on_it():
 
 
 @pytest.mark.parametrize("name, waits_with, terminal", [
-    ("vim", (), True), ("nano", (), True), ("hx", (), True),
+    ("vim", (), True), ("nvim", (), True), ("nano", (), True), ("micro", (), True), ("hx", (), True),
     ("code", ("--wait",), False), ("codium", ("--wait",), False), ("subl", ("--wait",), False),
     ("kate", ("--block",), False), ("gedit", ("--standalone",), False), ("gvim", ("-f",), False),
     ("notepad", (), False),
@@ -77,6 +77,7 @@ def test_an_editor_is_found_on_path(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", str(tmp_path))
     assert editors.located(editors.find("notepad")) is None
     program = _program_in(tmp_path, "notepad")
+    editors.forget()  # as the Editor screen does when it opens
     assert os.path.normcase(editors.located(editors.find("notepad"))) == os.path.normcase(str(program))
 
 
@@ -127,3 +128,63 @@ def test_a_stored_editor_that_is_not_text_is_none(tmp_path):
     path = tmp_path / "state.json"
     path.write_text('{"editor": 3}', encoding="utf-8")
     assert UserState(path).editor is None
+
+
+@pytest.fixture(autouse=True)
+def _a_fresh_lookup():
+    """Each test sees the lookup of its own PATH, not one an earlier test cached."""
+    editors.forget()
+    yield
+    editors.forget()
+
+
+def test_a_quoted_path_entry_is_searched_as_a_shell_does(tmp_path, monkeypatch):
+    """cmd.exe accepts "C:\\Program Files\\...\\bin" quoted on PATH."""
+    program = _program_in(tmp_path, "notepad")
+    monkeypatch.setenv("PATH", f'"{tmp_path}"')
+    assert os.path.normcase(editors.located(editors.find("notepad"))) == os.path.normcase(str(program))
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="PATHEXT is Windows'")
+@pytest.mark.parametrize("pathext", ["", ".VBS;.JS"])
+def test_a_pathext_with_nothing_windows_starts_falls_back_to_the_default(tmp_path, monkeypatch, pathext):
+    program = _program_in(tmp_path, "notepad")
+    monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setenv("PATHEXT", pathext)
+    assert os.path.normcase(editors.located(editors.find("notepad"))) == os.path.normcase(str(program))
+
+
+def test_a_network_path_entry_is_never_touched(tmp_path, monkeypatch):
+    """Off the VPN, one look at a share on PATH froze the screen about 21 s
+    (Windows' own wait for an unreachable host): such entries are skipped."""
+    program = _program_in(tmp_path, "notepad")
+    monkeypatch.setenv("PATH", os.pathsep.join([r"\\10.255.255.2\share", "//10.255.255.2/share", str(tmp_path)]))
+    looked = []
+    real = os.path.isfile
+    monkeypatch.setattr(os.path, "isfile", lambda path: looked.append(str(path)) or real(path))
+    assert os.path.normcase(editors.located(editors.find("notepad"))) == os.path.normcase(str(program))
+    assert not [path for path in looked if path.startswith(("\\\\", "//"))], looked
+
+
+def test_the_lookup_is_done_once_per_path(tmp_path, monkeypatch):
+    """Every screen that asks for the editor looked over PATH again."""
+    _program_in(tmp_path, "notepad")
+    monkeypatch.setenv("PATH", str(tmp_path))
+    looked = []
+    real = os.path.isfile
+    monkeypatch.setattr(os.path, "isfile", lambda path: looked.append(path) or real(path))
+    editors.located(editors.find("notepad"))
+    first = len(looked)
+    editors.located(editors.find("notepad"))
+    assert len(looked) == first
+    other = tmp_path / "other"
+    other.mkdir()
+    monkeypatch.setenv("PATH", str(other))  # a PATH of its own: looked over again
+    assert editors.located(editors.find("notepad")) is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the execute bit is POSIX's")
+def test_a_file_that_cannot_run_is_not_the_editor(tmp_path, monkeypatch):
+    (tmp_path / "nano").write_text("#!/bin/sh\n", encoding="ascii")  # no execute bit
+    monkeypatch.setenv("PATH", str(tmp_path))
+    assert editors.located(editors.find("nano")) is None

@@ -39,21 +39,40 @@ def find(name):
 # What CreateProcess starts (.cmd and .bat through cmd.exe); PATHEXT may also
 # list scripts it cannot (.VBS, .JS).
 _RUNNABLE = (".com", ".exe", ".bat", ".cmd")
+_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD"
+# (program, PATH, PATHEXT) -> where it was found: every screen that asks
+# for the editor would look over PATH again.
+_found = {}
+
+
+def forget():
+    """Looks over PATH again next time (tests that change it)."""
+    _found.clear()
 
 
 def located(editor):
     """The program's path on this system's PATH, or None. Only absolute
     entries are searched, never the current folder -- which is the
     repository, and where shutil.which looks first on Windows: a launcher a
-    cloned repository ships would be taken for the editor."""
+    cloned repository ships would be taken for the editor. Nor a network
+    share: one unreachable (off the VPN) froze the screen about 21 s."""
+    path, pathext = os.environ.get("PATH", ""), os.environ.get("PATHEXT", "")
+    key = (editor.program, path, pathext)
+    if key not in _found:
+        _found[key] = _search(editor.program, path, pathext)
+    return _found[key]
+
+
+def _search(program, path, pathext):
     if os.name == "nt":
-        extensions = [ext for ext in os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
-                      if ext.lower() in _RUNNABLE]
-        names = [editor.program + ext for ext in extensions]
+        extensions = [ext for ext in pathext.split(";") if ext.lower() in _RUNNABLE]
+        # None it can start (empty, or scripts only): as an unset PATHEXT.
+        names = [program + ext for ext in extensions or _DEFAULT_PATHEXT.split(";")]
     else:
-        names = [editor.program]
-    for folder in os.environ.get("PATH", "").split(os.pathsep):
-        if not os.path.isabs(folder):
+        names = [program]
+    for folder in path.split(os.pathsep):
+        folder = folder.strip().strip('"')  # cmd.exe accepts an entry quoted
+        if not os.path.isabs(folder) or folder.startswith(("\\\\", "//")):
             continue
         for name in names:
             candidate = os.path.join(folder, name)

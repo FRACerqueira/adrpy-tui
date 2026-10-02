@@ -4764,3 +4764,28 @@ def test_a_form_that_runs_gives_no_not_run_notice(tmp_path, user_state):
         assert _not_run_notices(app) == []
 
     run_app(app, scenario)
+
+
+def test_the_editor_screen_lists_an_editor_installed_while_the_tui_ran(tmp_path, user_state, monkeypatch):
+    """The lookup is kept for the session (core/editors.py); the Editor
+    screen looks again as it opens."""
+    import os
+
+    from adrpy_tui.core import editors
+
+    folder = tmp_path / "bin"
+    folder.mkdir()
+    monkeypatch.setenv("PATH", str(folder))
+    editors.forget()
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    program = folder / ("notepad.cmd" if os.name == "nt" else "notepad")
+
+    async def scenario(pilot):
+        assert editors.located(editors.find("notepad")) is None
+        program.write_text("@echo off\r\n" if os.name == "nt" else "#!/bin/sh\n", encoding="ascii")
+        program.chmod(0o755)
+        choices = await _open_editors(pilot)
+        assert not choices.get_option("notepad").disabled
+
+    run_app(app, scenario)
+    editors.forget()

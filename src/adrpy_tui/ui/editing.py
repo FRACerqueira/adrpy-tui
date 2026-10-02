@@ -57,7 +57,7 @@ def edit_decision(app, path):
             # returned, and would leave it suspended, drawing nothing.
             try:
                 code = app.client.edit_in_terminal(command, env)
-            except OSError as failure:
+            except (OSError, ValueError) as failure:
                 error = failure
     except SuspendNotSupported:
         app.notify(app.texts("editing.no_terminal", editor=editor.name), severity="warning", markup=False)
@@ -130,7 +130,7 @@ class EditorWaitScreen(ModalScreen):
         def work():
             try:
                 code, error = app.client.edit(self._command, self._env, self._leave), None
-            except OSError as failure:
+            except (OSError, ValueError) as failure:
                 code, error = None, failure
             app.call_from_thread(self._done, code, error)
 

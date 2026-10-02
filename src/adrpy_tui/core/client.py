@@ -175,7 +175,9 @@ class Client:
         # One adrpy call at a time, whichever worker asks (adrpy-ai ADR0001V01).
         self._lock = threading.Lock()
         self._closing = threading.Event()  # the TUI is quitting: stop reads, leave writes
-        self._left = []  # the processes of writes left running
+        self._left = []  # the processes of writes and editors left running
+        # still_writing() rebuilds the list while a worker may add to it.
+        self._left_lock = threading.Lock()
 
     def shutdown(self):
         """Every call in flight or waiting ends now: a read is stopped, a
@@ -184,8 +186,13 @@ class Client:
 
     def still_writing(self):
         """Whether a write the person left still runs."""
-        self._left = [process for process in self._left if process.poll() is None]
-        return bool(self._left)
+        with self._left_lock:
+            self._left = [process for process in self._left if process.poll() is None]
+            return bool(self._left)
+
+    def _remember_left(self, process):
+        with self._left_lock:
+            self._left.append(process)
 
     def run(self, command, flags=(), write=False, leave=None):
         """One call, always a Result: a read is stopped after READ_TIMEOUT;
@@ -216,7 +223,7 @@ class Client:
                 if left.process is None:
                     return Result(argv, -1, False, code=STOPPED,
                                   detail="adrpy was stopped: the TUI is quitting (a read changes nothing).")
-                self._left.append(left.process)
+                self._remember_left(left.process)
                 return Result(argv, -1, False, code=ABANDONED,
                               detail="adrpy is still running: its result is unknown. Run check to see the "
                               "repository's state.")
@@ -237,15 +244,17 @@ class Client:
         # Nothing of the TUI's terminal: on Windows the editor would share the
         # console's input and take keys meant for the TUI; its output would
         # draw over the screen.
+        stop = _Either(leave, self._closing)
+        if stop.is_set():  # left, or the TUI quitting, before it started: never opened
+            return None
         process = subprocess.Popen(command, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                    stderr=subprocess.DEVNULL)
-        stop = _Either(leave, self._closing)
         while True:
             try:
                 return process.wait(timeout=0.1)
             except subprocess.TimeoutExpired:
                 if stop.is_set():
-                    self._left.append(process)
+                    self._remember_left(process)
                     return None
 
     def edit_in_terminal(self, command, env):

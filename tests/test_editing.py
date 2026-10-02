@@ -139,10 +139,13 @@ def test_a_terminal_that_cannot_be_handed_over_is_said(tmp_path, user_state, mon
     run_app(app, scenario)
 
 
+@pytest.mark.parametrize("error", [OSError("[WinError 2] not found"), ValueError("embedded null byte")])
 @pytest.mark.parametrize("name", ["code", "vim"])
-def test_an_editor_that_cannot_start_is_said_and_nothing_is_checked(tmp_path, user_state, monkeypatch, name):
+def test_an_editor_that_cannot_start_is_said_and_nothing_is_checked(tmp_path, user_state, monkeypatch, name, error):
+    """A ValueError too (a NUL, a bad argument), as Client.run treats it:
+    the TUI was left suspended, or the wait never closed."""
     _with_editor(monkeypatch, user_state, name)
-    client = FakeClient(editor_error=OSError("[WinError 2] not found"))
+    client = FakeClient(editor_error=error)
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
     monkeypatch.setattr(app, "suspend", contextlib.nullcontext)
 
@@ -150,7 +153,7 @@ def test_an_editor_that_cannot_start_is_said_and_nothing_is_checked(tmp_path, us
         edit_decision(app, str(_decision(tmp_path)))
         await settle(pilot)
         assert not isinstance(app.screen, (CheckScreen, EditorWaitScreen))
-        assert any("could not be started" in note and "WinError 2" in note for note in _notes(app))
+        assert any("could not be started" in note and str(error) in note for note in _notes(app))
         assert "check" not in client.verbs()
 
     run_app(app, scenario)

@@ -21,6 +21,7 @@ class EditorScreen(AdrpyScreen):
         texts = self.app.texts
         yield Static(texts("editor.title"), classes="title")
         choices = [row(texts("menu.back"), id=BACK), row(texts("editor.none"), id=NONE)]
+        editors.forget()  # one installed or removed while the TUI ran is listed as it is now
         for editor in editors.EDITORS:
             if editors.located(editor):
                 choices.append(row(editor.name, id=editor.name))
