@@ -100,10 +100,11 @@ graph TD
 | `core/keys.py` | The actions whose key can be changed, their defaults, the keys that never change, and how a key is named on screen. |
 | `core/i18n.py` | The language packs, the language list and the operating system's language (ADR0005V01). |
 | `core/themes.py` | The appearance presets: the color of each screen role on top of a Textual base theme. |
-| `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it, the changed keys, the editor chosen and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
+| `core/state.py` | Per-user state: the chosen language, the appearance preset, the colors customized on top of it, the changed keys, the editor chosen, the update check's two settings (ADR0008V01) and the last item selected in each menu, in `%APPDATA%\adrpy-tui\state.json` on Windows, `$XDG_STATE_HOME/adrpy-tui` or `~/.local/state/adrpy-tui` elsewhere. A remembered item that is disabled in the current repository is ignored. |
 | `core/suggest.py` | Suggestions from the values a repository already uses. |
 | `core/editors.py` | The editors a Proposed decision opens in (ADR0007V01): the closed list, each found on PATH's absolute entries only (never the current folder, the repository), and the command that starts it -- a `.cmd` launcher through cmd.exe with the paths in environment variables. |
-| `core/versions.py` | The installed versions of adrpy-tui and adrpy-ai, for the header and `--version`, and the check of adrpy-ai against the declared range. |
+| `core/versions.py` | The installed versions of adrpy-tui and adrpy-ai, for the header and `--version`, the check of adrpy-ai against the declared range, and the order of versions as PEP 440 has it. |
+| `core/updates.py` | The check for a newer adrpy-tui (ADR0008V01): the versions on PyPI, asked with the standard library under a size limit and a deadline, and the newest one above the installed version. |
 | `ui/app.py`, `ui/base.py`, `ui/header.py` | The Textual app (navigation, repository, language, theme), the screen every other one extends -- with `read`, the one way a screen reads through adrpy: in a thread, its answer applied only to that screen while it is open and only if it is the latest, any failure shown there -- and the header they share. |
 | `ui/paged.py`, `ui/picker.py`, `ui/errors.py` | The interface's paged list (`row` makes every option, as plain text), the decision picker and the list of a repository's inconsistencies (each error's fields read as text, whatever type they came in). |
 | `ui/inputs.py` | The text field and text area every screen uses: whatever is typed, pasted or filled in passes through `field_text`. |
@@ -114,6 +115,7 @@ graph TD
 | `ui/preview.py`, `ui/logs.py` | A decision's or log entry's content rendered, its links to other `.md` files followed; the decision-log browser. |
 | `ui/keys.py` | The keys of the configurable actions, and the capture of a new one. |
 | `ui/editor.py`, `ui/editing.py` | The editor's choice; a decision opened in it -- the terminal handed over, or a window editor waited for in a dialog that can be left -- then Check. |
+| `ui/updates.py` | The update check's two settings and what the check found in this run (ADR0008V01); the check itself runs on a daemon thread the app starts once per run, its answer posted back as a message. |
 | `ui/menu.py`, `ui/language.py`, `ui/appearance.py`, `ui/repository.py`, `ui/startup.py`, `ui/confirm.py`, `ui/result.py` | The menus, the language choice, the appearance and colors, change repository, the first read of the repository, the confirmation and the result. |
 
 ## Languages

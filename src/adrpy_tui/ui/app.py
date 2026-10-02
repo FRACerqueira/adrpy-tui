@@ -8,6 +8,7 @@ from pathlib import Path
 
 from textual.app import App
 from textual.color import Color, ColorParseError
+from textual.message import Message
 
 from adrpy_tui.core import contrast, decisions, editors, i18n, keys, themes, updates, versions
 from adrpy_tui.core.client import Client
@@ -40,6 +41,15 @@ def _is_color(value):
     return True
 
 
+class PypiAnswered(Message):
+    """The check's answer (ADR0008V01): the versions on PyPI, or None when
+    they could not be had."""
+
+    def __init__(self, found):
+        super().__init__()
+        self.found = found
+
+
 class AdrpyTui(App):
     CSS_PATH = Path(__file__).parent.parent / "resources" / "app.tcss"
     TITLE = "adrpy-tui"
@@ -66,6 +76,7 @@ class AdrpyTui(App):
         # run; None until they come, and when they can't be had.
         self._published = published or updates.published
         self.published_versions = None
+        self._update_check_failed = False
         self._update_check_started = False
         # Each decision state's label in this repository, for display, and
         # the decisions folder the explore screen's folders are relative to.
@@ -191,6 +202,18 @@ class AdrpyTui(App):
         newer = updates.newer(installed, self.published_versions, self.user_state.prereleases)
         return (newer, installed) if newer else None
 
+    @property
+    def update_status(self):
+        """What the check found in this run: "off", "checking", "failed",
+        "available" or "current"."""
+        if not self.user_state.update_check:
+            return "off"
+        if self._update_check_failed:
+            return "failed"
+        if self.published_versions is None:
+            return "checking"
+        return "available" if self.newer_version else "current"
+
     def check_for_update(self):
         """Asks PyPI once per run, while the check is on, on a daemon thread:
         quitting never waits for the network."""
@@ -203,19 +226,24 @@ class AdrpyTui(App):
         try:
             found = self._published()
         except updates.CHECK_ERRORS:
-            return  # a check that fails shows nothing (ADR0008V01)
-        if not self.is_running:  # it answered after the app quit
-            return
+            found = None  # said only on the Updates screen, never on the main menu (ADR0008V01)
+        # A message, not call_from_thread: the thread never waits for the app,
+        # and a failure handling it is the app's, as any handler's.
         try:
-            self.call_from_thread(self._versions_published, found)
-        except Exception:  # noqa: BLE001 -- the app has quit meanwhile: nothing to show it on
+            self.post_message(PypiAnswered(found))
+        except RuntimeError:  # the app's loop closed as it quit
             pass
 
-    def _versions_published(self, found):
-        self.published_versions = found
+    def on_pypi_answered(self, message):
+        if message.found is None:
+            self._update_check_failed = True
+        else:
+            self.published_versions = message.found
         for screen in self.screen_stack:
             if isinstance(screen, MenuScreen):
                 screen.say_the_newer_version()
+            elif isinstance(screen, UpdatesScreen):
+                screen.say_the_status()
 
     def key_of(self, action):
         """The key an action has now: the person's, else its default."""

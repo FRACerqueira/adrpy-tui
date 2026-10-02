@@ -210,7 +210,7 @@ every list (`decisions.listed`).
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
 | One of a list, chosen | the editor (main menu) | a `PagedList`: after Back, None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
-| On or off | Updates (main menu) | a `PagedList`: after Back, each setting marked `[x]` or `[ ]`; Enter turns the highlighted one on or off, and it is kept at once |
+| Settings marked | Updates (main menu) | a `PagedList`: after Back, each setting marked `[x]` or `[ ]`; Space or Enter turns the highlighted one on or off, and it is kept at once; below the list, what the check found in this run |
 | Decision content | detail view, previews, help | `Markdown`, read-only, links never opened in a browser |
 
 ## Editing a decision
@@ -277,12 +277,18 @@ Main menu
   color that could not be used, an editor chosen that is no longer in a
   local folder of PATH (said again as the menu comes back to the top).
 - On every start, while "Check PyPI for a newer version on every start" is
-  on under Updates (on by default), the TUI asks PyPI for adrpy-tui's
-  versions once, in the background, and the main menu says "adrpy-tui X is
-  available (installed: Y)" when one is newer (ADR0008V01). Pre-releases
-  count only while "Include pre-releases" is on (off by default);
-  development builds never do. No network, or an answer that cannot be
-  read, says nothing. The TUI shows no update command and updates nothing.
+  on under Updates (on by default, the first start included), the TUI asks
+  PyPI for adrpy-tui's versions once, in the background, and the main menu
+  says "adrpy-tui X is available (installed: Y)" when one is newer
+  (ADR0008V01). Pre-releases count only while "Include pre-releases" is on
+  (off by default); development builds and releases whose files were all
+  yanked never do. Turned on during a run, the check asks PyPI at once;
+  turned off, the notice goes at once. No network, or an answer that
+  cannot be read or takes more than 15 seconds, says nothing on the main
+  menu; the Updates screen says what the check found in this run: off,
+  asking, failed, a newer version, or none newer. The TUI shows no update
+  command and updates nothing. A state file that cannot be read starts
+  with the check on, as with no file.
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
 - "Change repository" takes a folder's path, typed or chosen in a tree of

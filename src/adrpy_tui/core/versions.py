@@ -65,14 +65,17 @@ def within(found, specifier):
     return True
 
 
-_PEP440 = re.compile(r"(\d+(?:\.\d+)*)(?:(a|b|rc)(\d+))?(?:\.post(\d+))?(?:\.dev(\d+))?(?:\+[A-Za-z0-9.]+)?")
+_PEP440 = re.compile(r"(\d+(?:\.\d+)*)(?:(a|b|rc)(\d+))?(?:\.post(\d+))?(?:\.dev(\d+))?(?:\+[A-Za-z0-9.]+)?", re.ASCII)
+# Longer than any real version: one from PyPI past this is not shown.
+_LONGEST = 64
 
 
 def order(text):
     """A key that sorts versions as PEP 440 does, for the normalized forms
-    PyPI and setuptools-scm write (a local part is ignored); ValueError for
-    any other text."""
-    found = _PEP440.fullmatch(str(text or "").strip()) if text is not None else None
+    PyPI and setuptools-scm write (a local part is ignored), in ASCII digits
+    and at most 64 characters; ValueError for any other text."""
+    text = str(text).strip() if text is not None else ""
+    found = _PEP440.fullmatch(text) if len(text) <= _LONGEST else None
     if not found:
         raise ValueError(f"not a version: {text!r}")
     numbers, kind, pre, post, dev = found.groups()

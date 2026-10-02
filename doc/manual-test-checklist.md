@@ -71,6 +71,20 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
       UTF-8. Break a header line: Check shows the error and its hint.
 - [ ] A Proposed decision's detail offers Edit first; an Accepted one does not.
 
+## Updates
+
+- [ ] Installed as an older version than PyPI's (in a venv,
+      `SETUPTOOLS_SCM_PRETEND_VERSION=0.0.1 pip install -e .`), the main menu
+      says "adrpy-tui X is available (installed: 0.0.1)" shortly after it
+      opens; Updates says the same.
+- [ ] Offline (network off, or `HTTPS_PROXY=http://127.0.0.1:9`): the main
+      menu says nothing, Updates says PyPI could not be asked; quitting is
+      immediate.
+- [ ] Updates: Space and Enter turn each setting on and off; with the check
+      off, the next start reaches no network (a firewall log or the proxy
+      above shows no attempt); "Include pre-releases" names an rc when PyPI
+      has one newer.
+
 ## First run and appearance (`empty`)
 
 - [ ] With no state file (`%APPDATA%\adrpy-tui\state.json` removed on

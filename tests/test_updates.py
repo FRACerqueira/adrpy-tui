@@ -1,5 +1,7 @@
+import http.client
 import io
 import json
+import time
 
 import pytest
 from packaging.version import Version
@@ -112,3 +114,62 @@ def test_an_answer_too_large_is_refused(monkeypatch):
     monkeypatch.setattr(updates, "_open", _answer(b'{"releases": {}}' + b" " * updates.LIMIT))
     with pytest.raises(ValueError):
         published()
+
+
+@pytest.mark.parametrize("error", [http.client.IncompleteRead(b""), http.client.BadStatusLine("garbage"),
+                                   http.client.LineTooLong("header line")], ids=type)
+def test_an_http_answer_broken_off_or_not_http_is_an_error_the_check_can_catch(monkeypatch, error):
+    """A captive portal, a proxy or a connection reset mid-answer: http.client
+    raises these, which are neither OSError nor ValueError."""
+
+    class Broken(_Response):
+        def read1(self, size=-1):
+            raise error
+
+        read = read1
+
+    monkeypatch.setattr(updates, "_open", lambda url, timeout: Broken(b""))
+    with pytest.raises(updates.CHECK_ERRORS):
+        published()
+
+
+def test_an_answer_that_trickles_in_is_given_up_at_the_deadline(monkeypatch):
+    """TIMEOUT bounds each read of the socket, not the whole answer: a byte
+    every so often would hold the check for the whole run."""
+
+    class Trickle:
+        def __init__(self):
+            self.started = time.monotonic()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            pass
+
+        def read1(self, size=-1):  # ends after 3 seconds, so a check with no deadline fails rather than hangs
+            time.sleep(0.02)
+            return b" " if time.monotonic() - self.started < 3 else b""
+
+        def read(self, size=-1):  # as http.client's: until `size` bytes have come
+            data = b""
+            while len(data) < size and time.monotonic() - self.started < 3:
+                data += self.read1(size)
+            return data
+
+    monkeypatch.setattr(updates, "DEADLINE", 0.3, raising=False)
+    monkeypatch.setattr(updates, "_open", lambda url, timeout: Trickle())
+    started = time.monotonic()
+    with pytest.raises(TimeoutError):
+        published()
+    assert time.monotonic() - started < 1.5
+
+
+@pytest.mark.parametrize("text", ["٣.0", "1.٠", "1" * 65 + ".0", "1." + "0" * 70])
+def test_a_version_with_digits_other_than_ascii_or_too_long_is_refused(text):
+    with pytest.raises(ValueError):
+        versions.order(text)
+
+
+def test_a_version_from_pypi_with_other_digits_is_never_offered():
+    assert updates.newer("0.2.0", ["0.2.1", "٣.0", "9" * 4000 + ".0"], False) == "0.2.1"
