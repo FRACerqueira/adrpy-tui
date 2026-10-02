@@ -68,9 +68,11 @@ class FormScreen(CommandRunner, AdrpyScreen):
             hints += [("@preview", "preview")] * listed + [("@toggle", "show_all")]
         focused = self.focused
         if isinstance(focused, (CheckList, RadioSet)):
-            hints += [("arrows", "move"), ("space", "mark")]
+            hints += [("arrows", "move"), ("space_enter", "mark")]
         elif isinstance(focused, Switch):
-            hints.append(("space", "mark"))
+            hints.append(("space_enter", "mark"))
+        elif isinstance(focused, Select):
+            hints.append(("enter", "open_choose"))
         elif self._in_a_listing_picker(focused):
             # The arrows move its list from the filter too; Enter goes from the filter to the list, then chooses.
             hints += [("arrows", "move"), ("enter", "choose")]

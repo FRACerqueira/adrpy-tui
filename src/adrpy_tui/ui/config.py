@@ -66,9 +66,9 @@ class FieldEditScreen(ModalScreen):
             yield dialog_keys(self.app, self.hints())
 
     def hints(self):
-        # Enter keeps a one-line value; in a text area or a select it is the field's own.
-        submits = self._field.kind not in ("select", "multiline")
-        return (("enter", "ok"),) * submits + (("tab", "next"), ("escape", "cancel"))
+        # Enter keeps a one-line value, opens a select; in a text area it is a line break.
+        enter = {"select": (("enter", "open_choose"),), "multiline": ()}.get(self._field.kind, (("enter", "ok"),))
+        return (*enter, ("tab", "next"), ("escape", "cancel"))
 
     def on_mount(self):
         self.query_one("#editor").focus()
@@ -101,7 +101,7 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         if self.query("#fields"):
             return self.HINTS
         if self.query("#create-source"):  # created by its button: Ctrl+R saves an existing one
-            radio = (("arrows", "move"), ("space", "mark")) if isinstance(self.focused, RadioSet) else ()
+            radio = (("arrows", "move"), ("space_enter", "mark")) if isinstance(self.focused, RadioSet) else ()
             return (*radio, ("tab", "next"), ("enter", "choose"), ("escape", "back"))
         return (("escape", "back"),)
 

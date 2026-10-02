@@ -83,7 +83,7 @@ The Default preset:
 | Highlighted item | green `#00FF00` on `#303030` |
 | Buttons | white on `#1F6FC5` (the action); white on red (Yes to a command that destroys); the warnings role (Leave); the info role (No, Cancel) -- each with black or white text, whichever reads better on it |
 
-A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. A plain button takes the info role and Leave the warnings role, so "Customize colors" changes them too. Under the mouse a button's face moves a quarter away from its text's color, so its text reads better still.
+A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. Yes is red too on "Leave without saving your changes?" and on "Restore every color" / "Restore every key". A plain button takes the info role, and Leave and Stop waiting the warnings role, so "Customize colors" changes them too. Under the mouse a button's face moves a quarter away from its text's color, so its text reads better still.
 
 ## Lists
 
@@ -228,7 +228,9 @@ writes is refused until it closes, since saving there would undo it -- and
 so is Edit, while a left command or editor still runs. Ctrl+C belongs to a
 terminal editor: the TUI never stops it. Once
 the editor returns, Check runs and shows the repository's state, naming
-the file and what comes next; Esc then goes to the decision's detail, read
+the file and what comes next -- Edit it again when the header no longer
+reads (a broken one makes the decision no longer Proposed, so its detail
+offers no Edit); Esc then goes to the decision's detail, read
 again, instead of the screen it was opened from. A code
 other than 0 and a file not saved as UTF-8 (adrpy approve would replace
 its other characters with U+FFFD) are said. An editor that cannot start
@@ -270,7 +272,8 @@ Main menu
   repository configuration that could not be read (with the advice to
   repair `.adrpy.json` by hand when adrpy refused its content), the
   warnings reading it raised, a saved key or
-  color that could not be used.
+  color that could not be used, an editor chosen that is no longer in a
+  local folder of PATH (said again as the menu comes back to the top).
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
 - "Change repository" takes a folder's path, typed or chosen in a tree of

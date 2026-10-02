@@ -745,3 +745,25 @@ def test_an_editor_closing_after_its_wait_is_gone_changes_no_screen(tmp_path, us
         client.editor_closed.set()
 
     run_app(app, scenario)
+
+
+
+def test_an_editor_s_end_reported_while_its_wait_is_leaving_the_stack_changes_no_screen(tmp_path, user_state,
+                                                                                      monkeypatch):
+    """The wait already out of the stack but still attached (its pop not yet
+    awaited): the stack half of the guard holds there."""
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        wait = app.screen
+        app.pop_screen()  # not awaited: out of the stack, not yet detached
+        await wait._done(0, None)
+        await _shown(pilot)
+        assert not isinstance(app.screen, CheckScreen) and "check" not in client.verbs()
+        client.editor_closed.set()
+
+    run_app(app, scenario)

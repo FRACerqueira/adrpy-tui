@@ -5,7 +5,7 @@ adrpy's repair hint."""
 from pathlib import Path
 
 from textual.binding import Binding
-from textual.widgets import LoadingIndicator, Static
+from textual.widgets import Button, LoadingIndicator, Static
 
 from adrpy_tui.core.files import same_path
 from adrpy_tui.core.text import visible
@@ -54,10 +54,15 @@ class CheckScreen(AdrpyScreen):
                                     classes="warning", markup=False))
         if self._edited is not None:
             texts, name = self.app.texts, visible(Path(self._edited).name)
-            await body.mount(Static(texts("check.edited", file=name), id="edited", classes="title", markup=False))
+            left = self._writing or self.app.client.still_writing()
+            title = "check.edited_open" if left else "check.edited"
+            await body.mount(Static(texts(title, file=name), id="edited", classes="title", markup=False))
             next_step = self._next_step(result)
             if next_step:
                 await body.mount(Static(texts(next_step), id="next-step", classes="info", markup=False))
+            if next_step == "check.edited_repair":
+                # Its broken header makes it no longer Proposed: its detail offers no Edit (ADR0007V01, item 4).
+                await body.mount(Button(texts("check.edit_again"), id="edit-again", action="screen.edit_again"))
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))
         self.refresh_hints()
         self.focus_first()
@@ -75,6 +80,14 @@ class CheckScreen(AdrpyScreen):
         if result.success:
             return "check.edited_next"
         return "check.edited_repair" if result.data.get("errors") else None
+
+    def action_edit_again(self):
+        from adrpy_tui.ui.editing import edit_decision  # editing imports this module
+
+        app, path = self.app, str(self._edited)
+        # Not awaited: this screen's own action would wait for its own removal.
+        app.pop_screen()
+        app.call_later(edit_decision, app, path)
 
     async def action_back(self):
         app = self.app

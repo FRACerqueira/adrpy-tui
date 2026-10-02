@@ -188,3 +188,20 @@ def test_a_file_that_cannot_run_is_not_the_editor(tmp_path, monkeypatch):
     (tmp_path / "nano").write_text("#!/bin/sh\n", encoding="ascii")  # no execute bit
     monkeypatch.setenv("PATH", str(tmp_path))
     assert editors.located(editors.find("nano")) is None
+
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="PATHEXT is Windows'")
+def test_a_pathext_changed_in_the_session_is_looked_at_again(tmp_path, monkeypatch):
+    (tmp_path / "notepad.cmd").write_text("@echo off\r\n", encoding="ascii")
+    monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setenv("PATHEXT", ".EXE")
+    assert editors.located(editors.find("notepad")) is None
+    monkeypatch.setenv("PATHEXT", ".EXE;.CMD")
+    assert editors.located(editors.find("notepad")) is not None
+
+
+def test_a_path_entry_with_spaces_around_it_is_searched(tmp_path, monkeypatch):
+    program = _program_in(tmp_path, "notepad")
+    monkeypatch.setenv("PATH", f"  {tmp_path}  ")
+    assert os.path.normcase(editors.located(editors.find("notepad"))) == os.path.normcase(str(program))

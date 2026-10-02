@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **A Proposed decision's text in your own editor** (ADR0007V01): choose it under Editor -- vim, nvim, nano, micro, hx, VS Code, VSCodium, Sublime Text, Kate, gedit, gVim or Notepad, found on your PATH, None by default. A new decision, version, revision or successor can open in it once created, and a Proposed decision's detail offers Edit; the TUI waits as for a write (a window editor can be left, and a write, or another Edit, is then refused until it closes; Check's warning names it) and runs Check once the file is closed, saying when it was not saved as UTF-8. The TUI never writes the file.
+- **A Proposed decision's text in your own editor** (ADR0007V01): choose it under Editor -- vim, nvim, nano, micro, hx, VS Code, VSCodium, Sublime Text, Kate, gedit, gVim or Notepad, found on your PATH, None by default. A new decision, version, revision or successor can open in it once created, and a Proposed decision's detail offers Edit; the TUI waits as for a write (a window editor can be left, and a write, or another Edit, is then refused until it closes; Check's warning names it) and runs Check once the file is closed, saying when it was not saved as UTF-8 and offering to edit it again when its header no longer reads. The main menu says when the editor chosen is no longer on PATH; network shares and relative entries on PATH are not searched. The TUI never writes the file.
 - **A first-run preview** in the README (an animated GIF, kept out of the sdist), and the terminal it needs: at least 80×24 and a font for the interface's languages.
 
 ### Changed

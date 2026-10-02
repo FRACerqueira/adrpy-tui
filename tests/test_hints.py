@@ -77,7 +77,9 @@ def _unnamed(app):
     takes_choice = focused is not None and any(
         hasattr(node, "on_option_list_option_selected") for node in focused.ancestors_with_self)
     if isinstance(focused, (CheckList, RadioSet, Switch)):
-        acting.add("space")
+        acting |= {"space", "enter"}
+    elif isinstance(focused, Select):
+        acting.add("enter")
     elif isinstance(focused, Button) or (
             isinstance(focused, OptionList) and focused.option_count and takes_choice):
         acting.add("enter")
@@ -86,6 +88,8 @@ def _unnamed(app):
         acting.add("enter")  # the filter's Enter goes to the list; the list's chooses
     if isinstance(focused, (OptionList, CheckList, RadioSet)) and getattr(focused, "option_count", 2) > 1:
         acting.add("arrows")
+    if "space_enter" in named:  # one hint for both
+        named = named | {"space", "enter"}
     return sorted(acting - named) if named else []
 
 
@@ -215,10 +219,10 @@ def test_a_choice_names_space_while_it_has_the_focus(tmp_path, user_state):
         await settle(pilot)
         app.screen.query_one("#field-provider").focus()
         await pilot.pause()
-        assert "Space mark" in _line(app), _line(app)
+        assert "Space/Enter mark" in _line(app), _line(app)
         app.screen.query_one("#field-force").focus()
         await pilot.pause()
-        assert "Space mark" in _line(app), _line(app)
+        assert "Space/Enter mark" in _line(app), _line(app)
         app.screen.query_one("#run").focus()
         await pilot.pause()
         assert "Space" not in _line(app), _line(app)
@@ -388,7 +392,7 @@ def test_check_after_an_edit_with_errors_says_how_to_repair(tmp_path, user_state
         edit_decision(app, str(_decision(tmp_path)))
         await _shown(pilot)
         await settle(pilot)
-        assert "Edit opens it again" in str(app.screen.query_one("#next-step", Static).render())
+        assert "Edit it again opens it" in str(app.screen.query_one("#next-step", Static).render())
         assert _line(app) == "↑↓ move · F3 preview · Esc back to the decision", _line(app)
 
     run_app(app, scenario)
@@ -461,12 +465,13 @@ def test_the_wait_for_an_editor_names_its_one_key(tmp_path, user_state, monkeypa
 
 def test_while_a_command_runs_the_line_names_only_leave_once_it_can(tmp_path, user_state, monkeypatch):
     """The body takes no key while adrpy runs: the line named Tab, Ctrl+R
-    and Esc, and not Leave once it appeared."""
+    and Esc, and not Leave once it appeared. The panel is raised here, not by
+    READ_TIMEOUT's timer: one of 0.3 s raced the first assertion under load."""
     from adrpy_tui.core import client as client_module
 
     from test_async_screens import _approve_and_run, _held, _holding
 
-    monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.3)
+    monkeypatch.setattr(client_module, "READ_TIMEOUT", 600)
     client = _holding(tmp_path, "approve")
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
 
@@ -474,7 +479,9 @@ def test_while_a_command_runs_the_line_names_only_leave_once_it_can(tmp_path, us
         await _approve_and_run(app, pilot)
         assert await _held(pilot, client)
         assert _line(app) == "", _line(app)
-        await pilot.pause(0.8)
+        app.screen._say_still_running()
+        for _ in range(10):
+            await pilot.pause()
         assert app.focused is app.screen.query_one("#leave-running")
         assert _line(app) == "Enter leave", _line(app)
         client.release.set()
@@ -571,3 +578,200 @@ def test_the_editor_s_texts_name_the_status_as_each_pack_does():
     assert english == []
     french = json.loads((folder / "fr-fr.json").read_text(encoding="utf-8"))
     assert all("Esc " not in french[key] for key in ("check.edited_next", "check.edited_repair", "check.edited_left"))
+
+
+
+def _broken_by_the_edit(tmp_path, user_state, monkeypatch):
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient(answers={"check": {"success": False, "code": "repository-inconsistent", "detail": "d",
+                                           "data": {"errors": [{"code": "invalid-header", "file": "/r/x.md"}]}}})
+    client.editor_closed.set()
+    return client
+
+
+def test_check_after_an_edit_that_broke_the_header_offers_to_edit_it_again(tmp_path, user_state, monkeypatch):
+    """The broken header makes it no longer Proposed: its detail offers no
+    Edit, so the repair the ADR promises is offered here, for the file
+    just edited."""
+    from adrpy_tui.ui.editing import EditorWaitScreen, edit_decision
+
+    client = _broken_by_the_edit(tmp_path, user_state, monkeypatch)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+    path = _decision(tmp_path)
+
+    async def scenario(pilot):
+        edit_decision(app, str(path))
+        await _shown(pilot)
+        await settle(pilot)
+        again = app.screen.query_one("#edit-again", Button)
+        client.editor_closed.clear()
+        again.press()
+        await _shown(pilot)
+        assert isinstance(app.screen, EditorWaitScreen) and len(client.edits) == 2
+        assert client.edits[1][0][-1] == str(path.resolve())
+        assert not any(isinstance(screen, CheckScreen) for screen in app.screen_stack)
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("outcome", ["consistent", "could not run"])
+def test_check_after_an_edit_offers_no_edit_again_without_an_error(tmp_path, user_state, monkeypatch, outcome):
+    from adrpy_tui.ui.editing import edit_decision
+
+    _with_editor(monkeypatch, user_state, "code")
+    answer = ({"success": True, "data": {"decisions": 1, "warnings": []}} if outcome == "consistent"
+              else {"success": False, "code": "tui-timeout", "detail": "d"})
+    client = FakeClient(answers={"check": answer})
+    client.editor_closed.set()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        await settle(pilot)
+        assert isinstance(app.screen, CheckScreen) and not app.screen.query("#edit-again")
+        if outcome == "consistent":
+            assert str(app.screen.query_one("#next-step", Static).render()) == app.texts("check.edited_next")
+
+    run_app(app, scenario)
+
+
+def test_check_with_the_editor_still_open_says_so_in_its_title(tmp_path, user_state, monkeypatch):
+    """After Stop waiting nothing was edited yet: not "Checked after editing"."""
+    from adrpy_tui.ui.editing import edit_decision
+
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient(answers={"check": {"success": True, "data": {"decisions": 1, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+    path = _decision(tmp_path)
+
+    async def scenario(pilot):
+        edit_decision(app, str(path))
+        await _shown(pilot)
+        app.screen.query_one("#stop-waiting").press()
+        await _shown(pilot)
+        await settle(pilot)
+        title = str(app.screen.query_one("#edited", Static).render())
+        assert title == app.texts("check.edited_open", file=path.name), title
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+def test_the_menu_s_editor_notice_goes_once_the_editor_is_back_or_another_is_chosen(tmp_path, user_state, monkeypatch):
+    from adrpy_tui.core import editors
+
+    present = set()
+    monkeypatch.setattr(editors, "located", lambda editor, which=None: f"/bin/{editor.program}"
+                        if editor.program in present else None)
+    user_state.set_editor("vim")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert app.screen.query_one("#ignored-editor", Static).display
+        present.add("nano")
+        options = app.screen.query_one("#options", OptionList)
+        options.highlighted = options.get_option_index("editor")
+        await pilot.press("enter")
+        await settle(pilot)
+        choices = app.screen.query_one("#editors", OptionList)
+        choices.highlighted = choices.get_option_index("nano")
+        await pilot.press("enter")
+        await settle(pilot)
+        notices = app.screen.query("#ignored-editor")
+        assert not notices or not notices.first().display
+
+    run_app(app, scenario)
+
+
+def test_the_menu_s_editor_notice_is_said_only_when_it_applies(tmp_path, user_state, monkeypatch):
+    """Not to one whose editor is on PATH, nor on a submenu."""
+    from adrpy_tui.core import editors
+
+    monkeypatch.setattr(editors, "located", lambda editor, which=None: f"/bin/{editor.program}")
+    user_state.set_editor("vim")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        notices = app.screen.query("#ignored-editor")
+        assert not notices or not notices.first().display
+        monkeypatch.setattr(editors, "located", lambda editor, which=None: None)
+        options = app.screen.query_one("#options", OptionList)
+        options.highlighted = options.get_option_index("skills")
+        await pilot.press("enter")
+        await settle(pilot)
+        assert not app.screen.query("#ignored-editor")
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("focus, says", [("#field-provider", "Space/Enter mark"), ("#field-force", "Space/Enter mark")])
+def test_a_choice_names_both_keys_that_mark_it(tmp_path, user_state, focus, says):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("skills:install"))
+        await settle(pilot)
+        app.screen.query_one(focus).focus()
+        await pilot.pause()
+        assert says in _line(app), _line(app)
+
+    run_app(app, scenario)
+
+
+def test_a_select_names_the_enter_that_opens_it(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("log"))
+        await settle(pilot)
+        app.screen.query_one("#field-classification").focus()
+        await pilot.pause()
+        assert "Enter open/choose" in _line(app), _line(app)
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("path", [["explore", "explore.explore"], ["log", "log.browse"]])
+def test_a_list_s_filter_names_the_enter_that_goes_to_the_list(tmp_path, user_state, path):
+    """Enter in the filter moves to the list: it selects nothing there."""
+    from test_ui import _focus_client
+
+    app = AdrpyTui(tmp_path, client=_focus_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, path)
+        filters = [widget for widget in app.screen.query(Input) if widget.id and widget.id.endswith("filter")]
+        filters[0].focus()
+        await pilot.pause()
+        assert "Enter to the list" in _line(app) and "Enter select" not in _line(app), _line(app)
+
+    run_app(app, scenario)
+
+
+def test_a_question_with_no_command_draws_no_empty_command_box(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ConfirmScreen("", question=app.texts("config.discard"), danger=True))
+        await settle(pilot)
+        assert not app.screen.query_one("#command-scroll").display
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("screen_name", ["config", "migrate"])
+def test_while_a_command_runs_config_and_migrate_name_no_key(tmp_path, user_state, screen_name):
+    """Only the approve form's running line was tested."""
+    from test_ui import FOCUS_SCREENS, _layout_client
+
+    app = AdrpyTui(tmp_path, client=_layout_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, FOCUS_SCREENS[screen_name][0])
+        app.screen._command_running = True
+        assert app.screen.hints() == ()
+        app.screen._command_running = False
+
+    run_app(app, scenario)

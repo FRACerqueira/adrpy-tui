@@ -30,7 +30,9 @@ class ConfirmScreen(ModalScreen[bool]):
         texts = self.app.texts
         with Vertical(id="dialog"):
             yield Static(self._question or texts("confirm.question"), markup=False)
-            with VerticalScroll(id="command-scroll"):
+            box = VerticalScroll(id="command-scroll")
+            box.display = bool(self._command_line)  # a question alone ("Leave without saving?")
+            with box:
                 yield Static(self._command_line, id="command-line", classes="summary", markup=False)
             if self._note:
                 yield Static(self._note, id="crlf-note", classes="info", markup=False)

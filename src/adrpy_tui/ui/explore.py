@@ -107,7 +107,11 @@ class ExploreScreen(AdrpyScreen):
 
     def hints(self):
         options = self.query("#decisions")
-        return self.HINTS if options and options.first().option_count else (("escape", "back"),)
+        if not (options and options.first().option_count):
+            return (("escape", "back"),)
+        if isinstance(self.focused, FilterInput):  # its Enter goes to the list; the arrows move it from here
+            return (("arrows", "move"), ("enter", "to_list"), ("@preview", "preview"), ("escape", "back"))
+        return self.HINTS
 
     def _fill(self):
         """The decisions of the chosen folder whose name or folder holds the

@@ -4963,3 +4963,53 @@ def test_choosing_an_editor_on_a_screen_no_longer_in_front_does_nothing(tmp_path
         assert isinstance(app.screen, ConfirmScreen) and app.screen_stack[-2] is editor_screen
 
     run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_each_button_s_face_under_the_mouse_is_a_quarter_away_from_its_text(tmp_path, user_state, preset):
+    """Plain, blue, red and yellow: each variant's hover rule and amount."""
+    from textual.color import Color
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    faces = {}
+
+    async def scenario(pilot):
+        variables = app.get_css_variables()
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True
+        app.screen._say_still_running()
+        await settle(pilot)
+        for button_id, role in (("#run", "primary"), ("#leave-running", "tui-warning")):
+            await pilot.hover(button_id)
+            await pilot.pause()
+            faces[button_id] = (app.screen.query_one(button_id, Button).styles.background.hex,
+                                Color.parse(variables[f"{role}-hover"]).hex)
+        app.screen._command_running = False
+        app.push_screen(ConfirmScreen("adrpy reject --file x.md", danger=True))
+        await settle(pilot)
+        for button_id, role in (("#yes", "error"), ("#no", "tui-info")):
+            await pilot.hover(button_id)
+            await pilot.pause()
+            faces[button_id] = (app.screen.query_one(button_id, Button).styles.background.hex,
+                                Color.parse(variables[f"{role}-hover"]).hex)
+
+    run_app(app, scenario)
+    assert {key: drawn for key, (drawn, expected) in faces.items() if drawn != expected} == {}, faces
+
+
+def test_a_hover_face_is_a_quarter_of_the_way(tmp_path, user_state):
+    """The amount: 25%, not a hint of it."""
+    from textual.color import Color
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        variables = app.get_css_variables()
+        face, hover = Color.parse(variables["primary"]), Color.parse(variables["primary-hover"])
+        assert hover.hex == face.blend(Color.parse("#000000"), 0.25).hex
+
+    run_app(app, scenario)
