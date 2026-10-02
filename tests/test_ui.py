@@ -4887,3 +4887,79 @@ def test_two_fields_wrong_at_once_focus_and_name_the_first(tmp_path, user_state)
         assert any("Scope" in note for note in notes) and not any("Body" in note for note in notes), notes
 
     run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_a_button_under_the_mouse_stands_out_more(tmp_path, user_state, preset):
+    """Under the mouse a button's face moves a quarter away from its text's
+    color: it changes, and its text reads better still -- plain, blue and
+    red alike, on every preset (High contrast's plain face is already near
+    its text's color, so a tint toward the text changed nothing there)."""
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    gains = {}
+
+    async def scenario(pilot):
+        app.push_screen(ConfirmScreen("adrpy reject --file x.md", danger=True))
+        await settle(pilot)
+        for button_id in ("#no", "#yes"):
+            button = app.screen.query_one(button_id, Button)
+            _, face = button.background_colors
+            text = button.visual_style.foreground
+            await pilot.hover(button_id)
+            await pilot.pause()
+            _, hovered = button.background_colors
+            gains[button_id] = round(_contrast(text, hovered) - _contrast(text, face), 2)
+            await pilot.hover("#command-line")
+            await pilot.pause()
+
+    run_app(app, scenario)
+    assert all(gain >= 0.3 for gain in gains.values()), gains
+
+
+def test_a_multi_select_s_mark_takes_the_columns_textual_is_told(tmp_path, user_state):
+    """The list is told how many columns the mark takes on the left
+    (_get_left_gutter_width): a mark drawn wider or narrower than that cuts
+    or shifts every choice's text."""
+    from rich.cells import cell_len
+
+    from adrpy_tui.ui.toggles import CheckList
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("skills:install"))
+        await settle(pilot)
+        choices = app.screen.query_one("#field-provider", CheckList)
+        choices.select("claude")
+        await pilot.pause()
+        for line in (0, 1):  # marked and not
+            mark = next(iter(choices.render_line(line))).text
+            assert cell_len(mark) == choices._get_left_gutter_width(), repr(mark)
+
+    run_app(app, scenario)
+
+
+def test_choosing_an_editor_on_a_screen_no_longer_in_front_does_nothing(tmp_path, user_state):
+    """A choice queued for the Editor screen after another opened over it."""
+    from textual.widgets import OptionList
+
+    from adrpy_tui.ui.editor import EditorScreen
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        choices = await _open_editors(pilot)
+        editor_screen = app.screen
+        assert isinstance(editor_screen, EditorScreen)
+        app.push_screen(ConfirmScreen("x"))
+        await settle(pilot)
+        none = choices.get_option("none")
+        editor_screen.on_option_list_option_selected(OptionList.OptionSelected(choices, none, 1))
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen) and app.screen_stack[-2] is editor_screen
+
+    run_app(app, scenario)

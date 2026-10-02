@@ -699,3 +699,49 @@ def test_a_failed_command_s_result_says_no_next_step(tmp_path, user_state):
         assert not app.screen.query("#next-step")
 
     run_app(app, scenario)
+
+
+
+def test_stop_waiting_pressed_under_another_screen_leaves_the_editor_waited_for(tmp_path, user_state, monkeypatch):
+    """A press queued for the wait after something opened over it."""
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        from adrpy_tui.ui.confirm import ConfirmScreen
+
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        wait = app.screen
+        stop = wait.query_one("#stop-waiting", Button)
+        app.push_screen(ConfirmScreen("x"))
+        await _shown(pilot)
+        wait.on_button_pressed(Button.Pressed(stop))
+        await _shown(pilot)
+        assert not wait._leave.is_set() and not client.still_writing()
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+def test_an_editor_closing_after_its_wait_is_gone_changes_no_screen(tmp_path, user_state, monkeypatch):
+    """As the app quits, the worker still reports the editor's end: the
+    wait already left the stack, and nothing is popped or checked."""
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        wait = app.screen
+        await app.pop_screen()
+        stack = list(app.screen_stack)
+        await wait._done(0, None)
+        await _shown(pilot)
+        assert app.screen_stack == stack and not isinstance(app.screen, CheckScreen)
+        assert "check" not in client.verbs()
+        client.editor_closed.set()
+
+    run_app(app, scenario)

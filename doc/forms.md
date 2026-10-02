@@ -83,7 +83,7 @@ The Default preset:
 | Highlighted item | green `#00FF00` on `#303030` |
 | Buttons | white on `#1F6FC5` (the action); white on red (Yes to a command that destroys); the warnings role (Leave); the info role (No, Cancel) -- each with black or white text, whichever reads better on it |
 
-A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. A plain button takes the info role and Leave the warnings role, so "Customize colors" changes them too.
+A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. A plain button takes the info role and Leave the warnings role, so "Customize colors" changes them too. Under the mouse a button's face moves a quarter away from its text's color, so its text reads better still.
 
 ## Lists
 

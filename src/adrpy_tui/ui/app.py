@@ -119,9 +119,18 @@ class AdrpyTui(App):
         # The text of the buttons drawn on a role (resources/app.tcss), customized or not.
         on_roles = {f"{role}-text": contrast.readable_on(Color.parse(colors[role]).rgb)
                     for role in ("tui-info", "tui-warning")}
-        self.register_theme(replace(base, name=name, primary=spec.get("primary", base.primary),
+        primary = spec.get("primary", base.primary)
+        # Under the mouse a button's face moves a quarter away from its text's
+        # color: the text reads better still, on every preset and customized role.
+        faces = {"tui-info": (colors["tui-info"], on_roles["tui-info-text"]),
+                 "tui-warning": (colors["tui-warning"], on_roles["tui-warning-text"]),
+                 "primary": (primary, "#FFFFFF"), "error": (base.error, "#FFFFFF")}
+        hovered = {f"{role}-hover": Color.parse(face).blend(Color.parse("#000000" if text == "#FFFFFF" else "#FFFFFF"),
+                                                            0.25).hex
+                   for role, (face, text) in faces.items()}
+        self.register_theme(replace(base, name=name, primary=primary,
                                     variables={**base.variables, **colors, **cursor, **headings, **quieter,
-                                               **on_roles}))
+                                               **on_roles, **hovered}))
         return name
 
     def set_color(self, role, color):
