@@ -15,7 +15,7 @@
 
 ## Deciders
 
-* Deciders: [list everyone involved in the decision] <!-- optional -->
+* Deciders: Fernando Cerqueira (repo owner).
 
 ## Context and Problem Statement
 
