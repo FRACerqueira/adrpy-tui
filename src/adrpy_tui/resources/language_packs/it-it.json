@@ -296,6 +296,8 @@
   "updates.prereleases": "Includere le versioni preliminari (alpha, beta, release candidate)",
   "updates.available": "adrpy-tui {found} è disponibile (installata: {installed}).",
   "updates.status.current": "Nessuna versione più recente su PyPI (installata: {installed}).",
+  "updates.status.timeout": "PyPI non ha risposto entro {seconds} secondi, in questa esecuzione.",
+  "updates.timeout": "PyPI non ha risposto entro {seconds} secondi: nessuna versione più recente è nota in questa esecuzione. La ricerca si può disattivare in Aggiornamenti.",
   "updates.status.failed": "Non è stato possibile interrogare PyPI, o leggerne la risposta, in questa esecuzione.",
   "updates.status.checking": "Interrogazione di PyPI...",
   "updates.status.off": "La ricerca è disattivata: la TUI non interroga PyPI.",

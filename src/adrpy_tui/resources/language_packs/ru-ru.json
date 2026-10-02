@@ -296,6 +296,8 @@
   "updates.prereleases": "Учитывать предварительные выпуски (alpha, beta, release candidate)",
   "updates.available": "Доступен adrpy-tui {found} (установлен: {installed}).",
   "updates.status.current": "Более новой версии на PyPI нет (установлен: {installed}).",
+  "updates.status.timeout": "В этом запуске PyPI не ответил за {seconds} секунд.",
+  "updates.timeout": "PyPI не ответил за {seconds} секунд: в этом запуске более новая версия неизвестна. Проверку можно выключить в разделе «Обновления».",
   "updates.status.failed": "В этом запуске не удалось обратиться к PyPI или прочитать его ответ.",
   "updates.status.checking": "Запрос к PyPI...",
   "updates.status.off": "Проверка выключена: TUI не обращается к PyPI.",

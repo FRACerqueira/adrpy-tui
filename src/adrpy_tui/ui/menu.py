@@ -8,6 +8,7 @@ from textual.binding import Binding
 from textual.widgets import OptionList, Static
 from textual.widgets.option_list import OptionDoesNotExist
 
+from adrpy_tui.core import updates
 from adrpy_tui.core.registry import FORMS, MAIN_MENU, command_name
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen, on_top
@@ -43,7 +44,7 @@ class MenuScreen(AdrpyScreen):
         back = [] if self.menu is MAIN_MENU else [row(texts("menu.back"), id=BACK)]
         if self.menu is MAIN_MENU:
             # Shown once PyPI answers, which may be after the menu is drawn (ADR0008V01).
-            yield Static("", id="newer-version", classes="info", markup=False)
+            yield Static("", id="update-notice", classes="info", markup=False)
         if self.menu is MAIN_MENU and self.app.adrpy_outside_range:
             found, expected = self.app.adrpy_outside_range
             yield Static(texts("app.adrpy_outside_range", found=found, expected=expected), id="adrpy-outside-range",
@@ -91,11 +92,15 @@ class MenuScreen(AdrpyScreen):
             notice.update(self.app.texts("editor.ignored", name=visible(chosen or "")))
 
     def say_the_newer_version(self):
-        newer = self.app.newer_version
-        for notice in self.query("#newer-version").results(Static):
-            notice.display = newer is not None
+        """A newer version, or a check PyPI left unanswered past the deadline;
+        any other failure says nothing here (ADR0008V01)."""
+        newer, status = self.app.newer_version, self.app.update_status
+        for notice in self.query("#update-notice").results(Static):
+            notice.display = newer is not None or status == "timeout"
             if newer:
                 notice.update(self.app.texts("updates.available", found=newer[0], installed=newer[1]))
+            elif status == "timeout":
+                notice.update(self.app.texts("updates.timeout", seconds=updates.DEADLINE))
 
     def on_screen_resume(self):
         self._say_the_editor()

@@ -296,6 +296,8 @@
   "updates.prereleases": "プレリリース (alpha、beta、release candidate) を含める",
   "updates.available": "adrpy-tui {found} が利用できます (インストール済み: {installed})。",
   "updates.status.current": "PyPI により新しいバージョンはありません (インストール済み: {installed})。",
+  "updates.status.timeout": "この実行では PyPI が {seconds} 秒以内に応答しませんでした。",
+  "updates.timeout": "PyPI が {seconds} 秒以内に応答しませんでした: この実行ではより新しいバージョンは分かりません。確認は「更新」でオフにできます。",
   "updates.status.failed": "この実行では PyPI に問い合わせられなかったか、その応答を読めませんでした。",
   "updates.status.checking": "PyPI に問い合わせています...",
   "updates.status.off": "確認はオフです: TUI は PyPI に問い合わせません。",

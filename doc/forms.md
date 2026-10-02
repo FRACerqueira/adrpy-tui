@@ -282,11 +282,13 @@ Main menu
   says "adrpy-tui X is available (installed: Y)" when one is newer
   (ADR0008V01). Pre-releases count only while "Include pre-releases" is on
   (off by default); development builds and releases whose files were all
-  yanked never do. Turned on during a run, the check asks PyPI at once;
-  turned off, the notice goes at once. No network, or an answer that
-  cannot be read or takes more than 15 seconds, says nothing on the main
-  menu; the Updates screen says what the check found in this run: off,
-  asking, failed, a newer version, or none newer. The TUI shows no update
+  yanked never do. PyPI is asked at most once per run: turned on during a
+  run that started with it off, the check asks at once; turned off, the
+  notice goes at once. No network, or an answer that cannot be read, says
+  nothing on the main menu; no answer within 10 seconds ends the check
+  and the main menu says so, an answer coming later being ignored. The
+  Updates screen says what the check found in this run: off, asking,
+  failed, no answer in time, a newer version, or none newer. The TUI shows no update
   command and updates nothing. A state file that cannot be read starts
   with the check on, as with no file.
 - The repository is chosen once, shown in the header and changed from the

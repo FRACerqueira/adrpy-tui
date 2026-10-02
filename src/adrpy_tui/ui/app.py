@@ -77,6 +77,7 @@ class AdrpyTui(App):
         self._published = published or updates.published
         self.published_versions = None
         self._update_check_failed = False
+        self._update_check_timed_out = False
         self._update_check_started = False
         # Each decision state's label in this repository, for display, and
         # the decisions folder the explore screen's folders are relative to.
@@ -205,11 +206,13 @@ class AdrpyTui(App):
     @property
     def update_status(self):
         """What the check found in this run: "off", "checking", "failed",
-        "available" or "current"."""
+        "timeout", "available" or "current"."""
         if not self.user_state.update_check:
             return "off"
         if self._update_check_failed:
             return "failed"
+        if self._update_check_timed_out:
+            return "timeout"
         if self.published_versions is None:
             return "checking"
         return "available" if self.newer_version else "current"
@@ -221,6 +224,14 @@ class AdrpyTui(App):
             return
         self._update_check_started = True
         threading.Thread(target=self._ask_pypi, name="update-check", daemon=True).start()
+        self.set_timer(updates.DEADLINE, self._update_check_overdue)
+
+    def _update_check_overdue(self):
+        """Ends a check PyPI has not answered by DEADLINE: a proxy or a name
+        lookup that never answers would leave it asking for the whole run."""
+        if self.published_versions is None and not self._update_check_failed:
+            self._update_check_timed_out = True
+            self._say_the_update_check()
 
     def _ask_pypi(self):
         try:
@@ -231,14 +242,19 @@ class AdrpyTui(App):
         # and a failure handling it is the app's, as any handler's.
         try:
             self.post_message(PypiAnswered(found))
-        except RuntimeError:  # the app's loop closed as it quit
+        except (RuntimeError, AttributeError):  # the app's loop closed, or went, as it quit
             pass
 
     def on_pypi_answered(self, message):
+        if self._update_check_timed_out:
+            return  # too late: the check was ended and said so
         if message.found is None:
             self._update_check_failed = True
         else:
             self.published_versions = message.found
+        self._say_the_update_check()
+
+    def _say_the_update_check(self):
         for screen in self.screen_stack:
             if isinstance(screen, MenuScreen):
                 screen.say_the_newer_version()

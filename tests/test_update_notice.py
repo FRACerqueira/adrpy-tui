@@ -56,7 +56,7 @@ async def _answered(pilot):
 async def _notice(pilot, shown=True):
     """The main menu's notice, once the check has answered (it runs on its own thread)."""
     for _ in range(100):
-        notice = pilot.app.screen.query_one("#newer-version", Static)
+        notice = pilot.app.screen.query_one("#update-notice", Static)
         if notice.display == shown and (not shown or str(notice.render())):
             return notice
         await pilot.pause(0.02)
@@ -85,7 +85,7 @@ def test_no_newer_version_or_a_failed_check_says_nothing(tmp_path, user_state, a
 
     async def scenario(pilot):
         await _answered(pilot)
-        assert not app.screen.query_one("#newer-version", Static).display
+        assert not app.screen.query_one("#update-notice", Static).display
         assert isinstance(app.screen, MenuScreen)
 
     run_app(app, scenario)
@@ -101,7 +101,7 @@ def test_with_the_check_off_pypi_is_not_asked(tmp_path, user_state):
 
     async def scenario(pilot):
         await pilot.pause(0.2)
-        assert not app.screen.query_one("#newer-version", Static).display
+        assert not app.screen.query_one("#update-notice", Static).display
 
     run_app(app, scenario)
     assert published.calls == 0
@@ -126,7 +126,7 @@ def test_pre_releases_are_said_only_once_included(tmp_path, user_state):
     async def scenario(pilot):
         await _notice(pilot, shown=False)
         await pilot.pause(0.2)
-        assert not app.screen.query_one("#newer-version", Static).display
+        assert not app.screen.query_one("#update-notice", Static).display
         settings = await _open_updates(pilot)
         assert isinstance(app.screen, UpdatesScreen)
         assert _prompt(settings, "check").startswith("[x] ") and _prompt(settings, "prereleases").startswith("[ ] ")
@@ -166,7 +166,7 @@ def test_turning_the_check_off_hides_the_notice_and_on_again_asks_once(tmp_path,
         await settle(pilot)
         await pilot.press("escape")
         await settle(pilot)
-        assert not app.screen.query_one("#newer-version", Static).display
+        assert not app.screen.query_one("#update-notice", Static).display
 
     run_app(app, scenario)
     assert published.calls == 1
@@ -322,5 +322,120 @@ def test_space_marks_a_setting_as_enter_does_and_the_key_line_says_so(tmp_path, 
         await settle(pilot)
         line = str(app.screen.query_one("#hints", Static).render())
         assert "mark" not in line and "Enter select" in line
+
+    run_app(app, scenario)
+
+
+def test_an_answer_while_the_updates_screen_is_being_built_does_not_crash(tmp_path, user_state):
+    """The screen is on the stack before its widgets exist: the answer
+    reaching it then is said once it is mounted, not a crash."""
+    from adrpy_tui.ui.app import PypiAnswered
+
+    answer = threading.Event()
+
+    def published():
+        answer.wait(10)
+        return ["0.3.0"]
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state, published=published)
+
+    async def scenario(pilot):
+        app.push_screen(UpdatesScreen())
+        app.post_message(PypiAnswered(["0.3.0"]))
+        await settle(pilot)
+        assert await _status(pilot) == "adrpy-tui 0.3.0 is available (installed: 0.2.0)."
+
+    run_app(app, scenario)
+    answer.set()
+
+
+def test_an_answer_posted_as_the_app_ends_leaves_no_thread_error(tmp_path, user_state, monkeypatch, thread_errors):
+    """Textual reads its loop twice while posting from a thread: one gone
+    in between raises AttributeError, as a closed one raises RuntimeError."""
+    answer, done = threading.Event(), threading.Event()
+
+    def published():
+        answer.wait(10)
+        return ["0.3.0"]
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state, published=published)
+
+    def gone(message):
+        done.set()
+        raise AttributeError("'NoneType' object has no attribute 'call_soon_threadsafe'")
+
+    checks = []
+
+    async def scenario(pilot):
+        checks.extend(t for t in threading.enumerate() if t.name == "update-check")
+        monkeypatch.setattr(app, "post_message", gone)
+        answer.set()
+        assert await asyncio.to_thread(done.wait, 5)
+
+    run_app(app, scenario)
+    checks[0].join(5)
+    assert thread_errors == []
+
+
+def test_pypi_silent_past_the_deadline_is_said_on_the_main_menu_and_its_late_answer_dropped(tmp_path, user_state,
+                                                                                         monkeypatch):
+    """A proxy or DNS that never answers: past DEADLINE the check is ended,
+    the main menu and Updates say so, and an answer coming later is ignored."""
+    from adrpy_tui.core import updates
+
+    monkeypatch.setattr(updates, "DEADLINE", 0.3)
+    answer = threading.Event()
+
+    def published():
+        answer.wait(10)
+        return ["0.3.0"]
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state, published=published)
+
+    async def scenario(pilot):
+        notice = await _notice(pilot)
+        assert notice.display
+        assert str(notice.render()) == ("PyPI did not answer within 0.3 seconds: no newer version is known in this "
+                                        "run. The check can be turned off under Updates.")
+        answer.set()
+        await pilot.pause(0.3)
+        await _open_updates(pilot)
+        assert await _status(pilot) == "PyPI did not answer within 0.3 seconds, in this run."
+        await pilot.press("escape")
+        await settle(pilot)
+        assert "0.3.0" not in str(app.screen.query_one("#update-notice", Static).render())
+
+    run_app(app, scenario)
+
+
+def test_an_offline_check_that_fails_at_once_says_nothing_on_the_main_menu(tmp_path, user_state, monkeypatch):
+    from adrpy_tui.core import updates
+
+    monkeypatch.setattr(updates, "DEADLINE", 0.3)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state,
+                   published=Published(error=OSError("offline")))
+
+    async def scenario(pilot):
+        await _answered(pilot)
+        await pilot.pause(0.5)  # past the deadline: the failure came first
+        assert not app.screen.query_one("#update-notice", Static).display
+        assert app.update_status == "failed"
+
+    run_app(app, scenario)
+
+
+@pytest.mark.parametrize("found, status", [((), "current"), (("0.3.0",), "available")])
+def test_an_answer_in_time_is_not_turned_into_a_timeout_once_the_deadline_passes(tmp_path, user_state, monkeypatch,
+                                                                                 found, status):
+    from adrpy_tui.core import updates
+
+    monkeypatch.setattr(updates, "DEADLINE", 0.3)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state, published=Published(*found))
+
+    async def scenario(pilot):
+        await _answered(pilot)
+        await pilot.pause(0.5)  # past the deadline
+        assert app.update_status == status
+        assert "did not answer" not in str(app.screen.query_one("#update-notice", Static).render())
 
     run_app(app, scenario)

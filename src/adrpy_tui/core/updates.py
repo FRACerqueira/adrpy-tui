@@ -12,8 +12,10 @@ from adrpy_tui.core.versions import order
 
 URL = "https://pypi.org/pypi/adrpy-tui/json"
 TIMEOUT = 5  # seconds, for each read of the socket
-# Seconds for the whole answer: TIMEOUT alone lets a byte every few seconds go on for the whole run.
-DEADLINE = 15
+# Seconds the app waits for the answer before it ends the check and says so
+# (ADR0008V01). TIMEOUT alone lets a byte every few seconds go on for the
+# whole run, and nothing bounds the name lookup.
+DEADLINE = 10
 # The answer is a few kilobytes per release: more than this is not PyPI's.
 LIMIT = 4 * 1024 * 1024
 # Everything published() raises for no network or an answer that cannot be read.
@@ -27,7 +29,9 @@ def _open(url, timeout):
 def published():
     """The versions on PyPI with at least one file not yanked; raises one of
     CHECK_ERRORS when PyPI can't be reached or its answer can't be read."""
-    deadline = time.monotonic() + DEADLINE
+    # Past the app's own deadline, so the app always ends the check first;
+    # this only lets go of the socket.
+    deadline = time.monotonic() + DEADLINE + TIMEOUT
     raw = b""
     with _open(URL, TIMEOUT) as response:
         while chunk := response.read1(64 * 1024):

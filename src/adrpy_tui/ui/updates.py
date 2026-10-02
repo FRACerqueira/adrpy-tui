@@ -5,7 +5,7 @@ what the check found in this run (ADR0008V01)."""
 from textual.binding import Binding
 from textual.widgets import OptionList, Static
 
-from adrpy_tui.core import versions
+from adrpy_tui.core import updates, versions
 from adrpy_tui.ui.base import HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.menu import BACK
 from adrpy_tui.ui.paged import PagedList, row
@@ -43,8 +43,11 @@ class UpdatesScreen(AdrpyScreen):
             text = self.app.texts("updates.available", found=self.app.newer_version[0],
                                   installed=self.app.newer_version[1])
         else:
-            text = self.app.texts(f"updates.status.{status}", installed=versions.installed_version("adrpy-tui"))
-        self.query_one("#update-status", Static).update(text)
+            text = self.app.texts(f"updates.status.{status}", installed=versions.installed_version("adrpy-tui"),
+                                  seconds=updates.DEADLINE)
+        # Not query_one: the answer can reach this screen before it is mounted, and on_mount says it then.
+        for line in self.query("#update-status").results(Static):
+            line.update(text)
 
     def on_mount(self):
         options = self.query_one("#settings", OptionList)

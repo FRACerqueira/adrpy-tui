@@ -158,6 +158,7 @@ def test_an_answer_that_trickles_in_is_given_up_at_the_deadline(monkeypatch):
             return data
 
     monkeypatch.setattr(updates, "DEADLINE", 0.3, raising=False)
+    monkeypatch.setattr(updates, "TIMEOUT", 0.2)
     monkeypatch.setattr(updates, "_open", lambda url, timeout: Trickle())
     started = time.monotonic()
     with pytest.raises(TimeoutError):

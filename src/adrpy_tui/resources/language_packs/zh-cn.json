@@ -296,6 +296,8 @@
   "updates.prereleases": "包括预发布版本 (alpha、beta、release candidate)",
   "updates.available": "adrpy-tui {found} 已可用 (已安装: {installed})。",
   "updates.status.current": "PyPI 上没有较新的版本 (已安装: {installed})。",
+  "updates.status.timeout": "本次运行中 PyPI 在 {seconds} 秒内没有响应。",
+  "updates.timeout": "PyPI 在 {seconds} 秒内没有响应: 本次运行不知道是否有较新的版本。可以在“更新”中关闭检查。",
   "updates.status.failed": "本次运行无法访问 PyPI，或无法读取其响应。",
   "updates.status.checking": "正在访问 PyPI...",
   "updates.status.off": "检查已关闭: TUI 不会访问 PyPI。",
