@@ -1,5 +1,6 @@
 """The screens, driven headless through Textual's Pilot."""
 
+import os
 import pathlib
 import threading
 
@@ -4800,8 +4801,12 @@ def test_a_detail_opened_with_its_path_spelled_otherwise_chooses_it_in_the_form(
     proposed = [d for d in client.answers["explore"]["data"]["decisions"] if not d["header"]["status_update"]][0]
 
     async def scenario(pilot):
-        app.push_screen(FormScreen("approve", decision=proposed["path"].replace("\\", "/").upper()
-                                   if __import__("os").name == "nt" else proposed["path"].replace("/", "//")))
+        # The same path spelled otherwise: a "." step anywhere, other case and separators on Windows.
+        folder, name = os.path.split(proposed["path"])
+        spelled = os.path.join(folder, ".", name)
+        if os.name == "nt":
+            spelled = spelled.replace("\\", "/").upper()
+        app.push_screen(FormScreen("approve", decision=spelled))
         await settle(pilot)
         picker = app.screen.query_one("AdrPicker")
         assert picker.selected and picker.selected["path"] == proposed["path"]

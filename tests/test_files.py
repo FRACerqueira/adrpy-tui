@@ -199,8 +199,8 @@ def test_markdown_files_can_take_any_case_of_the_extension(tmp_path):
 
 
 @pytest.mark.parametrize("first, second, same", [
-    ("C:/r/doc/adr/x.md", "C:\\r\\doc\\adr\\x.md", True),
     ("/r/doc/adr/x.md", "/r/doc/./adr/x.md", True),
+    ("/r/doc/adr/x.md", "/r/doc/adr/../adr/x.md", True),
     ("/r/doc/adr/x.md", "/r/doc/adr/y.md", False),
 ])
 def test_two_spellings_of_one_path_are_the_same(first, second, same):
@@ -214,3 +214,4 @@ def test_a_path_in_another_case_is_the_same_on_windows():
     from adrpy_tui.core.files import same_path
 
     assert same_path(r"C:\Repo\Doc\ADR\X.md", r"c:\repo\doc\adr\x.md")
+    assert same_path("C:/r/doc/adr/x.md", r"C:\r\doc\adr\x.md")  # either separator
