@@ -1,0 +1,3 @@
+# A state file that cannot be read or written turns the update check back on
+
+A person who turned the check off and whose state.json is then unreadable, corrupt, read-only or full starts the next run with the defaults -- the check on -- and PyPI is asked again with nothing said, the documented "starts empty" policy applied to a network opt-out. Raised by the round 10 resilience pass. The owner chose to keep it and document it (forms.md, ADR0008V01 983a5a5) rather than skip the check on an unreadable file. Going back to 0.1.0 drops the setting the same way, since 0.1.0 rewrites only the keys it knows.
