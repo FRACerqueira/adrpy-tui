@@ -139,10 +139,13 @@ def test_a_terminal_that_cannot_be_handed_over_is_said(tmp_path, user_state, mon
     run_app(app, scenario)
 
 
+@pytest.mark.parametrize("error", [OSError("[WinError 2] not found"), ValueError("embedded null byte")])
 @pytest.mark.parametrize("name", ["code", "vim"])
-def test_an_editor_that_cannot_start_is_said_and_nothing_is_checked(tmp_path, user_state, monkeypatch, name):
+def test_an_editor_that_cannot_start_is_said_and_nothing_is_checked(tmp_path, user_state, monkeypatch, name, error):
+    """A ValueError too (a NUL, a bad argument), as Client.run treats it:
+    the TUI was left suspended, or the wait never closed."""
     _with_editor(monkeypatch, user_state, name)
-    client = FakeClient(editor_error=OSError("[WinError 2] not found"))
+    client = FakeClient(editor_error=error)
     app = AdrpyTui(tmp_path, client=client, user_state=user_state)
     monkeypatch.setattr(app, "suspend", contextlib.nullcontext)
 
@@ -150,7 +153,7 @@ def test_an_editor_that_cannot_start_is_said_and_nothing_is_checked(tmp_path, us
         edit_decision(app, str(_decision(tmp_path)))
         await settle(pilot)
         assert not isinstance(app.screen, (CheckScreen, EditorWaitScreen))
-        assert any("could not be started" in note and "WinError 2" in note for note in _notes(app))
+        assert any("could not be started" in note and str(error) in note for note in _notes(app))
         assert "check" not in client.verbs()
 
     run_app(app, scenario)
@@ -607,6 +610,160 @@ def test_the_encoding_is_said_once_closed_whatever_its_code_not_while_left_open(
         await settle(pilot)
         assert isinstance(app.screen, CheckScreen)
         assert any("not saved as UTF-8" in note for note in _notes(app)) is warned
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("where, says", [("outside", "outside"), ("missing", "missing")])
+def test_a_refused_edit_says_why(tmp_path, user_state, monkeypatch, where, says):
+    """The notice was only checked to exist: any text passed."""
+    _with_editor(monkeypatch, user_state, "code")
+    app = AdrpyTui(tmp_path / "repo", client=FakeClient(), user_state=user_state)
+    (tmp_path / "repo" / "doc" / "adr").mkdir(parents=True)
+    path = tmp_path / "x.md" if where == "outside" else tmp_path / "repo" / "doc" / "adr" / "ADR0009V01R01-gone.md"
+    if where == "outside":
+        path.write_text("# x\n", encoding="utf-8")
+    expected = (app.texts("preview.outside", path=str(path)) if where == "outside"
+                else app.texts("preview.missing", path=str(path)))
+
+    async def scenario(pilot):
+        edit_decision(app, str(path))
+        await _shown(pilot)
+        assert _notes(app) == [expected]
+
+    run_app(app, scenario)
+
+
+def test_an_editor_closed_cleanly_says_no_code(tmp_path, user_state, monkeypatch):
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    client.editor_closed.set()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        await settle(pilot)
+        assert isinstance(app.screen, CheckScreen) and not any("ended with code" in note for note in _notes(app))
+
+    run_app(app, scenario)
+
+
+def test_an_editor_gone_from_path_since_it_was_chosen_is_said(tmp_path, user_state, monkeypatch):
+    """Chosen while on PATH, gone by the time the decision is opened."""
+    looks = []  # once Edit is chosen: still there as it is chosen, gone as it starts
+    monkeypatch.setattr(editors, "located", lambda editor, which=None: looks.pop(0) if looks else "/bin/code")
+    user_state.set_editor("code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        looks.extend(["/bin/code", None])
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        assert client.edits == [] and any("no longer on this system's PATH" in note for note in _notes(app))
+
+    run_app(app, scenario)
+
+
+def test_a_detail_whose_read_failed_offers_no_edit(tmp_path, user_state, monkeypatch):
+    """What it shows may no longer be so: no action on it, Edit neither."""
+    from adrpy_tui.ui.explore import DetailScreen
+
+    _with_editor(monkeypatch, user_state, "code")
+    client = _repository_client(tmp_path, None)
+    decision = client.answers["explore"]["data"]["decisions"][0]
+    client.answers["explore"] = {"success": False, "code": "tui-timeout", "detail": "d"}
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(DetailScreen(decision))
+        await settle(pilot)
+        assert not app.screen.query("#actions")
+
+    run_app(app, scenario)
+
+
+def test_a_failed_command_s_result_says_no_next_step(tmp_path, user_state):
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.ui.result import ResultScreen
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("new", Result((), 1, False, code="x", detail="d",
+                                                   data={"created": str(tmp_path / "x.md")})))
+        await settle(pilot)
+        assert not app.screen.query("#next-step")
+
+    run_app(app, scenario)
+
+
+
+def test_stop_waiting_pressed_under_another_screen_leaves_the_editor_waited_for(tmp_path, user_state, monkeypatch):
+    """A press queued for the wait after something opened over it."""
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        from adrpy_tui.ui.confirm import ConfirmScreen
+
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        wait = app.screen
+        stop = wait.query_one("#stop-waiting", Button)
+        app.push_screen(ConfirmScreen("x"))
+        await _shown(pilot)
+        wait.on_button_pressed(Button.Pressed(stop))
+        await _shown(pilot)
+        assert not wait._leave.is_set() and not client.still_writing()
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+def test_an_editor_closing_after_its_wait_is_gone_changes_no_screen(tmp_path, user_state, monkeypatch):
+    """As the app quits, the worker still reports the editor's end: the
+    wait already left the stack, and nothing is popped or checked."""
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        wait = app.screen
+        await app.pop_screen()
+        stack = list(app.screen_stack)
+        await wait._done(0, None)
+        await _shown(pilot)
+        assert app.screen_stack == stack and not isinstance(app.screen, CheckScreen)
+        assert "check" not in client.verbs()
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+
+def test_an_editor_s_end_reported_while_its_wait_is_leaving_the_stack_changes_no_screen(tmp_path, user_state,
+                                                                                      monkeypatch):
+    """The wait already out of the stack but still attached (its pop not yet
+    awaited): the stack half of the guard holds there."""
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        wait = app.screen
+        app.pop_screen()  # not awaited: out of the stack, not yet detached
+        await wait._done(0, None)
+        await _shown(pilot)
+        assert not isinstance(app.screen, CheckScreen) and "check" not in client.verbs()
         client.editor_closed.set()
 
     run_app(app, scenario)

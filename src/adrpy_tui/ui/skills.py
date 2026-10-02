@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.widgets import LoadingIndicator, Static
 
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import HINTS_BACK, AdrpyScreen
+from adrpy_tui.ui.base import AdrpyScreen
 from adrpy_tui.ui.explore import _cells
 from adrpy_tui.ui.paged import PagedList, row
 
@@ -16,7 +16,7 @@ _WIDTHS = (20, 12, 10, 12)  # the least each column takes; it grows to its longe
 
 
 class SkillsListScreen(AdrpyScreen):
-    HINTS = HINTS_BACK
+    HINTS = (("arrows", "move"), ("escape", "back"))
     BINDINGS = [Binding("escape", "back", show=False)]
 
     def __init__(self):

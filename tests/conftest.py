@@ -12,6 +12,18 @@ from adrpy_tui.core.client import Client
 from adrpy_tui.core.state import UserState
 
 
+@pytest.fixture(autouse=True)
+def no_pypi(monkeypatch):
+    """No test reaches PyPI (ADR0008V01): the check fails as with no network,
+    unless a test gives the app its own `published`."""
+    from adrpy_tui.core import updates
+
+    def offline():
+        raise OSError("no network in tests")
+
+    monkeypatch.setattr(updates, "published", offline)
+
+
 @pytest.fixture
 def client():
     return Client()

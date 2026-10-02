@@ -13,7 +13,7 @@ from adrpy_tui.core import i18n, keys
 from adrpy_tui.core.config_fields import CONFIG_FIELDS, GROUPS
 from adrpy_tui.core.decisions import repository_config
 from adrpy_tui.core.text import field_text, visible
-from adrpy_tui.ui.base import AdrpyScreen, on_top
+from adrpy_tui.ui.base import AdrpyScreen, dialog_keys, on_top
 from adrpy_tui.ui.confirm import ConfirmScreen
 from adrpy_tui.ui.inputs import SafeInput, SafeTextArea
 from adrpy_tui.ui.paged import PagedList, row
@@ -63,6 +63,12 @@ class FieldEditScreen(ModalScreen):
             with Horizontal(id="buttons"):
                 yield Button(texts("edit.ok"), id="ok", variant="primary")
                 yield Button(texts("edit.cancel"), id="cancel")
+            yield dialog_keys(self.app, self.hints())
+
+    def hints(self):
+        # Enter keeps a one-line value, opens a select; in a text area it is a line break.
+        enter = {"select": (("enter", "open_choose"),), "multiline": ()}.get(self._field.kind, (("enter", "ok"),))
+        return (*enter, ("tab", "next"), ("escape", "cancel"))
 
     def on_mount(self):
         self.query_one("#editor").focus()
@@ -88,6 +94,16 @@ class FieldEditScreen(ModalScreen):
 class ConfigScreen(CommandRunner, AdrpyScreen):
     HINTS = (("arrows", "move"), ("enter", "edit"), ("@run", "save"), ("escape", "back"))
     BINDINGS = [Binding("escape", "back", show=False), Binding(keys.ACTIONS["run"], "save", id=keys.binding_id("run"), show=False)]
+
+    def hints(self):
+        if self.command_running:
+            return self.running_hints()
+        if self.query("#fields"):
+            return self.HINTS
+        if self.query("#create-source"):  # created by its button: Ctrl+R saves an existing one
+            radio = (("arrows", "move"), ("space_enter", "mark")) if isinstance(self.focused, RadioSet) else ()
+            return (*radio, ("tab", "next"), ("enter", "choose"), ("escape", "back"))
+        return (("escape", "back"),)
 
     def __init__(self, command):
         super().__init__(command)
@@ -120,6 +136,10 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
             self.focus_first()
 
     async def _mount_editor(self, result, contract):
+        await self._mount_body(result, contract)
+        self.refresh_hints()
+
+    async def _mount_body(self, result, contract):
         commands = contract.data.get("commands") if contract.success else None
         arguments = commands[0].get("arguments", []) if commands else []
         self._descriptions = {argument["name"]: " ".join(argument.get("description", "").split())
@@ -225,7 +245,8 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         if not self._changed:
             self.app.pop_screen()
             return
-        self.app.push_screen(ConfirmScreen("", question=self.app.texts("config.discard")),
+        # The changes typed are lost: red, as registry.destroys has it for what is hard to undo.
+        self.app.push_screen(ConfirmScreen("", question=self.app.texts("config.discard"), danger=True),
                              lambda yes: yes and self.app.pop_screen())
 
     # An install-level config that does not exist yet --------------------

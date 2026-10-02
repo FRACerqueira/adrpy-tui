@@ -1,5 +1,6 @@
 """The screens, driven headless through Textual's Pilot."""
 
+import os
 import pathlib
 import threading
 
@@ -846,7 +847,7 @@ def test_a_remembered_item_past_the_first_page_opens_on_its_page(tmp_path, user_
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
     async def scenario(pilot):
-        assert _page_text(app.screen, "options") == "Items 9–13 of 13 · page 2 of 2 · PgUp/PgDn"
+        assert _page_text(app.screen, "options") == "Items 9–14 of 14 · page 2 of 2 · PgUp/PgDn"
 
     run_app(app, scenario)
 
@@ -2841,6 +2842,7 @@ FOCUS_SCREENS = {
     "appearance": (["appearance"], "list"),
     "keys": (["keys"], "list"),
     "editor": (["editor"], "list"),
+    "updates": (["updates"], "list"),
     "help": (["help", "help.new"], "text"),
     "preview": (["explore", "explore.explore", ":preview"], "text"),
 }
@@ -4762,5 +4764,253 @@ def test_a_form_that_runs_gives_no_not_run_notice(tmp_path, user_state):
         await pilot.pause()
         assert isinstance(app.screen, ConfirmScreen)
         assert _not_run_notices(app) == []
+
+    run_app(app, scenario)
+
+
+def test_the_editor_screen_lists_an_editor_installed_while_the_tui_ran(tmp_path, user_state, monkeypatch):
+    """The lookup is kept for the session (core/editors.py); the Editor
+    screen looks again as it opens."""
+    import os
+
+    from adrpy_tui.core import editors
+
+    folder = tmp_path / "bin"
+    folder.mkdir()
+    monkeypatch.setenv("PATH", str(folder))
+    editors.forget()
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    program = folder / ("notepad.cmd" if os.name == "nt" else "notepad")
+
+    async def scenario(pilot):
+        assert editors.located(editors.find("notepad")) is None
+        program.write_text("@echo off\r\n" if os.name == "nt" else "#!/bin/sh\n", encoding="ascii")
+        program.chmod(0o755)
+        choices = await _open_editors(pilot)
+        assert not choices.get_option("notepad").disabled
+
+    run_app(app, scenario)
+    editors.forget()
+
+
+
+def test_a_detail_opened_with_its_path_spelled_otherwise_chooses_it_in_the_form(tmp_path, user_state):
+    """A decision's detail opens a form with it chosen: by its path as the
+    detail spells it, which explore may spell otherwise (case, separators)."""
+    client = _focus_client(tmp_path)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+    proposed = [d for d in client.answers["explore"]["data"]["decisions"] if not d["header"]["status_update"]][0]
+
+    async def scenario(pilot):
+        # The same path spelled otherwise: a "." step anywhere, other case and separators on Windows.
+        folder, name = os.path.split(proposed["path"])
+        spelled = os.path.join(folder, ".", name)
+        if os.name == "nt":
+            spelled = spelled.replace("\\", "/").upper()
+        app.push_screen(FormScreen("approve", decision=spelled))
+        await settle(pilot)
+        picker = app.screen.query_one("AdrPicker")
+        assert picker.selected and picker.selected["path"] == proposed["path"]
+
+    run_app(app, scenario)
+
+
+def test_restoring_every_color_shows_them_restored_in_the_list(tmp_path, user_state):
+    user_state.set_color("tui-banner", "#FFA500")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        roles = await _open_colors(pilot)
+        assert "#FFA500" in _rows(roles)[roles.get_option_index("tui-banner")]
+        roles.highlighted = roles.get_option_index("reset-all")
+        await pilot.press("enter")
+        await settle(pilot)
+        await pilot.press("enter")  # Yes
+        await settle(pilot)
+        roles = app.screen.query_one("#roles", OptionList)
+        assert "#FFA500" not in _rows(roles)[roles.get_option_index("tui-banner")]
+
+    run_app(app, scenario)
+
+
+def test_restoring_every_key_shows_them_restored_in_the_list(tmp_path, user_state):
+    user_state.set_key("run", "f5")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        actions = await _open_keys(pilot)
+        assert "F5" in _rows(actions)[actions.get_option_index("run")]
+        actions.highlighted = actions.get_option_index("reset-all")
+        await pilot.press("enter")
+        await settle(pilot)
+        await pilot.press("enter")  # Yes
+        await settle(pilot)
+        actions = app.screen.query_one("#actions", OptionList)
+        assert "Ctrl+R" in _rows(actions)[actions.get_option_index("run")]
+
+    run_app(app, scenario)
+
+
+def test_the_yellow_buttons_text_follows_the_warnings_role_not_the_info_one(tmp_path, user_state):
+    """Leave and Stop waiting are drawn on the warnings role: their text is
+    the one that reads on it, whatever the info role (a light one here, a
+    dark warning)."""
+    from textual.widgets import Button
+
+    user_state.set_color("tui-info", "#EEEEEE")
+    user_state.set_color("tui-warning", "#000080")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True  # as a write past its time
+        app.screen._say_still_running()
+        await settle(pilot)
+        leave = app.screen.query_one("#leave-running", Button)
+        ratio = _contrast(leave.visual_style.foreground, leave.background_colors[1])
+        app.screen._command_running = False
+        assert ratio >= 4.5, ratio
+
+    run_app(app, scenario)
+
+
+def test_two_fields_wrong_at_once_focus_and_name_the_first(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("log"))
+        await settle(pilot)
+        await pilot.press("ctrl+r")  # scope, slug, summary and body all empty
+        await settle(pilot)
+        assert app.focused is app.screen.query_one("#field-scope")
+        notes = [str(note.message) for note in app._notifications]
+        assert any("Scope" in note for note in notes) and not any("Body" in note for note in notes), notes
+
+    run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_a_button_under_the_mouse_stands_out_more(tmp_path, user_state, preset):
+    """Under the mouse a button's face moves a quarter away from its text's
+    color: it changes, and its text reads better still -- plain, blue and
+    red alike, on every preset (High contrast's plain face is already near
+    its text's color, so a tint toward the text changed nothing there)."""
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    gains = {}
+
+    async def scenario(pilot):
+        app.push_screen(ConfirmScreen("adrpy reject --file x.md", danger=True))
+        await settle(pilot)
+        for button_id in ("#no", "#yes"):
+            button = app.screen.query_one(button_id, Button)
+            _, face = button.background_colors
+            text = button.visual_style.foreground
+            await pilot.hover(button_id)
+            await pilot.pause()
+            _, hovered = button.background_colors
+            gains[button_id] = round(_contrast(text, hovered) - _contrast(text, face), 2)
+            await pilot.hover("#command-line")
+            await pilot.pause()
+
+    run_app(app, scenario)
+    assert all(gain >= 0.3 for gain in gains.values()), gains
+
+
+def test_a_multi_select_s_mark_takes_the_columns_textual_is_told(tmp_path, user_state):
+    """The list is told how many columns the mark takes on the left
+    (_get_left_gutter_width): a mark drawn wider or narrower than that cuts
+    or shifts every choice's text."""
+    from rich.cells import cell_len
+
+    from adrpy_tui.ui.toggles import CheckList
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("skills:install"))
+        await settle(pilot)
+        choices = app.screen.query_one("#field-provider", CheckList)
+        choices.select("claude")
+        await pilot.pause()
+        for line in (0, 1):  # marked and not
+            mark = next(iter(choices.render_line(line))).text
+            assert cell_len(mark) == choices._get_left_gutter_width(), repr(mark)
+
+    run_app(app, scenario)
+
+
+def test_choosing_an_editor_on_a_screen_no_longer_in_front_does_nothing(tmp_path, user_state):
+    """A choice queued for the Editor screen after another opened over it."""
+    from textual.widgets import OptionList
+
+    from adrpy_tui.ui.editor import EditorScreen
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        choices = await _open_editors(pilot)
+        editor_screen = app.screen
+        assert isinstance(editor_screen, EditorScreen)
+        app.push_screen(ConfirmScreen("x"))
+        await settle(pilot)
+        none = choices.get_option("none")
+        editor_screen.on_option_list_option_selected(OptionList.OptionSelected(choices, none, 1))
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen) and app.screen_stack[-2] is editor_screen
+
+    run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("preset", ["default", "light", "high-contrast"])
+def test_each_button_s_face_under_the_mouse_is_a_quarter_away_from_its_text(tmp_path, user_state, preset):
+    """Plain, blue, red and yellow: each variant's hover rule and amount."""
+    from textual.color import Color
+    from textual.widgets import Button
+
+    user_state.set_appearance(preset)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+    faces = {}
+
+    async def scenario(pilot):
+        variables = app.get_css_variables()
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True
+        app.screen._say_still_running()
+        await settle(pilot)
+        for button_id, role in (("#run", "primary"), ("#leave-running", "tui-warning")):
+            await pilot.hover(button_id)
+            await pilot.pause()
+            faces[button_id] = (app.screen.query_one(button_id, Button).styles.background.hex,
+                                Color.parse(variables[f"{role}-hover"]).hex)
+        app.screen._command_running = False
+        app.push_screen(ConfirmScreen("adrpy reject --file x.md", danger=True))
+        await settle(pilot)
+        for button_id, role in (("#yes", "error"), ("#no", "tui-info")):
+            await pilot.hover(button_id)
+            await pilot.pause()
+            faces[button_id] = (app.screen.query_one(button_id, Button).styles.background.hex,
+                                Color.parse(variables[f"{role}-hover"]).hex)
+
+    run_app(app, scenario)
+    assert {key: drawn for key, (drawn, expected) in faces.items() if drawn != expected} == {}, faces
+
+
+def test_a_hover_face_is_a_quarter_of_the_way(tmp_path, user_state):
+    """The amount: 25%, not a hint of it."""
+    from textual.color import Color
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        variables = app.get_css_variables()
+        face, hover = Color.parse(variables["primary"]), Color.parse(variables["primary-hover"])
+        assert hover.hex == face.blend(Color.parse("#000000"), 0.25).hex
 
     run_app(app, scenario)

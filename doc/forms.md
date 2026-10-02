@@ -83,7 +83,7 @@ The Default preset:
 | Highlighted item | green `#00FF00` on `#303030` |
 | Buttons | white on `#1F6FC5` (the action); white on red (Yes to a command that destroys); the warnings role (Leave); the info role (No, Cancel) -- each with black or white text, whichever reads better on it |
 
-A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. A plain button takes the info role and Leave the warnings role, so "Customize colors" changes them too.
+A button stands apart from what is behind it at WCAG's 3:1 and its text reads at 4.5:1, in every preset: Textual's plain button was the dialog's own surface, a word rather than a button. Yes is red where the command destroys something or is hard to undo (`core/registry.py` `destroys`): `reject`, `supersede`, `migrate`, `skills remove`, `init` replacing an existing config from a seed file, `skills install` overwriting files changed by hand. Yes is red too on "Leave without saving your changes?" and on "Restore every color" / "Restore every key". A plain button takes the info role, and Leave and Stop waiting the warnings role, so "Customize colors" changes them too. Under the mouse a button's face moves a quarter away from its text's color, so its text reads better still.
 
 ## Lists
 
@@ -120,7 +120,14 @@ defaults. The keys are kept with the language; a saved key that can't be
 used is ignored and named on the main menu. Esc, Enter, Tab, the arrows,
 `PgUp`/`PgDn`/`Home`/`End`, and Textual's own `Ctrl+C`/`Ctrl+Q`/`Ctrl+P`
 never change. The key line under every screen is built from the keys in
-use, so it always names the key that works.
+use and from what the screen shows now (`hints()`): it names a key only
+where it acts -- the arrows where there is a list or text to scroll, F3
+where there is a file to show, Enter where there is something to choose
+or a button to press, Space while a multi-select, radio button or switch
+has the focus -- and every key that acts. A dialog (the confirmation, a
+field's or a color's edit, the wait for an editor) has a key line of its
+own. `tests/test_hints.py` checks each key named has somewhere to act, on
+every screen and dialog.
 
 ## Previews
 
@@ -202,7 +209,8 @@ every list (`decisions.listed`).
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
-| One of a list, chosen | the editor (main menu) | a `PagedList`: None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
+| One of a list, chosen | the editor (main menu) | a `PagedList`: after Back, None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
+| Settings marked | Updates (main menu) | a `PagedList`: after Back, each setting marked `[x]` or `[ ]`; Space or Enter turns the highlighted one on or off, and it is kept at once; below the list, what the check found in this run |
 | Decision content | detail view, previews, help | `Markdown`, read-only, links never opened in a browser |
 
 ## Editing a decision
@@ -220,7 +228,11 @@ from then on what is saved there is not checked, and a command that
 writes is refused until it closes, since saving there would undo it -- and
 so is Edit, while a left command or editor still runs. Ctrl+C belongs to a
 terminal editor: the TUI never stops it. Once
-the editor returns, Check runs and shows the repository's state; a code
+the editor returns, Check runs and shows the repository's state, naming
+the file and what comes next -- Edit it again when the header no longer
+reads (a broken one makes the decision no longer Proposed, so its detail
+offers no Edit); Esc then goes to the decision's detail, read
+again, instead of the screen it was opened from. A code
 other than 0 and a file not saved as UTF-8 (adrpy approve would replace
 its other characters with U+FFFD) are said. An editor that cannot start
 is said, and nothing is checked. The TUI repairs nothing.
@@ -241,6 +253,7 @@ Main menu
 ├─ Appearance
 ├─ Keys
 ├─ Editor
+├─ Updates
 └─ Exit
 ```
 
@@ -261,7 +274,23 @@ Main menu
   repository configuration that could not be read (with the advice to
   repair `.adrpy.json` by hand when adrpy refused its content), the
   warnings reading it raised, a saved key or
-  color that could not be used.
+  color that could not be used, an editor chosen that is no longer in a
+  local folder of PATH (said again as the menu comes back to the top).
+- On every start, while "Check PyPI for a newer version on every start" is
+  on under Updates (on by default, the first start included), the TUI asks
+  PyPI for adrpy-tui's versions once, in the background, and the main menu
+  says "adrpy-tui X is available (installed: Y)" when one is newer
+  (ADR0008V01). Pre-releases count only while "Include pre-releases" is on
+  (off by default); development builds and releases whose files were all
+  yanked never do. PyPI is asked at most once per run: turned on during a
+  run that started with it off, the check asks at once; turned off, the
+  notice goes at once. No network, or an answer that cannot be read, says
+  nothing on the main menu; no answer within 10 seconds ends the check
+  and the main menu says so, an answer coming later being ignored. The
+  Updates screen says what the check found in this run: off, asking,
+  failed, no answer in time, a newer version, or none newer. The TUI shows no update
+  command and updates nothing. A state file that cannot be read starts
+  with the check on, as with no file.
 - The repository is chosen once, shown in the header and changed from the
   menu, rather than asked for in every command.
 - "Change repository" takes a folder's path, typed or chosen in a tree of
@@ -286,11 +315,11 @@ requirements).
 
 | Command | Fields → component |
 |---|---|
-| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names opens once the command succeeds, the confirmation saying so |
 | `approve`, `reject` | `AdrPicker` (`Proposed`, or a migrated placeholder) · refdate, not before the decision's creation |
 | `undo` | `AdrPicker` (`Accepted`/`Rejected`) |
-| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
-| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names opens once the command succeeds, the confirmation saying so |
+| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names opens once the command succeeds, the confirmation saying so |
 | `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
 | `explore` | its own screen: File, Folder (relative to the decisions folder, `.` straight in it: adrpy finds decisions in subfolders too), Status (the repository's label), Scope, Domain for every decision, a folder `Select` and a filter by name or folder, with "12 of 49 decisions" below, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
 | `check` | its own screen, run as it opens and again when it comes back to the top: "No inconsistencies in N decisions", or the `ErrorList` |

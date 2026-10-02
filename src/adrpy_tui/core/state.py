@@ -1,6 +1,7 @@
 """Per-user state: the interface language, the appearance preset, the
 colors customized on top of it, the changed keys, the editor decisions open
-in (ADR0007V01), and the last item selected in each menu.
+in (ADR0007V01), the check for a newer version (ADR0008V01), and the last
+item selected in each menu.
 
 A file that can't be read starts empty, and one that can't be written is
 skipped, without interrupting the person: losing it only means choosing the
@@ -43,6 +44,10 @@ class UserState:
         editor = data.get("editor")
         # A name of core/editors.py's list, checked by the app; None: no editor.
         self.editor = editor if isinstance(editor, str) else None
+        check = data.get("update_check")
+        self.update_check = check if isinstance(check, bool) else True
+        prereleases = data.get("prereleases")
+        self.prereleases = prereleases if isinstance(prereleases, bool) else False
         items = data.get("last_menu_item")
         self._items = {k: v for k, v in items.items() if isinstance(v, str)} if isinstance(items, dict) else {}
 
@@ -102,9 +107,18 @@ class UserState:
         self.editor = editor
         self._save()
 
+    def set_update_check(self, on):
+        self.update_check = on
+        self._save()
+
+    def set_prereleases(self, on):
+        self.prereleases = on
+        self._save()
+
     def _save(self):
         data = {"language": self.language, "appearance": self.appearance, "colors": self.colors,
-                "keys": self.keys, "editor": self.editor, "last_menu_item": self._items}
+                "keys": self.keys, "editor": self.editor, "update_check": self.update_check,
+                "prereleases": self.prereleases, "last_menu_item": self._items}
         # Written aside, then put in place: a save that fails half-way (a full
         # disk) leaves the previous file as it was, not a truncated one.
         partial = self._path.with_name(self._path.name + ".partial")

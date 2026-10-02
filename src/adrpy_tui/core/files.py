@@ -58,6 +58,11 @@ def outside_reason(root, path):
     return None
 
 
+def same_path(first, second):
+    """Whether two spellings name the same path (case on Windows, separators)."""
+    return os.path.normcase(os.path.normpath(first)) == os.path.normcase(os.path.normpath(second))
+
+
 def inside_repository(root, path):
     """Whether `path` lies inside the repository `root` with no folder link
     on the way (outside_reason)."""

@@ -20,7 +20,7 @@ This is a small, early-stage project maintained by one person — there's no for
 
 ## Scope
 
-adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: every change is an `adrpy` or `adrpy-skills` command run from its own interpreter ([ADR0001V01](doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)). The only files it writes are its own per-user state (language, appearance and colors, changed keys, last menu items) and, next to it, `error.log` with the traceback of its own last failure. It does not expose network services and does not handle credentials.
+adrpy-tui is a **local terminal UI**. It writes nothing to a repository itself: every change is an `adrpy` or `adrpy-skills` command run from its own interpreter ([ADR0001V01](doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)). The only files it writes are its own per-user state (language, appearance and colors, changed keys, editor, the update check's settings, last menu items) and, next to it, `error.log` with the traceback of its own last failure. It does not expose network services and does not handle credentials. Its one outbound request, while the update check is on (the default), is an HTTPS GET of `https://pypi.org/pypi/adrpy-tui/json` on each start, sending nothing of the person's or the repository's ([ADR0008V01](doc/adr/ADR0008V01R01-on-every-start-the-tui-checks-py-pi-for-a-newer-adrpy-tui-in-the-background,-with-the-standard-library-only,-and-only-shows-a-notice.md)).
 
 Concerns that are in scope:
 

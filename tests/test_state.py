@@ -82,3 +82,21 @@ def test_a_state_file_nested_too_deep_to_read_starts_empty(tmp_path):
     path = tmp_path / "state.json"
     path.write_text("[" * 100000, encoding="utf-8")
     assert UserState(path).language is None
+
+
+def test_the_update_check_is_on_and_pre_releases_off_until_changed(tmp_path):
+    path = tmp_path / "state.json"
+    state = UserState(path)
+    assert state.update_check is True and state.prereleases is False
+    state.set_update_check(False)
+    state.set_prereleases(True)
+
+    again = UserState(path)
+    assert again.update_check is False and again.prereleases is True
+
+
+def test_an_update_setting_that_is_not_a_boolean_is_its_default(tmp_path):
+    path = tmp_path / "state.json"
+    path.write_text('{"update_check": "no", "prereleases": 1}', encoding="utf-8")
+    state = UserState(path)
+    assert state.update_check is True and state.prereleases is False

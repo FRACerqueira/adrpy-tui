@@ -14,7 +14,7 @@ from textual.widgets import Button, Static
 from adrpy_tui.core import editors
 from adrpy_tui.core.files import is_file, outside_reason
 from adrpy_tui.core.text import visible
-from adrpy_tui.ui.base import on_top
+from adrpy_tui.ui.base import dialog_keys, on_top
 from adrpy_tui.ui.check import CheckScreen
 from adrpy_tui.ui.preview import refusal
 
@@ -57,7 +57,7 @@ def edit_decision(app, path):
             # returned, and would leave it suspended, drawing nothing.
             try:
                 code = app.client.edit_in_terminal(command, env)
-            except OSError as failure:
+            except (OSError, ValueError) as failure:
                 error = failure
     except SuspendNotSupported:
         app.notify(app.texts("editing.no_terminal", editor=editor.name), severity="warning", markup=False)
@@ -81,7 +81,7 @@ def _edited(app, editor, code, path):
         app.notify(app.texts("editing.exit_code", editor=editor.name, code=code), severity="warning", markup=False)
     if code is not None and not _utf8(path):
         app.notify(app.texts("editing.not_utf8", file=visible(path.name)), severity="warning", markup=False)
-    app.push_screen(CheckScreen())
+    app.push_screen(CheckScreen(edited=path))
 
 
 def _utf8(path):
@@ -118,6 +118,10 @@ class EditorWaitScreen(ModalScreen):
                          id="editor-waiting", markup=False)
             with Horizontal(id="buttons"):
                 yield Button(texts("editing.stop"), id="stop-waiting", variant="warning")
+            yield dialog_keys(self.app, self.hints())
+
+    def hints(self):
+        return (("enter", "stop_waiting"),)
 
     def on_mount(self):
         self.query_one("#stop-waiting", Button).focus()
@@ -126,7 +130,7 @@ class EditorWaitScreen(ModalScreen):
         def work():
             try:
                 code, error = app.client.edit(self._command, self._env, self._leave), None
-            except OSError as failure:
+            except (OSError, ValueError) as failure:
                 code, error = None, failure
             app.call_from_thread(self._done, code, error)
 

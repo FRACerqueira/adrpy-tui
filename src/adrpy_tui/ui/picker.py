@@ -9,6 +9,7 @@ from textual.widgets import Input, Label, OptionList, Static, Switch
 
 from adrpy_tui.core import keys
 from adrpy_tui.core.decisions import state
+from adrpy_tui.core.files import same_path
 from adrpy_tui.core.text import visible
 from adrpy_tui.ui.base import on_top
 from adrpy_tui.ui.paged import FilterInput, PagedList, row
@@ -137,7 +138,7 @@ class AdrPicker(Vertical):
         """Chooses the decision at `path`, as if picked from the list (a
         decision's detail opens a form with it)."""
         for decision in self._decisions:
-            if decision["path"] == path:
+            if same_path(decision["path"], path):  # the detail may spell it otherwise than explore
                 self._chose(decision)
                 return
 

@@ -23,7 +23,9 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
 ## Every screen
 
 - [ ] The banner's double rules and letters are whole, in the banner color.
-- [ ] The key line at the bottom matches the keys that work.
+- [ ] The key line at the bottom names only keys that act there, and the
+      ones that do: check with and without errors, a result with and
+      without a file, Space on the skills form's choices, every dialog.
 - [ ] `Esc` goes back one level; on the main menu it leaves.
 - [ ] A list longer than eight rows shows "Items … · page … · PgUp/PgDn";
       `PgUp`, `PgDn`, `Home` and `End` move as it says.
@@ -69,6 +71,20 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
       UTF-8. Break a header line: Check shows the error and its hint.
 - [ ] A Proposed decision's detail offers Edit first; an Accepted one does not.
 
+## Updates
+
+- [ ] Installed as an older version than PyPI's (in a venv,
+      `SETUPTOOLS_SCM_PRETEND_VERSION=0.0.1 pip install -e .`), the main menu
+      says "adrpy-tui X is available (installed: 0.0.1)" shortly after it
+      opens; Updates says the same.
+- [ ] Offline (network off, or `HTTPS_PROXY=http://127.0.0.1:9`): the main
+      menu says nothing, Updates says PyPI could not be asked; quitting is
+      immediate.
+- [ ] Updates: Space and Enter turn each setting on and off; with the check
+      off, the next start reaches no network (a firewall log or the proxy
+      above shows no attempt); "Include pre-releases" names an rc when PyPI
+      has one newer.
+
 ## First run and appearance (`empty`)
 
 - [ ] With no state file (`%APPDATA%\adrpy-tui\state.json` removed on
@@ -81,7 +97,7 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
       the saved one; Light and High contrast are readable, the highlighted
       menu item included.
 - [ ] Customize colors: a color shows at once; a hard-to-read one is warned
-      about; "Back to the preset" and "Restore every color" undo it.
+      about; "Back to the preset" and "Restore every color" (asked first, its Yes red) undo it.
 
 ## Repository (`empty`, then `legacy`)
 

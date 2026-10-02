@@ -1,14 +1,16 @@
 """The Textual app: the repository, the client, the language and the
 navigation between screens."""
 
+import threading
 import traceback
 from dataclasses import replace
 from pathlib import Path
 
 from textual.app import App
 from textual.color import Color, ColorParseError
+from textual.message import Message
 
-from adrpy_tui.core import contrast, decisions, editors, i18n, keys, themes, versions
+from adrpy_tui.core import contrast, decisions, editors, i18n, keys, themes, updates, versions
 from adrpy_tui.core.client import Client
 from adrpy_tui.core.registry import FORMS
 from adrpy_tui.core.state import UserState, default_state_path
@@ -28,6 +30,7 @@ from adrpy_tui.ui.migrate import MigrateScreen
 from adrpy_tui.ui.repository import RepositoryScreen
 from adrpy_tui.ui.skills import SkillsListScreen
 from adrpy_tui.ui.startup import StartupScreen
+from adrpy_tui.ui.updates import UpdatesScreen
 
 
 def _is_color(value):
@@ -38,6 +41,15 @@ def _is_color(value):
     return True
 
 
+class PypiAnswered(Message):
+    """The check's answer (ADR0008V01): the versions on PyPI, or None when
+    they could not be had."""
+
+    def __init__(self, found):
+        super().__init__()
+        self.found = found
+
+
 class AdrpyTui(App):
     CSS_PATH = Path(__file__).parent.parent / "resources" / "app.tcss"
     TITLE = "adrpy-tui"
@@ -45,7 +57,7 @@ class AdrpyTui(App):
     # open over a screen while its command ran (and core/keys.py reserves it).
     ENABLE_COMMAND_PALETTE = False
 
-    def __init__(self, repo, client=None, user_state=None):
+    def __init__(self, repo, client=None, user_state=None, published=None):
         super().__init__()
         self.repo = Path(repo).resolve()
         self.client = client or Client()
@@ -60,6 +72,13 @@ class AdrpyTui(App):
         # An adrpy-ai outside the range this adrpy-tui was validated with,
         # (found, range), shown on the main menu (ADR0003V01).
         self.adrpy_outside_range = versions.adrpy_outside_range()
+        # The versions of adrpy-tui on PyPI (ADR0008V01), asked for once per
+        # run; None until they come, and when they can't be had.
+        self._published = published or updates.published
+        self.published_versions = None
+        self._update_check_failed = False
+        self._update_check_timed_out = False
+        self._update_check_started = False
         # Each decision state's label in this repository, for display, and
         # the decisions folder the explore screen's folders are relative to.
         self.labels = decisions.labels({})
@@ -119,9 +138,18 @@ class AdrpyTui(App):
         # The text of the buttons drawn on a role (resources/app.tcss), customized or not.
         on_roles = {f"{role}-text": contrast.readable_on(Color.parse(colors[role]).rgb)
                     for role in ("tui-info", "tui-warning")}
-        self.register_theme(replace(base, name=name, primary=spec.get("primary", base.primary),
+        primary = spec.get("primary", base.primary)
+        # Under the mouse a button's face moves a quarter away from its text's
+        # color: the text reads better still, on every preset and customized role.
+        faces = {"tui-info": (colors["tui-info"], on_roles["tui-info-text"]),
+                 "tui-warning": (colors["tui-warning"], on_roles["tui-warning-text"]),
+                 "primary": (primary, "#FFFFFF"), "error": (base.error, "#FFFFFF")}
+        hovered = {f"{role}-hover": Color.parse(face).blend(Color.parse("#000000" if text == "#FFFFFF" else "#FFFFFF"),
+                                                            0.25).hex
+                   for role, (face, text) in faces.items()}
+        self.register_theme(replace(base, name=name, primary=primary,
                                     variables={**base.variables, **colors, **cursor, **headings, **quieter,
-                                               **on_roles}))
+                                               **on_roles, **hovered}))
         return name
 
     def set_color(self, role, color):
@@ -165,6 +193,74 @@ class AdrpyTui(App):
     def choose_editor(self, name):
         self.user_state.set_editor(name)
 
+    @property
+    def newer_version(self):
+        """(newer, installed) when PyPI has a newer adrpy-tui and the check
+        is on (ADR0008V01), else None."""
+        if not self.user_state.update_check or self.published_versions is None:
+            return None
+        installed = versions.installed_version("adrpy-tui")
+        newer = updates.newer(installed, self.published_versions, self.user_state.prereleases)
+        return (newer, installed) if newer else None
+
+    @property
+    def update_status(self):
+        """What the check found in this run: "off", "checking", "failed",
+        "timeout", "available" or "current"."""
+        if not self.user_state.update_check:
+            return "off"
+        if self._update_check_failed:
+            return "failed"
+        if self._update_check_timed_out:
+            return "timeout"
+        if self.published_versions is None:
+            return "checking"
+        return "available" if self.newer_version else "current"
+
+    def check_for_update(self):
+        """Asks PyPI once per run, while the check is on, on a daemon thread:
+        quitting never waits for the network."""
+        if self._update_check_started or not self.user_state.update_check:
+            return
+        self._update_check_started = True
+        threading.Thread(target=self._ask_pypi, name="update-check", daemon=True).start()
+        self.set_timer(updates.DEADLINE, self._update_check_overdue)
+
+    def _update_check_overdue(self):
+        """Ends a check PyPI has not answered by DEADLINE: a proxy or a name
+        lookup that never answers would leave it asking for the whole run."""
+        if self.published_versions is None and not self._update_check_failed:
+            self._update_check_timed_out = True
+            self._say_the_update_check()
+
+    def _ask_pypi(self):
+        try:
+            found = self._published()
+        except updates.CHECK_ERRORS:
+            found = None  # said only on the Updates screen, never on the main menu (ADR0008V01)
+        # A message, not call_from_thread: the thread never waits for the app,
+        # and a failure handling it is the app's, as any handler's.
+        try:
+            self.post_message(PypiAnswered(found))
+        except (RuntimeError, AttributeError):  # the app's loop closed, or went, as it quit
+            pass
+
+    def on_pypi_answered(self, message):
+        if self._update_check_timed_out:
+            return  # too late: the check was ended and said so
+        if message.found is None:
+            self._update_check_failed = True
+        else:
+            self.published_versions = message.found
+        self._say_the_update_check()
+
+    def _say_the_update_check(self):
+        for screen in self.screen_stack:
+            if isinstance(screen, MenuScreen):
+                screen.say_the_newer_version()
+            elif isinstance(screen, UpdatesScreen):
+                screen.say_the_status()
+
     def key_of(self, action):
         """The key an action has now: the person's, else its default."""
         return self.chosen_keys.get(action, keys.ACTIONS[action])
@@ -183,6 +279,7 @@ class AdrpyTui(App):
         self.apply_preset(preset)
 
     def on_mount(self):
+        self.check_for_update()
         if self.user_state.language in i18n.LANGUAGES:
             self.push_screen(StartupScreen())
         else:
@@ -259,6 +356,8 @@ class AdrpyTui(App):
             self.push_screen(KeysScreen())
         elif item.id == "editor":
             self.push_screen(EditorScreen())
+        elif item.id == "updates":
+            self.push_screen(UpdatesScreen())
         elif item.id == "change-repository":
             self.push_screen(RepositoryScreen())
         elif item.submenu:

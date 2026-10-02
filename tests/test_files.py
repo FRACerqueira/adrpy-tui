@@ -195,3 +195,23 @@ def test_markdown_files_can_take_any_case_of_the_extension(tmp_path):
     """adrpy reads the decision log's `.MD` as an entry on every system."""
     (tmp_path / "a.MD").write_text("x", encoding="utf-8")
     assert [p.name for p in files.markdown_files(tmp_path, any_case=True)] == ["a.MD"]
+
+
+
+@pytest.mark.parametrize("first, second, same", [
+    ("/r/doc/adr/x.md", "/r/doc/./adr/x.md", True),
+    ("/r/doc/adr/x.md", "/r/doc/adr/../adr/x.md", True),
+    ("/r/doc/adr/x.md", "/r/doc/adr/y.md", False),
+])
+def test_two_spellings_of_one_path_are_the_same(first, second, same):
+    from adrpy_tui.core.files import same_path
+
+    assert same_path(first, second) is same
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows paths ignore case")
+def test_a_path_in_another_case_is_the_same_on_windows():
+    from adrpy_tui.core.files import same_path
+
+    assert same_path(r"C:\Repo\Doc\ADR\X.md", r"c:\repo\doc\adr\x.md")
+    assert same_path("C:/r/doc/adr/x.md", r"C:\r\doc\adr\x.md")  # either separator

@@ -45,9 +45,8 @@ def result_widgets(texts, result, success_text=None):
         yield Static(texts("result.failure", code=result.code), classes="error title", markup=False)
         if result.detail:
             yield Static(visible(result.detail), classes="error", markup=False)
-        errors = result.data.get("errors")
-        if isinstance(errors, list) and errors and all(isinstance(error, dict) for error in errors):
-            yield ErrorList(errors)
+        if _errors(result):
+            yield ErrorList(result.data["errors"])
         # The rest of `data` is what names the files a failure is about (the detail may give only a count).
         for key, value in result.data.items():
             if key not in ("errors", "warnings"):
@@ -58,8 +57,16 @@ def result_widgets(texts, result, success_text=None):
             yield Static(_text(warning), classes="warning", markup=False)
 
 
+# The commands that create a decision, status Proposed.
+CREATES = ("new", "version", "revise", "supersede")
+
+
+def _errors(result):
+    errors = result.data.get("errors")
+    return isinstance(errors, list) and bool(errors) and all(isinstance(error, dict) for error in errors)
+
+
 class ResultScreen(AdrpyScreen):
-    HINTS = (("@preview", "preview"), ("escape", "back"))
     BINDINGS = [Binding("escape", "back", show=False),
                 Binding(keys.ACTIONS["preview"], "preview", id=keys.binding_id("preview"), show=False)]
 
@@ -67,9 +74,28 @@ class ResultScreen(AdrpyScreen):
         super().__init__(command, finished=True)
         self.result = result
 
+    def hints(self):
+        errors = _errors(self.result)
+        hints = [("arrows", "move")] if errors else []
+        if errors or isinstance(self._written(), str):
+            hints.append(("@preview", "preview"))
+        if self._checks():
+            hints.append(("enter", "run_check"))
+        return (*hints, ("escape", "back"))
+
+    def _written(self):
+        return self.result.data.get("created") or self.result.data.get("file")
+
+    def _checks(self):
+        return self.result.code in (ABANDONED, WRITE_STILL_RUNNING)
+
     def compose_body(self):
         yield from result_widgets(self.app.texts, self.result)
-        if self.result.code in (ABANDONED, WRITE_STILL_RUNNING):  # the repository's state is unknown: Check says it
+        if self.result.success and self.command in CREATES and isinstance(self.result.data.get("created"), str):
+            key = keys.display(self.app.key_of("preview"), self.app.texts)
+            text = "result.next_created_edit" if self.app.editor else "result.next_created"
+            yield Static(self.app.texts(text, preview=key), id="next-step", classes="info", markup=False)
+        if self._checks():  # the repository's state is unknown: Check says it
             yield Button(self.app.texts("result.run_check"), id="run-check", variant="primary",
                          action="screen.run_check")
 
@@ -81,7 +107,7 @@ class ResultScreen(AdrpyScreen):
     def action_preview(self):
         """The file the command wrote (created, file), else the highlighted
         error's."""
-        written = self.result.data.get("created") or self.result.data.get("file")
+        written = self._written()
         errors = list(self.query(ErrorList).results(ErrorList))
         path = errors[0].highlighted_path() if errors else written
         if isinstance(path, str):

@@ -17,9 +17,7 @@ HINTS_MAIN = (("arrows", "move"), ("enter", "select"), ("escape", "exit"))
 HINTS_MENU = (("arrows", "move"), ("enter", "select"), ("escape", "back"))
 HINTS_BACK = (("escape", "back"),)
 HINTS_LIST = (("arrows", "move"), ("enter", "select"), ("@preview", "preview"), ("escape", "back"))
-HINTS_FORM = (("tab", "next_field"), ("right", "accept_suggestion"), ("@run", "run"), ("escape", "back"))
-HINTS_PICKER_FORM = (("tab", "next_field"), ("@preview", "preview"), ("@toggle", "show_all"), ("@run", "run"),
-                     ("escape", "back"))
+HINTS_READ = (("arrows", "scroll"), ("escape", "back"))
 
 
 def on_top(node):
@@ -31,6 +29,11 @@ def on_top(node):
     if not node.is_attached:
         return False
     return node.app.screen is (node if isinstance(node, Screen) else node.screen)
+
+
+def dialog_keys(app, hints):
+    """A dialog's own key line: it covers the screen's."""
+    return Static(key_line(app, hints), id="dialog-keys", classes="info", markup=False)
 
 
 def key_line(app, hints):
@@ -65,7 +68,20 @@ class AdrpyScreen(Screen):
         body.can_focus = self.READS
         with body:
             yield from self.compose_body()
-        yield Static(key_line(self.app, self.HINTS), id="hints", markup=False)
+        yield Static(key_line(self.app, self.hints()), id="hints", markup=False)
+
+    def hints(self):
+        """The keys the key line names: those that act on what the screen
+        shows now (tests/test_hints.py checks each one has somewhere to act)."""
+        return self.HINTS
+
+    def refresh_hints(self):
+        for line in self.query("#hints").results(Static):
+            line.update(key_line(self.app, self.hints()))
+
+    def on_descendant_focus(self, event):
+        # A field's own keys (Space on a choice) are named while it has the focus.
+        self.refresh_hints()
 
     def compose_body(self):
         yield from ()
