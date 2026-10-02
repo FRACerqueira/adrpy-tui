@@ -1,0 +1,5 @@
+# The update check's deadline covered the body only, not the lookup or the headers
+
+**Front:** Stability and concurrency (Opus) -- round 11, on round 10's fixes | **Severity:** Low | **Resolution:** Escalated | **Round:** 11
+
+Round 10's 15-second deadline was checked between body reads: a name lookup, a connection, headers, a chunk extension or a chunked trailer that trickled went past it (6 s for a 1 s deadline on headers; a trailer never bounded), leaving Updates on "Asking PyPI..." for the run. The owner chose a 10-second app timer that ends the check and says so on the main menu too, a later answer ignored; ADR0008V01 item 4 undone, rewritten and approved again. The thread's own deadline is DEADLINE + TIMEOUT, so the app always ends it first (a73cdcb). Red then green: tests/test_update_notice.py::test_pypi_silent_past_the_deadline_is_said_on_the_main_menu_and_its_late_answer_dropped, ::test_an_offline_check_that_fails_at_once_says_nothing_on_the_main_menu and ::test_an_answer_in_time_is_not_turned_into_a_timeout_once_the_deadline_passes (added after a mutation of the timer's guard survived).
