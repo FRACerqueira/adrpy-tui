@@ -481,3 +481,93 @@ def test_while_a_command_runs_the_line_names_only_leave_once_it_can(tmp_path, us
         await settle(pilot)
 
     run_app(app, scenario)
+
+
+
+def test_check_after_stopping_the_wait_says_the_editor_is_still_open(tmp_path, user_state, monkeypatch):
+    """It said "approve it or edit it again" while both are refused until
+    the editor closes."""
+    from adrpy_tui.ui.editing import edit_decision
+
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient(answers={"check": {"success": True, "data": {"decisions": 1, "warnings": []}}})
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        app.screen.query_one("#stop-waiting").press()
+        await _shown(pilot)
+        await settle(pilot)
+        assert isinstance(app.screen, CheckScreen)
+        next_step = str(app.screen.query_one("#next-step", Static).render())
+        assert "still open" in next_step and "once the editor has closed" in next_step, next_step
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+def test_check_after_an_edit_that_could_not_run_offers_no_repair(tmp_path, user_state, monkeypatch):
+    """A check that timed out lists nothing to repair."""
+    from adrpy_tui.ui.editing import edit_decision
+
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient(answers={"check": {"success": False, "code": "tui-timeout", "detail": "d"}})
+    client.editor_closed.set()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        await settle(pilot)
+        assert isinstance(app.screen, CheckScreen) and not app.screen.query("#next-step")
+
+    run_app(app, scenario)
+
+
+def test_the_main_menu_says_when_the_editor_chosen_is_no_longer_on_path(tmp_path, user_state, monkeypatch):
+    """Edit and the editor field vanished with no word, as a saved key or
+    color that cannot be used is named."""
+    from adrpy_tui.core import editors
+
+    user_state.set_editor("vim")
+    monkeypatch.setattr(editors, "located", lambda editor, which=None: None)
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        assert "vim" in str(app.screen.query_one("#ignored-editor", Static).render())
+
+    run_app(app, scenario)
+
+
+def test_leaving_the_config_editor_without_saving_asks_in_red(tmp_path, user_state):
+    """The changes typed are lost: hard to undo, as registry.destroys has it."""
+    from test_ui import FOCUS_SCREENS, _layout_client, _walk
+
+    app = AdrpyTui(tmp_path, client=_layout_client(tmp_path), user_state=user_state)
+
+    async def scenario(pilot):
+        await _walk(app, pilot, FOCUS_SCREENS["config"][0])
+        app.screen._changed = {"prefix": "XYZ"}
+        app.screen.action_back()
+        await settle(pilot)
+        assert isinstance(app.screen, ConfirmScreen)
+        assert app.screen.query_one("#yes", Button).variant == "error"
+
+    run_app(app, scenario)
+
+
+def test_the_editor_s_texts_name_the_status_as_each_pack_does():
+    """"Proposed" was left in English in two texts of every pack that
+    translates the status everywhere else."""
+    import json
+    import pathlib
+
+    folder = pathlib.Path(__file__).parent.parent / "src" / "adrpy_tui" / "resources" / "language_packs"
+    english = [file.stem for file in folder.glob("*.json")
+               if any(word in json.loads(file.read_text(encoding="utf-8"))[key]
+                      for key in ("menu.editor.description", "editor.title") for word in ("Proposed",))
+               and file.stem != "en-us"]
+    assert english == []
+    french = json.loads((folder / "fr-fr.json").read_text(encoding="utf-8"))
+    assert all("Esc " not in french[key] for key in ("check.edited_next", "check.edited_repair", "check.edited_left"))

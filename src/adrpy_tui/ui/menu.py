@@ -48,6 +48,11 @@ class MenuScreen(AdrpyScreen):
         if self.menu is MAIN_MENU and self.app.ignored_keys:
             yield Static(texts("keys.ignored", actions=", ".join(self.app.ignored_keys)), id="ignored-keys",
                          classes="warning", markup=False)
+        chosen = self.app.user_state.editor
+        if self.menu is MAIN_MENU and chosen and self.app.editor is None:
+            # Edit and the editor's field are offered no more: said, as a key or a color that can't be used.
+            yield Static(texts("editor.ignored", name=visible(chosen)), id="ignored-editor", classes="warning",
+                         markup=False)
         if self.menu is MAIN_MENU and self.app.ignored_colors:
             yield Static(texts("appearance.ignored", roles=", ".join(self.app.ignored_colors)), id="ignored-colors",
                          classes="warning", markup=False)

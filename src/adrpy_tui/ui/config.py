@@ -245,7 +245,8 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
         if not self._changed:
             self.app.pop_screen()
             return
-        self.app.push_screen(ConfirmScreen("", question=self.app.texts("config.discard")),
+        # The changes typed are lost: red, as registry.destroys has it for what is hard to undo.
+        self.app.push_screen(ConfirmScreen("", question=self.app.texts("config.discard"), danger=True),
                              lambda yes: yes and self.app.pop_screen())
 
     # An install-level config that does not exist yet --------------------

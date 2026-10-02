@@ -209,7 +209,7 @@ every list (`decisions.listed`).
 | Folder or file | repository, `--seed` | `DirectoryTree` filtered |
 | Confirmation | every change | modal showing the exact command line about to run |
 | Progress | reads | `LoadingIndicator` |
-| One of a list, chosen | the editor (main menu) | a `PagedList`: None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
+| One of a list, chosen | the editor (main menu) | a `PagedList`: after Back, None first, then every editor of ADR0007V01's list; one not on PATH disabled, its reason in words |
 | Decision content | detail view, previews, help | `Markdown`, read-only, links never opened in a browser |
 
 ## Editing a decision
@@ -295,11 +295,11 @@ requirements).
 
 | Command | Fields → component |
 |---|---|
-| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `new` | title `Input` (required; no `\|<>:"/\?*`) · domain, scope `Input` + suggestions from `explore` · refdate · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names opens once the command succeeds, the confirmation saying so |
 | `approve`, `reject` | `AdrPicker` (`Proposed`, or a migrated placeholder) · refdate, not before the decision's creation |
 | `undo` | `AdrPicker` (`Accepted`/`Rejected`) |
-| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
-| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
+| `version` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · domain, scope filled from the chosen decision (a value typed before choosing is kept) · refdate, not before its last update (or creation) · `--empty` `Switch` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names opens once the command succeeds, the confirmation saying so |
+| `revise` | `AdrPicker` (`Accepted`/`Rejected`, or a migrated placeholder) · refdate, not before its last update (or creation); a repository with revisions off gets adrpy's own `revision-not-configured` · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names opens once the command succeeds, the confirmation saying so |
 | `supersede` | `AdrPicker` (`Accepted`, or a migrated placeholder) · title left empty for adrpy's default, shown as the placeholder · domain, scope filled from the chosen decision · refdate, not before its last update (or creation) · open in the editor once created, a `Switch` of the screen's own, shown while an editor is chosen (ADR0007V01): the decision `data.created` names -- for supersede, the successor -- opens once the command succeeds, the confirmation saying so |
 | `explore` | its own screen: File, Folder (relative to the decisions folder, `.` straight in it: adrpy finds decisions in subfolders too), Status (the repository's label), Scope, Domain for every decision, a folder `Select` and a filter by name or folder, with "12 of 49 decisions" below, and a warning when the repository has inconsistencies; `Enter` opens the detail: the header fields, the actions its state allows (each opens its form with the decision chosen) and the file's content, without control characters. Both read the repository again when they come back to the top |
 | `check` | its own screen, run as it opens and again when it comes back to the top: "No inconsistencies in N decisions", or the `ErrorList` |

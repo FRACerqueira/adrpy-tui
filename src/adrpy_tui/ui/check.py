@@ -55,8 +55,9 @@ class CheckScreen(AdrpyScreen):
         if self._edited is not None:
             texts, name = self.app.texts, visible(Path(self._edited).name)
             await body.mount(Static(texts("check.edited", file=name), id="edited", classes="title", markup=False))
-            await body.mount(Static(texts("check.edited_next" if result.success else "check.edited_repair"),
-                                    id="next-step", classes="info", markup=False))
+            next_step = self._next_step(result)
+            if next_step:
+                await body.mount(Static(texts(next_step), id="next-step", classes="info", markup=False))
         await body.mount_all(result_widgets(self.app.texts, result, self.app.texts("check.ok", count=count)))
         self.refresh_hints()
         self.focus_first()
@@ -64,6 +65,16 @@ class CheckScreen(AdrpyScreen):
     def action_preview(self):
         for errors in self.query(ErrorList).results(ErrorList):
             open_preview(self.app, errors.highlighted_path())
+
+    def _next_step(self, result):
+        """What comes after an edit: with the editor left open, nothing is
+        approved or edited until it closes; a check that could not run lists
+        nothing to repair."""
+        if self._writing or self.app.client.still_writing():
+            return "check.edited_left"
+        if result.success:
+            return "check.edited_next"
+        return "check.edited_repair" if result.data.get("errors") else None
 
     async def action_back(self):
         app = self.app

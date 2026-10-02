@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- **The key line says only what acts, and all of it**: each screen builds it from what it shows now -- check with nothing wrong named the arrows, Enter and F3, a result named F3 with no file, and Space on a multi-select or radio button, the arrows on a result's errors and Enter on Run check went unnamed. Every dialog has its own key line, and a test checks each named key has somewhere to act, on every screen and dialog.
+- **The key line says only what acts, and all of it**: each screen builds it from what it shows now -- check with nothing wrong named the arrows, Enter and F3, a result named F3 with no file, and Space on a multi-select or radio button, the arrows on a result's errors and Enter on Run check went unnamed. Every dialog has its own key line (the key capture's instruction names its keys), and a test checks each named key has somewhere to act, on every screen and dialog.
 - **After editing a decision, Check says which and what next**, and Esc goes to that decision's detail instead of the result it came from; a created decision's result says where to read, edit or approve it.
 - **A form in a short terminal scrolls** instead of squeezing its fields: each field's row shared out the visible height and was cut to its share, so a list's choices (the skills form's providers and skills) showed only in a tall terminal.
 - **Every screen fits 80×24**, checked by a test that opens each screen and dialog at that size: migrate's preview is no longer squeezed to one row, what migrate reads from each part of the name wraps within its row instead of running past it, and a long command's confirmation keeps its Yes and No buttons whole.

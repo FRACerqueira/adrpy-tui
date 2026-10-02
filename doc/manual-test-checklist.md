@@ -83,7 +83,7 @@ macOS Terminal, a Linux terminal), with `adrpy-tui --path <folder>/<repo>`.
       the saved one; Light and High contrast are readable, the highlighted
       menu item included.
 - [ ] Customize colors: a color shows at once; a hard-to-read one is warned
-      about; "Back to the preset" and "Restore every color" undo it.
+      about; "Back to the preset" and "Restore every color" (asked first, its Yes red) undo it.
 
 ## Repository (`empty`, then `legacy`)
 
