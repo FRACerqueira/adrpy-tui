@@ -96,10 +96,13 @@ class ConfigScreen(CommandRunner, AdrpyScreen):
     BINDINGS = [Binding("escape", "back", show=False), Binding(keys.ACTIONS["run"], "save", id=keys.binding_id("run"), show=False)]
 
     def hints(self):
+        if self.command_running:
+            return self.running_hints()
         if self.query("#fields"):
             return self.HINTS
         if self.query("#create-source"):  # created by its button: Ctrl+R saves an existing one
-            return (("tab", "next"), ("enter", "choose"), ("escape", "back"))
+            radio = (("arrows", "move"), ("space", "mark")) if isinstance(self.focused, RadioSet) else ()
+            return (*radio, ("tab", "next"), ("enter", "choose"), ("escape", "back"))
         return (("escape", "back"),)
 
     def __init__(self, command):

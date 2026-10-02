@@ -22,7 +22,8 @@ from adrpy_tui.ui.running import CommandRunner
 
 
 class MigrateScreen(CommandRunner, AdrpyScreen):
-    HINTS = (("tab", "next"), ("enter", "choose"), ("@preview", "preview"), ("@run", "migrate"), ("escape", "back"))
+    HINTS = (("arrows", "move"), ("tab", "next"), ("enter", "choose"), ("@preview", "preview"), ("@run", "migrate"),
+             ("escape", "back"))
     BINDINGS = [
         Binding("escape", "back", show=False),
         Binding(keys.ACTIONS["run"], "migrate", id=keys.binding_id("run"), show=False),
@@ -54,6 +55,8 @@ class MigrateScreen(CommandRunner, AdrpyScreen):
         self.read(work, lambda both: self._show(*both))
 
     def hints(self):
+        if self.command_running:
+            return self.running_hints()
         # The builder's keys only once it shows files to migrate.
         return self.HINTS if self.query("#files") else (("escape", "back"),)
 

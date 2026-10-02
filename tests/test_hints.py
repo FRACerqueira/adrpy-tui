@@ -66,6 +66,29 @@ def _somewhere_to_act(app, key):
     return True  # Tab, Esc, Ctrl+R, F2: their screen's own bindings
 
 
+def _unnamed(app):
+    """The keys that act on what has the focus but that the line does not
+    name: Enter on a list, a button or a decision's filter, Space on a
+    choice, the arrows on a list of more than one row."""
+    from adrpy_tui.ui.picker import AdrPicker
+
+    focused, named = app.focused, _announced(app)
+    acting = set()
+    takes_choice = focused is not None and any(
+        hasattr(node, "on_option_list_option_selected") for node in focused.ancestors_with_self)
+    if isinstance(focused, (CheckList, RadioSet, Switch)):
+        acting.add("space")
+    elif isinstance(focused, Button) or (
+            isinstance(focused, OptionList) and focused.option_count and takes_choice):
+        acting.add("enter")
+    pickers = [node for node in getattr(focused, "ancestors_with_self", ()) if isinstance(node, AdrPicker)]
+    if pickers and pickers[0].query(OptionList).first().option_count:
+        acting.add("enter")  # the filter's Enter goes to the list; the list's chooses
+    if isinstance(focused, (OptionList, CheckList, RadioSet)) and getattr(focused, "option_count", 2) > 1:
+        acting.add("arrows")
+    return sorted(acting - named) if named else []
+
+
 EXTRA = {
     "result: created": lambda app: ResultScreen("new", Result((), 0, True, data={
         "created": str(app.repo / "doc" / "adr" / "ADR001V01-d.md"), "status": "Proposed"})),
@@ -77,7 +100,8 @@ EXTRA = {
     "check: consistent": lambda app: CheckScreen(),
 }
 STATES = [*FOCUS_SCREENS, *_dialogs(), *EXTRA, "explore: nothing", "log: nothing", "migrate: nothing to migrate",
-          "approve: nothing to approve", "confirmation: Enter on No"]
+          "approve: nothing to approve", "confirmation: Enter on No", "approve: the decision list focused",
+          "approve: Run focused", "detail: its read failed"]
 
 
 def _empty_repository(tmp_path):
@@ -112,6 +136,17 @@ def test_every_key_the_line_names_acts_there(tmp_path, user_state, state):
             await _walk(app, pilot, EMPTY[state])
         elif state in EXTRA:
             app.push_screen(EXTRA[state](app))
+        elif state.startswith("approve: ") and state != "approve: nothing to approve":
+            await _walk(app, pilot, ["decisions", "decisions.approve"])
+            await settle(pilot)
+            target = "#field-file-options" if "list" in state else "#run"
+            app.screen.query_one(target).focus()
+        elif state == "detail: its read failed":
+            await _walk(app, pilot, FOCUS_SCREENS["explore detail"][0])
+            client.answers["explore"] = {"success": False, "code": "tui-timeout", "detail": "d"}
+            app.push_screen(ResultScreen("approve", Result((), 0, True, data={})))
+            await settle(pilot)
+            await pilot.press("escape")
         elif state == "confirmation: Enter on No":
             app.push_screen(ConfirmScreen("adrpy new --path C:/r --title x"))
             await settle(pilot)
@@ -123,6 +158,7 @@ def test_every_key_the_line_names_acts_there(tmp_path, user_state, state):
         assert _line(app) or type(app.screen).__name__ == "KeyCaptureScreen", "no key line"
         idle = [key for key in _announced(app) if not _somewhere_to_act(app, key)]
         assert idle == [], _line(app)
+        assert _unnamed(app) == [], (type(app.focused).__name__, _line(app))
 
     run_app(app, scenario, size=(80, 24))
 
@@ -398,5 +434,50 @@ def test_a_choice_names_the_arrows_that_move_in_it(tmp_path, user_state):
             app.screen.query_one(widget).focus()
             await pilot.pause()
             assert "↑↓ move" in _line(app), (widget, _line(app))
+
+    run_app(app, scenario)
+
+
+
+def test_the_wait_for_an_editor_names_its_one_key(tmp_path, user_state, monkeypatch):
+    """Not in the sweep above: its settle() would wait for the editor."""
+    from adrpy_tui.ui.editing import EditorWaitScreen, edit_decision
+
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        assert isinstance(app.screen, EditorWaitScreen)
+        assert _line(app) == "Enter stop waiting", _line(app)
+        assert [key for key in _announced(app) if not _somewhere_to_act(app, key)] == []
+        assert _unnamed(app) == []
+        client.editor_closed.set()
+
+    run_app(app, scenario)
+
+
+def test_while_a_command_runs_the_line_names_only_leave_once_it_can(tmp_path, user_state, monkeypatch):
+    """The body takes no key while adrpy runs: the line named Tab, Ctrl+R
+    and Esc, and not Leave once it appeared."""
+    from adrpy_tui.core import client as client_module
+
+    from test_async_screens import _approve_and_run, _held, _holding
+
+    monkeypatch.setattr(client_module, "READ_TIMEOUT", 0.3)
+    client = _holding(tmp_path, "approve")
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        await _approve_and_run(app, pilot)
+        assert await _held(pilot, client)
+        assert _line(app) == "", _line(app)
+        await pilot.pause(0.8)
+        assert app.focused is app.screen.query_one("#leave-running")
+        assert _line(app) == "Enter leave", _line(app)
+        client.release.set()
+        await settle(pilot)
 
     run_app(app, scenario)

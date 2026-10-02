@@ -57,6 +57,8 @@ class FormScreen(CommandRunner, AdrpyScreen):
         self._candidates = {}
 
     def hints(self):
+        if self.command_running:
+            return self.running_hints()
         fields = self.form.FIELDS
         hints = [("tab", "next_field")]
         if any(field.suggest_from for field in fields):
@@ -64,11 +66,21 @@ class FormScreen(CommandRunner, AdrpyScreen):
         if any(field.kind == "decision" for field in fields):
             listed = any(picker.query(OptionList).first().option_count for picker in self.query(AdrPicker))
             hints += [("@preview", "preview")] * listed + [("@toggle", "show_all")]
-        if isinstance(self.focused, (CheckList, RadioSet)):
+        focused = self.focused
+        if isinstance(focused, (CheckList, RadioSet)):
             hints += [("arrows", "move"), ("space", "mark")]
-        elif isinstance(self.focused, Switch):
+        elif isinstance(focused, Switch):
             hints.append(("space", "mark"))
+        elif self._in_a_listing_picker(focused):
+            # The arrows move its list from the filter too; Enter goes from the filter to the list, then chooses.
+            hints += [("arrows", "move"), ("enter", "choose")]
+        elif isinstance(focused, Button):
+            hints.append(("enter", "choose"))
         return (*hints, ("@run", "run"), ("escape", "back"))
+
+    def _in_a_listing_picker(self, widget):
+        pickers = [node for node in getattr(widget, "ancestors_with_self", ()) if isinstance(node, AdrPicker)]
+        return bool(pickers) and bool(pickers[0].query(OptionList).first().option_count)
 
     def compose_body(self):
         texts = self.app.texts

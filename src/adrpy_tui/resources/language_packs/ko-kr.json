@@ -308,6 +308,7 @@
   "hint.cancel": "취소",
   "hint.stop_waiting": "기다리지 않기",
   "hint.back_to_decision": "결정으로 돌아가기",
+  "hint.leave": "나가기",
   "check.edited": "{file}을(를) 편집한 뒤 검사했습니다.",
   "check.edited_next": "Esc로 상세로 가서 승인하거나 다시 편집하세요.",
   "check.edited_repair": "Esc로 상세로 가세요. 목록의 오류가 이 결정에 있으면 편집으로 다시 열어 고치세요.",

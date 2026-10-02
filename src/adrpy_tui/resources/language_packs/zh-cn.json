@@ -308,6 +308,7 @@
   "hint.cancel": "取消",
   "hint.stop_waiting": "停止等待",
   "hint.back_to_decision": "返回该决策",
+  "hint.leave": "离开",
   "check.edited": "编辑 {file} 后已检查。",
   "check.edited_next": "按 Esc 进入其详情，以接受或再次编辑它。",
   "check.edited_repair": "按 Esc 进入其详情：若列出的错误在其中，用编辑再次打开它进行修复。",

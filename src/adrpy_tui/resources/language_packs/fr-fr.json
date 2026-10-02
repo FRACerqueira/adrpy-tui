@@ -308,6 +308,7 @@
   "hint.cancel": "annuler",
   "hint.stop_waiting": "ne plus attendre",
   "hint.back_to_decision": "retour à la décision",
+  "hint.leave": "quitter",
   "check.edited": "Vérifié après modification de {file}.",
   "check.edited_next": "Esc mène à son détail, pour l'accepter ou la modifier à nouveau.",
   "check.edited_repair": "Esc mène à son détail : Modifier la rouvre, si une erreur listée s'y trouve.",

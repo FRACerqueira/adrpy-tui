@@ -308,6 +308,7 @@
   "hint.cancel": "abbrechen",
   "hint.stop_waiting": "nicht mehr warten",
   "hint.back_to_decision": "zurück zur Entscheidung",
+  "hint.leave": "verlassen",
   "check.edited": "Geprüft nach dem Bearbeiten von {file}.",
   "check.edited_next": "Esc führt zu ihrem Detail, um sie anzunehmen oder erneut zu bearbeiten.",
   "check.edited_repair": "Esc führt zu ihrem Detail: Bearbeiten öffnet sie erneut, wenn ein aufgeführter Fehler sie betrifft.",

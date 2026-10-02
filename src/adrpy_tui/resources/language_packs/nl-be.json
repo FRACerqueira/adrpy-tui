@@ -308,6 +308,7 @@
   "hint.cancel": "annuleren",
   "hint.stop_waiting": "niet meer wachten",
   "hint.back_to_decision": "terug naar de beslissing",
+  "hint.leave": "verlaten",
   "check.edited": "Gecontroleerd na het bewerken van {file}.",
   "check.edited_next": "Esc gaat naar haar detail, om ze goed te keuren of opnieuw te bewerken.",
   "check.edited_repair": "Esc gaat naar haar detail: Bewerken opent ze opnieuw, als een vermelde fout erin zit.",

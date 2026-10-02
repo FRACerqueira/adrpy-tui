@@ -308,6 +308,7 @@
   "hint.cancel": "cancel",
   "hint.stop_waiting": "stop waiting",
   "hint.back_to_decision": "back to the decision",
+  "hint.leave": "leave",
   "check.edited": "Checked after editing {file}.",
   "check.edited_next": "Esc goes to its detail, to approve it or edit it again.",
   "check.edited_repair": "Esc goes to its detail: Edit opens it again, if an error listed is in it.",

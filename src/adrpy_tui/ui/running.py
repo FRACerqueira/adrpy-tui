@@ -29,6 +29,10 @@ class CommandRunner:
     def command_running(self):
         return self._command_running
 
+    def running_hints(self):
+        """The key line while a command runs: Leave's key, once it is there."""
+        return (("enter", "leave"),) if self.query("#leave-running") else ()
+
     def confirm_and_run(self, commands, then=None, also=None):
         """Asks with every command line, then runs them in order, stopping at
         the first that fails; the result shown is the last one run. `then`
@@ -51,6 +55,7 @@ class CommandRunner:
         body = self.query_one("#body")
         body.loading = True
         body.disabled = True
+        self.refresh_hints()
         app = self.app  # the worker reaches the app directly, never through this screen
         leave = self._leave = threading.Event()
 
@@ -93,6 +98,8 @@ class CommandRunner:
                    classes="warning", markup=False),
             Button(texts("running.leave"), id="leave-running", variant="warning", action="screen.leave_running"),
             id="still-running"), before=self.query_one("#hints"))
+        # The only key that acts now: given the focus, named on the line.
+        self.call_after_refresh(lambda: self.is_attached and self.query_one("#leave-running").focus())
 
     def action_leave_running(self):
         """Stops waiting for the write; adrpy goes on to its own end."""
