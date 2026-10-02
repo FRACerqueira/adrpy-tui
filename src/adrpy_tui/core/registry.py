@@ -120,6 +120,7 @@ MAIN_MENU = Item("main", submenu=(
     Item("appearance"),
     Item("keys"),
     Item("editor"),
+    Item("updates"),
     Item("exit"),
 ))
 

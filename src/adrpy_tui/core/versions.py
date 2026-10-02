@@ -65,6 +65,29 @@ def within(found, specifier):
     return True
 
 
+_PEP440 = re.compile(r"(\d+(?:\.\d+)*)(?:(a|b|rc)(\d+))?(?:\.post(\d+))?(?:\.dev(\d+))?(?:\+[A-Za-z0-9.]+)?")
+
+
+def order(text):
+    """A key that sorts versions as PEP 440 does, for the normalized forms
+    PyPI and setuptools-scm write (a local part is ignored); ValueError for
+    any other text."""
+    found = _PEP440.fullmatch(str(text or "").strip()) if text is not None else None
+    if not found:
+        raise ValueError(f"not a version: {text!r}")
+    numbers, kind, pre, post, dev = found.groups()
+    release = tuple(int(part) for part in numbers.split("."))
+    while len(release) > 1 and release[-1] == 0:
+        release = release[:-1]
+    if kind:
+        stage = ({"a": 0, "b": 1, "rc": 2}[kind], int(pre))
+    elif dev is not None and post is None:
+        stage = (-1, 0)  # X.devN comes before X's alphas
+    else:
+        stage = (3, 0)
+    return (release, stage, -1 if post is None else int(post), float("inf") if dev is None else int(dev))
+
+
 def adrpy_outside_range():
     """(version found, range) when the installed adrpy-ai is outside the
     declared range; None when it is within, or not installed (the header

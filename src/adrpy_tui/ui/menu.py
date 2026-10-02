@@ -14,7 +14,7 @@ from adrpy_tui.ui.base import HINTS_MAIN, HINTS_MENU, AdrpyScreen, on_top
 from adrpy_tui.ui.paged import PagedList, row
 
 # Items that open no form but are available.
-_ACTIONS = ("log.browse", "change-repository", "language", "appearance", "keys", "editor", "exit")
+_ACTIONS = ("log.browse", "change-repository", "language", "appearance", "keys", "editor", "updates", "exit")
 # The first option of every submenu: back to the menu it was opened from.
 BACK = "back"
 
@@ -41,6 +41,9 @@ class MenuScreen(AdrpyScreen):
             for warning in self.app.repo_warnings:
                 yield Static(visible(str(warning)), classes="warning", markup=False)
         back = [] if self.menu is MAIN_MENU else [row(texts("menu.back"), id=BACK)]
+        if self.menu is MAIN_MENU:
+            # Shown once PyPI answers, which may be after the menu is drawn (ADR0008V01).
+            yield Static("", id="newer-version", classes="info", markup=False)
         if self.menu is MAIN_MENU and self.app.adrpy_outside_range:
             found, expected = self.app.adrpy_outside_range
             yield Static(texts("app.adrpy_outside_range", found=found, expected=expected), id="adrpy-outside-range",
@@ -87,8 +90,16 @@ class MenuScreen(AdrpyScreen):
             notice.display = bool(chosen) and self.app.editor is None
             notice.update(self.app.texts("editor.ignored", name=visible(chosen or "")))
 
+    def say_the_newer_version(self):
+        newer = self.app.newer_version
+        for notice in self.query("#newer-version").results(Static):
+            notice.display = newer is not None
+            if newer:
+                notice.update(self.app.texts("updates.available", found=newer[0], installed=newer[1]))
+
     def on_screen_resume(self):
         self._say_the_editor()
+        self.say_the_newer_version()
 
     def on_mount(self):
         options = self.query_one("#options", OptionList)

@@ -847,7 +847,7 @@ def test_a_remembered_item_past_the_first_page_opens_on_its_page(tmp_path, user_
     app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
 
     async def scenario(pilot):
-        assert _page_text(app.screen, "options") == "Items 9–13 of 13 · page 2 of 2 · PgUp/PgDn"
+        assert _page_text(app.screen, "options") == "Items 9–14 of 14 · page 2 of 2 · PgUp/PgDn"
 
     run_app(app, scenario)
 
@@ -2842,6 +2842,7 @@ FOCUS_SCREENS = {
     "appearance": (["appearance"], "list"),
     "keys": (["keys"], "list"),
     "editor": (["editor"], "list"),
+    "updates": (["updates"], "list"),
     "help": (["help", "help.new"], "text"),
     "preview": (["explore", "explore.explore", ":preview"], "text"),
 }
