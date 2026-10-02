@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-02
+
 ### Added
 
 - **A Proposed decision's text in your own editor** (ADR0007V01): choose it under Editor -- vim, nvim, nano, micro, hx, VS Code, VSCodium, Sublime Text, Kate, gedit, gVim or Notepad, found on your PATH, None by default. A new decision, version, revision or successor can open in it once created, and a Proposed decision's detail offers Edit; the TUI waits as for a write (a window editor can be left, and a write, or another Edit, is then refused until it closes; Check's warning names it) and runs Check once the file is closed, saying when it was not saved as UTF-8 and offering to edit it again when its header no longer reads. The main menu says when the editor chosen is no longer on PATH; network shares and relative entries on PATH are not searched. The TUI never writes the file.
@@ -59,5 +61,6 @@ The first release of adrpy-tui.
 - **Every change goes through adrpy** ([ADR0001V01](doc/adr/ADR0001V01R01-every-read-and-change-goes-through-the-adrpy-cli-as-a-subprocess,-and-the-tui-decides-on-the-json-code-and-data-only.md)), run from the TUI's own interpreter ([ADR0003V01](doc/adr/ADR0003V01R01-adrpy-ai-is-a-declared-dependency-run-through-the-tui%27s-own-interpreter,-and-adrpy-tui-is-not-published-until-adrpy-ai-is-on-py-pi.md)).
 - **The UI speaks the eleven languages adrpy supports** ([ADR0005V01](doc/adr/ADR0005V01R01-the-ui-is-localized-in-adrpy%27s-languages-through-json-language-packs,-chosen-on-first-run,-while-adrpy%27s-own-responses-stay-in-english.md)). adrpy's own messages stay in English. The ten non-English packs have not been reviewed by native speakers yet.
 
-[Unreleased]: https://github.com/FRACerqueira/adrpy-tui/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FRACerqueira/adrpy-tui/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FRACerqueira/adrpy-tui/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FRACerqueira/adrpy-tui/releases/tag/v0.1.0
