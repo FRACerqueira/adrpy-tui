@@ -613,3 +613,89 @@ def test_the_encoding_is_said_once_closed_whatever_its_code_not_while_left_open(
         client.editor_closed.set()
 
     run_app(app, scenario)
+
+
+
+@pytest.mark.parametrize("where, says", [("outside", "outside"), ("missing", "missing")])
+def test_a_refused_edit_says_why(tmp_path, user_state, monkeypatch, where, says):
+    """The notice was only checked to exist: any text passed."""
+    _with_editor(monkeypatch, user_state, "code")
+    app = AdrpyTui(tmp_path / "repo", client=FakeClient(), user_state=user_state)
+    (tmp_path / "repo" / "doc" / "adr").mkdir(parents=True)
+    path = tmp_path / "x.md" if where == "outside" else tmp_path / "repo" / "doc" / "adr" / "ADR0009V01R01-gone.md"
+    if where == "outside":
+        path.write_text("# x\n", encoding="utf-8")
+    expected = (app.texts("preview.outside", path=str(path)) if where == "outside"
+                else app.texts("preview.missing", path=str(path)))
+
+    async def scenario(pilot):
+        edit_decision(app, str(path))
+        await _shown(pilot)
+        assert _notes(app) == [expected]
+
+    run_app(app, scenario)
+
+
+def test_an_editor_closed_cleanly_says_no_code(tmp_path, user_state, monkeypatch):
+    _with_editor(monkeypatch, user_state, "code")
+    client = FakeClient()
+    client.editor_closed.set()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        await settle(pilot)
+        assert isinstance(app.screen, CheckScreen) and not any("ended with code" in note for note in _notes(app))
+
+    run_app(app, scenario)
+
+
+def test_an_editor_gone_from_path_since_it_was_chosen_is_said(tmp_path, user_state, monkeypatch):
+    """Chosen while on PATH, gone by the time the decision is opened."""
+    looks = []  # once Edit is chosen: still there as it is chosen, gone as it starts
+    monkeypatch.setattr(editors, "located", lambda editor, which=None: looks.pop(0) if looks else "/bin/code")
+    user_state.set_editor("code")
+    client = FakeClient()
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        looks.extend(["/bin/code", None])
+        edit_decision(app, str(_decision(tmp_path)))
+        await _shown(pilot)
+        assert client.edits == [] and any("no longer on this system's PATH" in note for note in _notes(app))
+
+    run_app(app, scenario)
+
+
+def test_a_detail_whose_read_failed_offers_no_edit(tmp_path, user_state, monkeypatch):
+    """What it shows may no longer be so: no action on it, Edit neither."""
+    from adrpy_tui.ui.explore import DetailScreen
+
+    _with_editor(monkeypatch, user_state, "code")
+    client = _repository_client(tmp_path, None)
+    decision = client.answers["explore"]["data"]["decisions"][0]
+    client.answers["explore"] = {"success": False, "code": "tui-timeout", "detail": "d"}
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(DetailScreen(decision))
+        await settle(pilot)
+        assert not app.screen.query("#actions")
+
+    run_app(app, scenario)
+
+
+def test_a_failed_command_s_result_says_no_next_step(tmp_path, user_state):
+    from adrpy_tui.core.client import Result
+    from adrpy_tui.ui.result import ResultScreen
+
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(ResultScreen("new", Result((), 1, False, code="x", detail="d",
+                                                   data={"created": str(tmp_path / "x.md")})))
+        await settle(pilot)
+        assert not app.screen.query("#next-step")
+
+    run_app(app, scenario)

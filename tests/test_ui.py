@@ -4789,3 +4789,96 @@ def test_the_editor_screen_lists_an_editor_installed_while_the_tui_ran(tmp_path,
 
     run_app(app, scenario)
     editors.forget()
+
+
+
+def test_a_detail_opened_with_its_path_spelled_otherwise_chooses_it_in_the_form(tmp_path, user_state):
+    """A decision's detail opens a form with it chosen: by its path as the
+    detail spells it, which explore may spell otherwise (case, separators)."""
+    client = _focus_client(tmp_path)
+    app = AdrpyTui(tmp_path, client=client, user_state=user_state)
+    proposed = [d for d in client.answers["explore"]["data"]["decisions"] if not d["header"]["status_update"]][0]
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("approve", decision=proposed["path"].replace("\\", "/").upper()
+                                   if __import__("os").name == "nt" else proposed["path"].replace("/", "//")))
+        await settle(pilot)
+        picker = app.screen.query_one("AdrPicker")
+        assert picker.selected and picker.selected["path"] == proposed["path"]
+
+    run_app(app, scenario)
+
+
+def test_restoring_every_color_shows_them_restored_in_the_list(tmp_path, user_state):
+    user_state.set_color("tui-banner", "#FFA500")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        roles = await _open_colors(pilot)
+        assert "#FFA500" in _rows(roles)[roles.get_option_index("tui-banner")]
+        roles.highlighted = roles.get_option_index("reset-all")
+        await pilot.press("enter")
+        await settle(pilot)
+        await pilot.press("enter")  # Yes
+        await settle(pilot)
+        roles = app.screen.query_one("#roles", OptionList)
+        assert "#FFA500" not in _rows(roles)[roles.get_option_index("tui-banner")]
+
+    run_app(app, scenario)
+
+
+def test_restoring_every_key_shows_them_restored_in_the_list(tmp_path, user_state):
+    user_state.set_key("run", "f5")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        actions = await _open_keys(pilot)
+        assert "F5" in _rows(actions)[actions.get_option_index("run")]
+        actions.highlighted = actions.get_option_index("reset-all")
+        await pilot.press("enter")
+        await settle(pilot)
+        await pilot.press("enter")  # Yes
+        await settle(pilot)
+        actions = app.screen.query_one("#actions", OptionList)
+        assert "Ctrl+R" in _rows(actions)[actions.get_option_index("run")]
+
+    run_app(app, scenario)
+
+
+def test_the_yellow_buttons_text_follows_the_warnings_role_not_the_info_one(tmp_path, user_state):
+    """Leave and Stop waiting are drawn on the warnings role: their text is
+    the one that reads on it, whatever the info role (a light one here, a
+    dark warning)."""
+    from textual.widgets import Button
+
+    user_state.set_color("tui-info", "#EEEEEE")
+    user_state.set_color("tui-warning", "#000080")
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("approve"))
+        await settle(pilot)
+        app.screen._command_running = True  # as a write past its time
+        app.screen._say_still_running()
+        await settle(pilot)
+        leave = app.screen.query_one("#leave-running", Button)
+        ratio = _contrast(leave.visual_style.foreground, leave.background_colors[1])
+        app.screen._command_running = False
+        assert ratio >= 4.5, ratio
+
+    run_app(app, scenario)
+
+
+def test_two_fields_wrong_at_once_focus_and_name_the_first(tmp_path, user_state):
+    app = AdrpyTui(tmp_path, client=FakeClient(), user_state=user_state)
+
+    async def scenario(pilot):
+        app.push_screen(FormScreen("log"))
+        await settle(pilot)
+        await pilot.press("ctrl+r")  # scope, slug, summary and body all empty
+        await settle(pilot)
+        assert app.focused is app.screen.query_one("#field-scope")
+        notes = [str(note.message) for note in app._notifications]
+        assert any("Scope" in note for note in notes) and not any("Body" in note for note in notes), notes
+
+    run_app(app, scenario)
